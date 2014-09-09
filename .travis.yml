@@ -13,3 +13,4 @@ script:
   - mkdir build && cd build
   - cmake -DMAINTAINER=ON -DLIBUILD=ON ..
   - make
+  - make install DESTDIR=./install_root/
