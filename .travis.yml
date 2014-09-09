@@ -1,0 +1,15 @@
+# Travis CI config for Listaller
+
+language: c
+
+compiler:
+  - gcc
+  - clang
+before_script:
+  - env | sort
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq cmake intltool libarchive-dev libglib2.0-dev libgpgme11-dev
+script:
+  - mkdir build
+  - cd build && cmake -DMAINTAINER=ON -DLIBUILD=ON ..
+  - make -C build
