@@ -1,0 +1,542 @@
+Version 0.5.9
+~~~~~~~~~~~~~~
+
+Notes:
+ * This release is mainly for PK 0.9.x compatibility, and a preview on what happens next
+   with Listaller.
+   There are some huge plans, even a rewrite (again) is possible due to changes in PK
+ * Do not rely on this unstable Listaller release and build on it!
+
+Features:
+ * Remove dependency on Redland and DOAP RDF module (Matthias Klumpp)
+ * Convert IPK to use AppStream appdata, and switch to IPK2.0 (Matthias Klumpp)
+ * Include all dependency-information in every IPK package (Matthias Klumpp)
+ * Replace own AppStream parser with libappstream (Matthias Klumpp)
+ * Use AsComponent as data store in AppItem (Matthias Klumpp)
+ * Add support for PackageKit 0.9.x (Matthias Klumpp)
+ * Add support for a few internal Listaller-specific AppStream extensions (Matthias Klumpp)
+ * Some database tweaks and test fixes (Matthias Klumpp)
+ * Use SHA256 as default checksumming algorithm (Matthias Klumpp)
+ * Create a "Stdlibs" metainfo template (Matthias Klumpp)
+ * Add option to disable 3rd-party module installs (Matthias Klumpp)
+
+Specs & Docs:
+ * docs: Slight module-graph image change (Matthias Klumpp)
+ * docs: A few changes on the listaller-tools image (Matthias Klumpp)
+
+Bugfixes:
+ * fix FTBFS with clang instead of gcc (Nicolas Sévelin-Radiguet)
+ * Use ia32 for x86 architecture naming everywhere (Matthias Klumpp)
+ * Don't silently die if malformed AppData leads to broken AppInfo (Matthias Klumpp)
+ * lipa: Never silently exit when initialization fails at an early stage (Matthias Klumpp)
+ * clitools: Don't repeat error messages if a cli tool is running (Matthias Klumpp)
+ * Fix bug in depscan and lipkgen which added invalid dependencies (Matthias Klumpp)
+ * Apply the unique-id naming project-wide (Matthias Klumpp)
+ * Ensure we always have reliable unique ids, and fix various bugs around it (Matthias Klumpp)
+ * Get rid of the xmldata hack (Matthias Klumpp)
+ * Remove useless cruft from the dependency representation (Matthias Klumpp)
+
+Version 0.5.8
+~~~~~~~~~~~~~~
+Released: 2013-08-02
+
+Notes:
+ * The database format is now stable, also most of the other specs used should no loger change.
+   If it is necessary, we might still apply some modifications, so the interfaces are not yet
+   100% stable.
+ * The Python solver included in this release is just a demonstration and does not work yet.
+   It will be completed in the next release.
+
+Features:
+ * Implement frameworks and modules support in Listaller's dependency solver (Matthias Klumpp)
+ * Generate GIR typelib and install it (Matthias Klumpp)
+ * Support for clearly defined dependency-components (Matthias Klumpp)
+ * Remove old Listaller IPK.Dependency and associated parts (Matthias Klumpp)
+ * Make depscan component-aware (Matthias Klumpp)
+ * Allow wildcards in component items (Matthias Klumpp)
+ * Allow embedding of additional module dependencies in IPK packages (Matthias Klumpp)
+ * Implement new dependency-solver infrastructure (Matthias Klumpp)
+ * Add prototype for a Python solver (Matthias Klumpp)
+ * Add library-name based version detection (Matthias Klumpp)
+ * Bump PackageKit dependency: We require 0.8.10 now due to API changes (Matthias Klumpp)
+ * Implement nicer errors/warnings for all cli tools (Matthias Klumpp)
+ * Handle optional component-items in dependency-scanning (Matthias Klumpp)
+ * Add framework for PulseAudio (Matthias Klumpp)
+ * plugin: Update to new li-pid syntax (Matthias Klumpp)
+ * plugin: Use internal job for native-backend communication (Matthias Klumpp)
+
+Specs & Docs:
+ * Implement first parts of the IPK1.2 spec (Matthias Klumpp)
+ * depscan: Document the --components option in manual page (Matthias Klumpp)
+ * docs: Add a little bit of basic documentation on components (Matthias Klumpp)
+ * docs: Rewrite documentation in Docbook (Matthias Klumpp)
+ * ipkspec: Make InstallModes list comma-separated (Matthias Klumpp)
+
+Bugfixes:
+ * Don't add position information to locale files (Matthias Klumpp)
+ * Many fixes in depscan output (Matthias Klumpp)
+ * Adjust to latest PackageKit API changes (Matthias Klumpp)
+ * Prevent debug-log spam from disabled resolvers (Matthias Klumpp)
+ * Adjust unittests to new URLs (Matthias Klumpp)
+ * plugin: Fix crash in backends on internal job creation (Matthias Klumpp)
+
+Version 0.5.7
+~~~~~~~~~~~~~~
+Released: 2013-03-15
+
+Notes:
+  * /!\ Please note: We do NOT provide stable API/ABI in the 0.5.x series!
+        The 0.5.x series is not stable, we might change the specs at any time.
+
+Features:
+ * Updated default IPK dummy icons (Matthias Klumpp)
+ * relaytool: Add documentation (Matthias Klumpp)
+ * lirepo: Adjust to current repo draft (Matthias Klumpp)
+ * Remove old touch_dir() method (duplicated functionality) (Matthias Klumpp)
+ * lirepo: Add possibility to add new packages to the repo (Matthias Klumpp)
+ * repo: Don't allow multiarch-IPKs in repositories (Matthias Klumpp)
+ * repo: Allow adding new package versions & create package index per arch (Matthias Klumpp)
+ * lipkgen: Follow the specs in naming generated IPK packages (Matthias Klumpp)
+ * repo: Prepare RepoRemote to access remote repositories (Matthias Klumpp)
+ * repo: Allow downloading packages and add first self-tests (Matthias Klumpp)
+ * repo: Allow fetching available apps from remote repos (Matthias Klumpp)
+ * repo: Make Listaller build repository content cache (Matthias Klumpp)
+ * Create extra downloader class to handle HTTP and possibly other protocols later (Matthias Klumpp)
+ * Split databases into multiple classes (Matthias Klumpp)
+ * Migrate to new AppState application property (Matthias Klumpp)
+ * Make software origin a string (Matthias Klumpp)
+ * Implement SQLite available-applications cache (Matthias Klumpp)
+ * Make it possible to install packages from remote sources (Matthias Klumpp)
+ * Port remaining components to new API (Matthias Klumpp)
+ * Add new app-filter method to manager (Matthias Klumpp)
+ * updater: More support code & unit test (Matthias Klumpp)
+ * tests: Make Updater unit-testable (Matthias Klumpp)
+ * updater: Add stuff required to make updating dependencies possible (Matthias Klumpp)
+ * updater: Get rid of SoftwareItem (Matthias Klumpp)
+ * tests: Port to new testing infrastructure (Matthias Klumpp)
+ * plugin: Add get-updates support code (Matthias Klumpp)
+ * core: Kill Listaller reporting (Matthias Klumpp)
+ * tests: Include versioned file for update-testing in FooBar (Matthias Klumpp)
+ * tests: Greatly improve updater test and testing framework in general (Matthias Klumpp)
+ * Don't add source code hint to log messages when not in verbose mode (Matthias Klumpp)
+ * Allow fetching a package security level as sentence (Matthias Klumpp)
+ * updater: Improve error and message handling (Matthias Klumpp)
+ * lilith: Disable for next release (Matthias Klumpp)
+ * plugin: Make Listaller messages translated (Matthias Klumpp)
+
+Specs & Docs:
+ * docs: Add new pages for Appcompile/Depscan (Matthias Klumpp)
+ * docs: Add some more end-user howto (Matthias Klumpp)
+ * docs: Add packaging instructions (Matthias Klumpp)
+ * docs: Add simple note about architecture naming (Matthias Klumpp)
+ * docs: Add file-list spec (Matthias Klumpp)
+ * Updated repo spec to reflect the inclusion of dependencies (Matthias Klumpp)
+ * spec: Allow building packages even if release field does not contain a date (Matthias Klumpp)
+ * docs: Generate C docs by default (Matthias Klumpp)
+ * docs: Restructure documents and auto-generate them during build (Matthias Klumpp)
+ * spec: New control value to specify if an user has to accept a license (Matthias Klumpp)
+
+Bugfixes:
+ * Fix IPK icon-variable naming for 256x256 icons (Florian Höch)
+ * Check supported architecture in installer, not in package itself (Matthias Klumpp)
+ * installer: Always store hashes with filenames (Matthias Klumpp)
+ * lipa: Always wipe license-scroll hint, even when translated (Matthias Klumpp)
+ * lipkgen: Properly handle 0-byte files (don't treat them as missing) (Matthias Klumpp)
+ * tests: Make lipkgen test essential and add new arch:all dummy package (Matthias Klumpp)
+ * ipk: Prefer archdep dependency files, if there is any (Matthias Klumpp)
+ * Use libsoup to download files (Matthias Klumpp)
+ * Fix crash when object is accessed before it is constructed (Matthias Klumpp)
+ * plugin: Check for cancelled transaction before processing finished() (Matthias Klumpp)
+ * lipa: Don't show progres bar when in verbose mode (Matthias Klumpp)
+ * Fix Listaller refusing to install any package below SecLevel "low" (Matthias Klumpp)
+ * runapp: Correctly handle quotation marks & private libdir (Matthias Klumpp)
+ * lirepo: Fix crash when adding new app (Matthias Klumpp)
+ * pk-plugin: Adjust to latest PK API change (Matthias Klumpp)
+ * plugin: Fix interaction with PackageKit messages (Matthias Klumpp)
+ * Fix bug which prevented Listaller to show errors in some rare cases (Matthias Klumpp)
+ * Handle application updates via PK clients correctly (Matthias Klumpp)
+ * lirepo: Make adding new apps work again (Matthias Klumpp)
+ * tests: Fix FooBar building test (Matthias Klumpp)
+ * runapp: Fix environment before running an app (Matthias Klumpp)
+
+Version 0.5.6
+~~~~~~~~~~~~~~
+Released: 2012-10-01
+
+Notes:
+  * /!\ Please note: We do NOT provide stable API/ABI in the 0.5.x series!
+        The 0.5.x series is experimental, we might change the specs at any time.
+
+Features:
+  * Added Visual-LDD code
+  * Enable item_progress instead of subprogress (adopting to PackageKit API)
+  * Update Listaller variable processing & warn about incompatible packages
+  * Add new class to generate useful reports
+  * lipkgen: Use new reporting API to display final report
+  * Use new tmpdir layout for Listaller
+  * More documentation
+  * Prepare package installer for deltaIPK
+  * Improve compile process by sharing precompiled files with Listaller tools
+  * Allow admin to block 3rd-party installs below a defined security level
+  * Add new Listaller configuration system
+  * Move not-changeable data to /usr/share instead of /etc
+  * Allow Listaller to use a shared GPG keyring
+  * Completely rework the way we handle GPG
+  * Add new likey tool to maintain the Listaller key database
+  * Use new, more detailed SecurityInfo
+  * Make signature solving much faster & provide frontends with signer info
+
+
+Specs & Docs:
+  * Allow fine-grained install-mode setting to IPK packages,
+    default to shared-only
+  * Document install-time directory variables
+  * Added manpage for likey
+  * Update filelist to new IPK1.1 spec
+  * Add documentation about ligcc
+
+
+Bugfixes:
+  * vldd: Remove internal libc ELF headers from vLDD
+  * vldd: Remove read_elf too, we will use depscan instead
+  * Automatically fix licenses
+  * Fix completely outdated build instructions
+  * database: Get rid of dbid and improve other parts of the db
+  * Require newer Vala version (bug #1006147)
+  * Fix typos in libuild Perl modules (bug #1006199)
+  * Update PackageKit API binding
+  * Add interfaces to access PkBackendJob
+  * Port PackageKit plugin to new internal API
+  * Remove old li_log system
+  * Remove origin element from database: This was just legacy
+  * Check if PackageKit backends provide required roles before calling them
+  * Create new script to generate Listaller releases
+  * Fix dependency scanner to check for symlinked libs in project files
+  * Finally fix GPG and package security handling
+  * lipa: Fix license accepting
+  * lipa: Finally fix license info scrolling
+  * Add posibility to fetch GPG-keys on-demand before installing new software
+  * pkplugin: More API adjustments
+  * Add some more simple Python support to depsolver
+  * Don't store "replaces" info in SQLite-db, put it to package extra-info
+  * Install GIR file
+  * lipkgen: Report empty filelists
+  * Improve library search code
+  * Fix architecture confusion
+  * Switch to new progress API
+
+Version 0.5.5
+~~~~~~~~~~~~~~
+Released: 2012-05-20
+
+Notes:
+  * /!\ Please note: We do NOT provide stable API/ABI in the 0.5.x series!
+        The 0.5.x series is experimental, we might change the specs at any time.
+
+Features:
+  * Rewrote groff manpages in XML
+  * Add manual pages for all Listaller binaries
+  * Rename libuild to lipkgen to avoid name collisions
+  * Updated RPM specfile template
+  * Add lipa command-line tool again to control Listaller
+    via a command-line interface.
+  * ligcc: Remove NO_STATIC_X option, it is default now
+  * lipa: Clean-up stuff on CTRL+C
+  * Show a progress-bar in text terminals
+  * Exclusively use /etc/os-release introduced by systemd to check distro info
+  * Moved license files to toplevel
+  * Show a message that we don't support other OSes than Linux (yet)
+  * Install into multiarch-paths by default
+
+Specifications:
+  * Add some (old and new) concept graphics
+
+Bugfixes:
+  * Update PK API file
+  * ligcc: Fix linker paths
+  * Install binreloc too, if libuild is enabled
+  * Don't ship a separate copy of elf.h
+  * Always prefer personal over shared apps in db queries
+  * Move buildlist helper to a better, more FHS-compliant location
+  * Correctly set listaller library dependency line
+
+Version 0.5.4
+~~~~~~~~~~~~~~
+Released: 2012-04-16
+
+Notes:
+  * /!\ Please note: We do NOT provide stable API/ABI in the 0.5.x series!
+        The 0.5.x series is experimental, we might change the specs at any time.
+  * Libuild will now create multiarch IPKs by default
+
+Features:
+  * Add possibility to change filenames in file listings
+  * Wrote new logging system
+  * Autodetect desktop-file for applications
+  * Allow distributors to override dependency data
+  * Allow packages to ship a license text
+  * Add manual dependencies to generator to update automatic deps
+  * Establish generic naming of x86 architectures
+  * Make runapp tool handle LDPATH
+  * pkplugin: Emit app description & list of files
+  * Update database layout to support arch field
+  * Use SQLite locking mechanism instead of custom ones
+  * Find libraries provided by local dependency installations
+  * Always store dependency component and provided-by data in database
+  * Cache dependency environment info in database
+  * Rework GPGSignature facilities
+  * Make use of PkTasks intf and centralize PackageKit access classes
+  * Bring back source-code documentation
+  * Add possibility to append new listdata to FileList
+  * libuild: Create multiarch IPKs by default
+  * Only sign the control-part of IPK, should be enough for security
+  * Use /var/tmp by default
+  * Remove the Qt4 library: Not up-to-date anymore
+  * Make Nvidia GL libs a default dependency
+  * Allow manager to remove shared applications
+
+Specifications:
+  * Use system icon paths to store icondata
+  * Add "pksetting" to IPK packages to modify their behavior
+  * Always add 'Architectures' field to IPK setting
+  * Support all component types in global dependency info data
+  * Allow application to define "replaces" relation with existing apps
+
+Bugfixes:
+  * Canonicalize filepaths when possible
+  * Don't include files in list twice
+  * Fix problems with bad substitution vars and install path issues
+  * Rewrite of FileList internals (make list faster & more efficient)
+  * Never try to install a file twice
+  * Fix testsuite
+  * Don't crash with newer libRDF versions
+  * Set correct dependency information & don't crash if desktop file isn't set
+  * Only allow write access to shared db if we're root
+  * Fix error handling in PkResolver
+  * Handle installation of shared apps properly
+  * Fix Listaller dependency info generator
+  * Don't produce garbage IPKs if filenames contain spaces
+  * Really mark package as dangerous if signature is broken
+  * Check if database is writable, not if it is locked
+  * tests: Make sure we are verbose when running tests
+  * Allow arch:all packages
+  * Search strings in app idnames too
+
+Version 0.5.3
+~~~~~~~~~~~~~~
+Released: 2012-01-24
+
+Notes:
+  * /!\ Please note: We do NOT provide stable API/ABI in the 0.5.x series!
+        The 0.5.x series is experimental, we might change the specs at any time.
+  * We now require at least PackageKit 0.7.2 to build
+
+Features:
+  * Improve database error handling (Matthias Klumpp)
+  * Fix Pk dependency installer and remove DepSolver (not needed) (Matthias Klumpp)
+  * Make use of IPK1.0 draft now (Matthias Klumpp)
+  * builder: Work with new DOAP descriptions (Matthias Klumpp)
+  * libuild: Don't search control.xml anymore, use pkoptions instead. (Matthias Klumpp)
+  * Fetch license texts automatically (Debian-only at time) (Matthias Klumpp)
+  * Speed up building with tests enabled (Matthias Klumpp)
+  * Save software registry in user data dir (Matthias Klumpp)
+
+Specifications:
+  * Use DOAP for application information in IPK (Matthias Klumpp)
+
+Bugfixes:
+  * Check if DB lock file exists - solves access warning when running as user (Matthias Klumpp)
+  * Make use of new PK backend exit type to skip native pkg-manager (Matthias Klumpp)
+  * Don't fail the installation if private_db cannot be opened as root (Matthias Klumpp)
+  * Fix PK daemon crash if trying to install a native pkg (Matthias Klumpp)
+  * Don't try to build package without app information (Matthias Klumpp)
+  * plugin: Fix crash on proxy request (Matthias Klumpp)
+  * Adjust to new PackageKit plugin API (Matthias Klumpp)
+  * libuild: Fix some minor builder issues (Matthias Klumpp)
+
+Version 0.5.2
+~~~~~~~~~~~~~~
+Released: 2011-08-06
+
+ Notes:
+  * /!\ Please note: We do NOT provide stable API/ABI in the 0.5.x series!
+        The 0.5.x series is experimental and should not be used in productive environments.
+
+ Features:
+  * Added BinReloc to Listaller core again (Matthias Klumpp)
+  * binreloc: Experimental support for *BSD (Anders F. Björklund)
+  * Include the APBuild tool (Matthias Klumpp)
+  * apbuild: Using new libgee API for accessing keys of a HashMap. (Jan Niklas Hasse)
+  * First bits of automatic dependency detection (Matthias Klumpp)
+  * Add options to change default libdir (Matthias Klumpp)
+  * Add Listaller PackageKit PlugIn (Matthias Klumpp)
+  * Add possibility to specify libdir prefix in ./prepare (Matthias Klumpp)
+  * Improved libuild dependency detection (Matthias Klumpp)
+  * Cleanup: Remove listallerd data files (Matthias Klumpp)
+  * Provide feeds for some dependencies & sort out standard deps (Matthias Klumpp)
+  * Store long description in main database (Matthias Klumpp)
+  * Improved dependency feed handling (Matthias Klumpp)
+  * Compare package versions if same package is already installed (Matthias Klumpp)
+  * Use PackageKit for dependency installing (Matthias Klumpp)
+  * Implement basic feed-dependency downloading & extracting (Matthias Klumpp)
+  * Always prefer native distribution packages (Matthias Klumpp)
+  * Add methods to register dependencies in database (Matthias Klumpp)
+  * Check the database if dependency is already installed (Matthias Klumpp)
+  * Install a few manpages (Matthias Klumpp)
+  * Include the patchelf utility, but disable it (Matthias Klumpp)
+  * appcompile: Support CMake & arguments (Matthias Klumpp)
+  * Various improvements to make dependency search faster (Matthias Klumpp)
+  * Automagically update .desktop file paths, even if no var is set (Matthias Klumpp)
+  * Use own stat()-based mechanism to look for libraries. (Matthias Klumpp)
+  * Automatically close the software-database (Matthias Klumpp)
+  * Add /usr/lib/$arch-$os-gnu/mesa to list of valid library paths (Matthias Klumpp)
+  * Apply a set of installation speed-improvements (Matthias Klumpp)
+  * Create new PkResolver to perform resolve actions for native pkgs (Matthias Klumpp)
+  * Apply parts of the dependency-component handling, important stuff is still
+     missing in PackageKit. (Matthias Klumpp)
+  * Some preparations for direct PkBackend usage (Matthias Klumpp)
+  * Added ugly method to request GPG passwords (Matthias Klumpp)
+  * Make cmake install LIBDIR multiarch-aware (Matthias Klumpp)
+  * Add a Fedora spec file template that builds listaller (Richard Hughes)
+  * Fix up some warnings in the PK plugin (Richard Hughes)
+  * plugin: Use the correct function names to fix PackageKit (Richard Hughes)
+  * plugin: Split the lists once and early for speed (Richard Hughes)
+  * plugin: Correctly connect ListallerManager object with callbacks (Matthias Klumpp)
+  * plugin: Set a log domain so the packagekitd daemon knows what's printing messages (Richard Hughes)
+  * plugin: Only rescan the application list after modifying roles (Richard Hughes)
+
+ Specifications:
+  * Updated dependency-extra list format (is now RFC822-style) (Matthias Klumpp)
+  * Use type-specific dependencies instead of dependencies on "files" (Matthias Klumpp)
+  * Move state information to /var/lib (Matthias Klumpp)
+  * Implement a dependency-id (Matthias Klumpp)
+
+ Bugfixes:
+  * Remove internal libc ELF headers from vLDD (Matthias Klumpp)
+  * Depend runapp on listaller-glib, allows parallel builds (Matthias Klumpp)
+  * Remove \r's from nl translation (Matthias Klumpp)
+  * Compile with _FILE_OFFSET_BITS=64 (Matthias Klumpp)
+  * Fix uninstaller error handling (Matthias Klumpp)
+  * Adjust to new PackageKit 0.7 API (Matthias Klumpp)
+  * Register IPK mime type again (Matthias Klumpp)
+  * Use PREFIXDIR in Listaller settings (Matthias Klumpp)
+  * Fix database application listing (Matthias Klumpp)
+  * Bugfix: Installation fails if there are no dependencies defined (Matthias Klumpp)
+  * Build in Debug mode by default (for development versions) (Matthias Klumpp)
+  * Process variables _after_ everything was installed (Matthias Klumpp)
+  * Consider all dependencies as satisfied when in testmode (Matthias Klumpp)
+  * Fix deadlock when application is registered (Matthias Klumpp)
+  * libuild: Fix installing all files into one directory (Matthias Klumpp)
+  * Display warning if dependency idname or full_name is empty (Matthias Klumpp)
+  * plugin: Fix sigsegv on loading applist (Matthias Klumpp)
+  * plugin: Fix pointer deferencing to make package and files removal work (Richard Hughes)
+  * plugin: Ensure the transaction gets properly finished if listaller can handle all the ids (Richard Hughes)
+
+Version 0.5.1
+~~~~~~~~~~~~~~
+Released: 2011-06-21
+
+ Overview:
+  * /!\ Please note: We do NOT provide stable ABI/API in 0.5.x series!
+        The 0.5.x series is experimental and may not be used in productive environments.
+  * Complete rewrite of Listaller in Vala and C/C++
+  * Switched to LGPLv3+ for library parts, everything else stays GPLv3+
+
+ Features:
+  * Wildcards in file-lists (src)
+  * Switch to XML-based IPK control files
+  * Introduced some new path variables
+  * Compatible with PackageKit 0.6 series now
+  * vldd: Rewrote parts of Visual-LDD
+  * binreloc: New Mallard documentation
+
+ Specifications:
+  * Add new LIB_PRIVATE directory variable
+
+ Bindings:
+  * Rewrite of Qt bindings
+
+ Bugfixes:
+  * None, as this is a complete rewrite of Listaller
+
+Version 0.5b
+~~~~~~~~~~~~~~
+
+ Features:
+  * New software database handler
+  * Use Debian packages as dependency sources
+  * Added PackageKit bindings generator
+  * Marked Listaller daemon as obsolete
+  * Now use Listaller-enabled PackageKit as Listaller deamon
+
+ Toolset:
+  * visual-ldd: Pulled from Autopackage
+  * visual-ldd: Ported to Qt4, updated GUI and added few more features
+  * Pulled apbuild from Autopackage
+  * binreloc: Adjusted for Listaller
+
+ Specifications:
+  * Updated database layout to new format
+
+ Bindings:
+  * This release contains major API/ABI breaks, tools depending on
+     liblistaller will need huge adjustements.
+  * pas: Updated Pascal bindings
+  * qt : Created new Qt bindings
+  * c  : Updated C bindings to new version
+  * Created bindingtool, to ensure all bindings are in sync.
+
+ Bugfixes:
+  * Fix invalid dependencies on Fedora
+
+Version 0.4.10
+~~~~~~~~~~~~~~
+
+ Bugfixes:
+  * Compatibility patch for PackageKit > 0.5
+
+Version 0.4b
+~~~~~~~~~~~~~~
+ * licreator: Use the new IPS defs
+ * listallmgr: Redesigned interface
+ * listallmgr: Revised Qt4 GUI
+ * listallmgr: Removed catalog feature (might be replaced by PAPPI)
+ * master: New module: libInstaller library
+ * master: Advanced translation support
+ * master: Completely new build system
+ * master: Dropped C/Python bindings
+ * master: Switched to Lazarus 0.9.29 to use the new FPC resource system
+ * master: Changed to IPK1.0 and IPS1.0 standard for package building
+ * master: Added LZMA support for IPK1.0
+ * master: Dropped Abbrevia components
+ * master: Included libinstaller library
+ * master: Completely updated the GUI interfaces
+ * master: Switched to Lazarus 0.9.29 and FPC 2.4.0
+ * master: Removed support for IPK0.8
+ * master: Dropped "PkgXTransact" - replaced with PackageKit
+ * lipa: Update to work with new components
+ * listallgo: Updated GUI
+ * libuild: Work with new IPK1.0 specs
+ * libuild: Use LZMA compression for IPK
+ * libinstaller: Added PolicyKit support
+ * libinstaller: Rebased on PackageKit 0.5.x glib2 interface
+
+
+Version 0.3.0a
+~~~~~~~~~~~~~~
+ * First beta release, no changelog created
+ * Completely refreshed GUI
+ * Some other changes
+ * Switch to IPKXML
+
+Version 0.2.00a
+~~~~~~~~~~~~~~
+ * First alpha release, no changelog created
+
+Version 0.1.18
+~~~~~~~~~~~~~~
+ * Test release 2, no changelog created
+
+Version 0.1.16
+~~~~~~~~~~~~~~
+ * Test release 1, no changelog created

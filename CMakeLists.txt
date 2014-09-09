@@ -123,6 +123,7 @@ add_definitions("-D_FILE_OFFSET_BITS=64")
 #
 find_package(PkgConfig REQUIRED)
 
+add_subdirectory(src)
 add_subdirectory(data)
 add_subdirectory(contrib)
 if (GETTEXT_FOUND AND L10N)
