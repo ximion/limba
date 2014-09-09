@@ -1,0 +1,66 @@
+[encoding: UTF-8]
+# List of source files containing translatable strings.
+#
+# Listaller library sources
+src/logging.vala
+src/config-global.vala
+src/setup-settings.vala
+src/status.vala
+src/utils.vala
+src/application.vala
+src/database-internal.vala
+src/software-db.vala
+src/software-cache.vala
+src/key-manager.vala
+src/gpgex.vala
+src/signature.vala
+src/security-info.vala
+src/ipk-changelog.vala
+src/ipk-metafile.vala
+src/ipk-control.vala
+src/ipk-filelist.vala
+src/ipk-package.vala
+src/ipk-repo.vala
+src/repo-data.vala
+src/repo-list.vala
+src/repo-manager.vala
+src/varsolver.vala
+src/varsetter.vala
+src/manager.vala
+src/installer.vala
+src/updater.vala
+src/dependency.vala
+src/component-factory.vala
+src/dep-manager.vala
+src/dep-installer.vala
+src/pkit-tasks.vala
+src/solvers/abstract-solver.vala
+src/solvers/basic-solver.vala
+src/solvers/feed-installer.vala
+src/solvers/pkit-solver.vala
+src/solvers/python-solver.vala
+src/solvers/zfeed-solver.vala
+src/solvers/zfeed.vala
+# Listaller tools
+tools/toolshared.vala
+tools/reporting.vala
+tools/console-progress-bar.vala
+tools/runapp/runapp.vala
+tools/lipa/lipa.vala
+tools/lipa/lipa-module.vala
+tools/lipa/lipa-installer.vala
+tools/lipa/lipa-manager.vala
+tools/lipkgen/lipkgen.vala
+tools/lipkgen/ipkbuilder.vala
+tools/lipkgen/gpgsign.vala
+tools/lipkgen/depfind.vala
+tools/lipkgen/prepare.vala
+tools/lipkgen/lpkgutils.vala
+tools/appcompile/appcompile.vala
+tools/appcompile/autocompiler.vala
+tools/depscan/depscan-tool.vala
+tools/depscan/depscan.vala
+tools/depscan/scan_ldd.vala
+tools/likey/likey.vala
+# Mimetypes
+data/mime/listaller-ipk.xml.in

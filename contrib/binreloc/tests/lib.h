@@ -1,0 +1,1 @@
+char *locate_libshared ();

@@ -1,0 +1,830 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: listaller\n"
+"Report-Msgid-Bugs-To: listaller@freelists.org\n"
+"POT-Creation-Date: 2014-08-11 03:19+0200\n"
+"PO-Revision-Date: 2013-03-11 20:30+0000\n"
+"Last-Translator: Konki <pavel.konkol@seznam.cz>\n"
+"Language-Team: Czech <cs@li.org>\n"
+"Language: cs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Launchpad-Export-Date: 2013-08-02 14:12+0000\n"
+"X-Generator: Launchpad (build 16718)\n"
+
+msgid ""
+"'%s' has no file-list registered. The software database might be broken."
+msgstr ""
+"'%s' nemá registrován žádný seznam souborů. Databáze softwaru může být "
+"poškozena."
+
+msgid "<<< Press ENTER to continue! >>>"
+msgstr ""
+
+msgid "A higher version '%s' of this application has already been installed."
+msgstr "Vyšší verze '%s' této aplikace je již nainstalována."
+
+msgid "A lower version '%s' of this application has already been installed."
+msgstr "Nižší verze '%s' této aplikace je již nainstalována."
+
+msgid "AVAILABLE"
+msgstr ""
+
+msgid "Activate verbose mode"
+msgstr "Aktivovat podrobný režim"
+
+msgid "AppStream metadata for %s did not have desktop-file as ID!"
+msgstr ""
+
+msgid "Application ID %s is invalid!"
+msgstr "ID aplikace %s je neplatné!"
+
+msgid "Binary %s was not found"
+msgstr ""
+
+msgid "Build IPK package"
+msgstr "Sestavit balíček IPK"
+
+msgid ""
+"Cannot override %s! Delete the existing file or run lipkgen with the '-o' "
+"parameter!"
+msgstr ""
+
+msgid ""
+"Component %s is only available in version %s, while a version %s %s is "
+"required. This software can not be installed, please notify the original "
+"author about it."
+msgstr ""
+
+msgid "Copying files to their destination"
+msgstr "Kopírování souborů do jejich cíle"
+
+msgid ""
+"Could not copy file %s to its destination. Do you have the necessary rights "
+"to perform this action?\n"
+"Error message was \"%s\"."
+msgstr ""
+"Nelze zkopírovat soubor %s do jeho cíle. Máte dostatečná oprávnění k "
+"provedení této činnosti?\n"
+"Chybová zpráva byla \"%s\"."
+
+msgid "Could not create file '%s'! File already exists."
+msgstr "Nelze vytvořit soubor '%s'! Již existuje."
+
+msgid "Could not create software database!"
+msgstr "Nelze vytvořit databázi softwaru!"
+
+msgid "Could not extract IPK payload! Package might be damaged. Error: %s"
+msgstr "Nelze extrahovat obsah IPK! Balíček může být poškozen. Chyba: %s"
+
+msgid "Could not extract file %s! Error: %s"
+msgstr "Nelze extrahovat soubor %s! Chyba: %s"
+
+msgid "Could not extract file! Error: %s"
+msgstr "Nelze extrahovat soubor! Chyba: %s"
+
+#. : IPk builder was unable to find IPK source scripts
+msgid "Could not find IPK source files!"
+msgstr "Nelze najít zdrojové soubory IPK!"
+
+msgid "Could not find application which matches '%s'!\n"
+msgstr "Nelze najít aplikaci odpovídající '%s'!\n"
+
+msgid "Could not find application!"
+msgstr ""
+
+msgid "Could not load application information: %s"
+msgstr "Nelze přečíst kontrolní informace IPK! Chyba: %s"
+
+msgid "Could not load desktop file values: %s"
+msgstr "Nelze načíst hodnoty souboru plochy: %s"
+
+msgid ""
+"Could not obtain a PkBackendProxy instance. Maybe the Listaller-PkPlugin is "
+"not installed or broken?"
+msgstr ""
+"Nelze získat instanci PkBackendProxy. Možná, že Listaller-PkPlugin není "
+"nainstalován nebo je poškozen?"
+
+msgid "Could not open AppStream metadata file: %s"
+msgstr "Nelze otevřít soubor plochy: %s"
+
+msgid "Could not open IPK file! Error: %s"
+msgstr "Nelze otevřít soubor IPK! Chyba: %s"
+
+msgid "Could not open desktop file: %s"
+msgstr "Nelze otevřít soubor plochy: %s"
+
+msgid ""
+"Could not open the software database, maybe it is locked at time.\n"
+"Please close all other running installations to continue!"
+msgstr ""
+"Nelze otevřít databázi softwaru, možná, že je nyní uzamčena.\n"
+"Prosím uzavřete všechny ostatní spuštěné instalace pro pokračování!"
+
+msgid ""
+"Could not override file %s! Maybe the software database is damaged or this "
+"package is broken!"
+msgstr ""
+"Nelze přepsat soubor %s! Možná, že je tento balíček nebo databáze softwaru "
+"poškozena!"
+
+msgid "Could not override file %s, this file already exists!"
+msgstr "Nelze přepsat soubor %s, tento soubor již existuje!"
+
+msgid "Could not read IPK control information! Error: %s"
+msgstr "Nelze přečíst kontrolní informace IPK! Chyba: %s"
+
+msgid ""
+"Could not read IPK payload container! Package might be damaged. Error: %s"
+msgstr ""
+"Nelze přečíst kontejner obsahu IPK! Balíček může být poškozen. Chyba: %s"
+
+msgid ""
+"Could not read dependency archive! Archive might be damaged. Message: %s"
+msgstr "Nelze přečíst archiv závislostí! Archiv může být poškozen. Zpráva: %s"
+
+msgid "Could not remove file %s!"
+msgstr "Nelze odstranit soubor %s!"
+
+msgid "Could not uninstall application %s. It is not installed."
+msgstr "Nelze odinstalovat aplikaci %s. Není nainstalována."
+
+msgid "DIRECTORY"
+msgstr "ADRESÁŘ"
+
+msgid "Database action '%s' failed: %s (%s)"
+msgstr "Činnost databáze '%s' selhala: %s"
+
+msgid "Database action failed"
+msgstr "Činnost databáze selhala"
+
+msgid "Database action successful"
+msgstr "Činnost databáze byla úspěšná"
+
+msgid "Database locked"
+msgstr "Databáze uzamčena"
+
+msgid "Database unlocked"
+msgstr "Databáze odemčena"
+
+msgid "Define an additional directory with module definitions"
+msgstr ""
+
+msgid "Dependencies which are not matching a (installed) component:"
+msgstr ""
+
+msgid "Description:"
+msgstr "Popis:"
+
+msgid "Do you accept these terms and conditions?"
+msgstr "Přijímate tyto podmínky?"
+
+msgid "Do you want to install %s now?"
+msgstr "Chcete nyní %s nainstalovat?"
+
+msgid "Do you want to remove %s (%s) now?"
+msgstr "Chcete nyní %s (%s) odstranit?"
+
+msgid "ERROR: %s"
+msgstr "CHYBA: %s"
+
+msgid "Enable verbose mode"
+msgstr "Povolit podrobný režim"
+
+msgid "Error while finding files in directory %s: %s"
+msgstr "Chyba při hledání souborů v adresáři %s: %s"
+
+msgid "Error: %s\n"
+msgstr "Chyba: %s\n"
+
+msgid "FPR"
+msgstr ""
+
+msgid "Failed to import key with fingerprint '%s'."
+msgstr ""
+
+msgid "File %s not found or permission denied!"
+msgstr "Soubor %s nenalezen, nebo přístup zamítnut!"
+
+msgid "File '%s' doesn't exist."
+msgstr "Soubor %s neexistuje."
+
+msgid "File does not exist!"
+msgstr ""
+
+msgid "File does not exist."
+msgstr "Soubor %s neexistuje."
+
+msgid "GPG-Sign the resulting package"
+msgstr "Podepsat výsledný baliček pomocí GPG"
+
+msgid "INSTALLED"
+msgstr "NAINSTALOVÁNO"
+
+msgid "IPK package could not be found!"
+msgstr "Balíček IPK nemohl být nenalezen!"
+
+msgid "IPK package output directory"
+msgstr "Výstupní adresář balíčku IPK"
+
+msgid "Import key with fingerprint FPR"
+msgstr ""
+
+msgid "Install a remote IPK package"
+msgstr ""
+
+msgid "Install an IPK package"
+msgstr "Instalovat balíček IPK"
+
+msgid "Installation completed!"
+msgstr "Instalace dokončena!"
+
+msgid "Installation failed!"
+msgstr "Instalace selhala!"
+
+msgid "Installation of %s"
+msgstr "Instalace %s"
+
+msgid "Installation of native packages failed with message: %s"
+msgstr "Instalace nativních balíčků selhala se zprávou: %s"
+
+msgid "Installing"
+msgstr "Instalace"
+
+msgid "Installing native packages: %s"
+msgstr "Instalování nativních balíčků: %s"
+
+msgid "Key '%s' imported successfully!"
+msgstr ""
+
+msgid "Key is missing"
+msgstr ""
+
+msgid "Key not found!"
+msgstr ""
+
+msgid "Library %s was not found"
+msgstr ""
+
+msgid "License:"
+msgstr "Licence:"
+
+msgid "List all installed applications"
+msgstr "Vypsat všechny nainstalované aplikace"
+
+msgid "List installed Listaller applications"
+msgstr "Vypsat všechny nainstalované aplikace Listaller"
+
+msgid ""
+"Listaller command-line tool: No command specified.\n"
+"Run '%s --help' to see a list of available commands."
+msgstr ""
+"Listaller nástroj příkazového řádku: Nezadán žádný příkaz.\n"
+"Spusťte '%s --help' pro výpis všech dostupných příkazů."
+
+msgid "Lookup key which matches PATTERN"
+msgstr ""
+
+msgid "Low security."
+msgstr "Nízká bezpečnost."
+
+msgid "Making '%s' known to your system."
+msgstr "Seznamování '%s' s vaším systémem."
+
+msgid "Malformed line in file listing: %s"
+msgstr "Poškozený řádek ve výpisu souborů: %s"
+
+msgid "Medium security."
+msgstr "Střední zabezpečení."
+
+msgid "Missing parameter for 'install' action: No IPK package specified.\n"
+msgstr "Chybějící parametr pro činnost 'install': Nezadán žádný balíček IPK.\n"
+
+msgid ""
+"Missing parameter for 'install-remote' action: No IPK package-id specified.\n"
+msgstr ""
+
+msgid ""
+"Missing parameter for 'remove' action: No application-id or name specified.\n"
+msgstr ""
+"Chybějící parametr pro činnost 'remove': Nezadáno žádné id aplikace nebo "
+"název.\n"
+
+msgid "Never trust."
+msgstr "Nikdy nevěřit."
+
+msgid "No application specified!"
+msgstr "Nezadána žádná aplikace!"
+
+msgid "No component matching '%s' (v%s) found!"
+msgstr ""
+
+msgid "No path given!"
+msgstr "Nezadána žádná cesta!"
+
+msgid ""
+"No payload data archive has been registered! This might be a bug in this "
+"application, please report the issue!"
+msgstr ""
+"Nebyla zaregistrována žádná data obsahu archivu! To může být chyba v "
+"aplikaci. prosím nahlaste tuto chybu!"
+
+msgid ""
+"No valid AppStream application data found in directory %s - Can't open "
+"control files."
+msgstr ""
+"V adresáři %s nenalezena žádná data DOAP - Nelze otevřít kontrolní soubory."
+
+msgid "One key has been revoked"
+msgstr "Jeden klíč byl zrušen"
+
+msgid "One key has expired"
+msgstr "Jeden klíč vypršel"
+
+msgid "PATTERN"
+msgstr ""
+
+msgid ""
+"Package uses custom variable: '%s' - usually this is not intentional, please "
+"contact the package author!"
+msgstr ""
+
+msgid ""
+"PackageKit backend does not support searching for files - Installer was "
+"unable to use native packages to satisfy dependencies of this application."
+msgstr ""
+
+msgid ""
+"PackageKit transaction failed!\n"
+"Exit message was: %s"
+msgstr ""
+"Přenos PackageKit selhal!\n"
+"Návratový kód byl: %s"
+
+msgid "Path to Listaller package source directory"
+msgstr "Cesta ke zdrojovému adresáři balíčku Listaller"
+
+msgid "Path to the application's source code"
+msgstr "Cesta ke zdrojovému kódu aplikace"
+
+msgid "Please remove the existing version to continue!"
+msgstr "Pro pokračování prosím odstraňte současnou verzi!"
+
+msgid "Print list of used framework/modules"
+msgstr ""
+
+msgid "Print machine-readable simple text"
+msgstr "Vytisknout jednoduchý text čitelný strojem"
+
+msgid "Pubkey is missing"
+msgstr "Pubkey chybí"
+
+msgid "RFU"
+msgstr ""
+
+msgid "Refresh repository application cache"
+msgstr ""
+
+msgid "Removal of %s completed successfully!"
+msgstr "Odstranění %s úspěšně dokončeno!"
+
+msgid "Removal of %s failed!"
+msgstr "Odstranění %s selhalo!"
+
+msgid "Removal of %s finished."
+msgstr "Odstranění %s dokončneo."
+
+msgid "Removal of %s started."
+msgstr "Odstranění %s spuštěno."
+
+msgid "Remove an application installed using Listaller"
+msgstr "Odstranit nainstalovanou aplikaci pomocí Listaller"
+
+msgid "Removing"
+msgstr "Odstraňování"
+
+msgid "Resolving dependencies of '%s'."
+msgstr "Řešení závislostí '%s'."
+
+msgid "Run '%s --help' to see a full list of available command line options.\n"
+msgstr ""
+"Spusťte '%s --help' pro získání úplného přehledu dostupných parametrů "
+"příkazové řádky.\n"
+
+msgid "Running installation of %s"
+msgstr "Spouštění instalace %s"
+
+msgid "Security is:"
+msgstr "Bezpečnost je:"
+
+msgid "Setup has not been initialized!"
+msgstr "Instalace nebyla zavedena!"
+
+msgid "Should be safe to use."
+msgstr ""
+
+msgid "Show the application's version"
+msgstr "Zobrazit verzi aplikace"
+
+msgid "Signature has expired"
+msgstr "Podpis vypršel"
+
+msgid "Signature is bad"
+msgstr "Podpis je špatný"
+
+msgid "Signature is fully valid"
+msgstr "Podpis je zcela platný"
+
+msgid "Software database closed"
+msgstr "Databáze softwaru uzavřena"
+
+msgid "Software database message (%d)"
+msgstr "Zpráva databáze softwaru (%d)"
+
+msgid "Software database opened"
+msgstr "Databáze softwaru otevřena"
+
+msgid "Software install prefix"
+msgstr "Místo instalace softwaru"
+
+msgid "Software installation package"
+msgstr "Instalační balíček softwaru"
+
+msgid ""
+"Some files of this package could not be installed, because they were not "
+"found in payload data.\n"
+"This IPK package might be damaged, please obtain a new copy!"
+msgstr ""
+"Některé soubory v tomto balíčku nemohly být nainstalovány, protože nebyly "
+"nalezeny v datech obsahu.\n"
+"Tento balíček IPK může být poškozen, prosím obstarejte si novou kopii!"
+
+msgid "Status of this signature is unknown or package is not signed."
+msgstr "Stav tohoto podpisu je neznámý nebo balíček není podepsán."
+
+msgid "Strip debug infos from files in install-target"
+msgstr "Odebrat informace pro ladění ze souborů v cíli instalce"
+
+msgid "System policy forbids installation of 3rd-party modules."
+msgstr ""
+
+msgid ""
+"The installer will only work with the %s operating system, but you use "
+"'%s'.\n"
+"Setup can not continue, sorry."
+msgstr ""
+"Instalátor funguje pouze v operačním systému %s, ale vy používáte '%s'.\n"
+"Instalace nemůže pokračovat, je nám líto."
+
+msgid "There are no files in file-list for architecture '%s'!"
+msgstr ""
+
+msgid "This application has already been installed."
+msgstr "Tato aplikace již je nainstalována."
+
+msgid ""
+"This package can't be installed on your system architecture (%s)!\n"
+"Please get a package which was built for your machine."
+msgstr ""
+"Tento balíček nelze nainstalovat na vaší architektuře systému (%s)!\n"
+"Prosím pořiďte si balíček, který byl sestaven pro váš stroj."
+
+msgid "This package could be dangerous!"
+msgstr "Tento balíček by mohl být nebezpečný!"
+
+msgid ""
+"This package is a delta-package, containing software patches. It is usually "
+"distributed via update-services, you can't install it using this tool. "
+"Please obtain a non-delta version of this application!"
+msgstr ""
+
+msgid ""
+"This package was built using a more recent version of Listaller.\n"
+"Please update your copy of Listaller to be able to install it."
+msgstr ""
+
+msgid ""
+"This package was built using spec version '%s', but we need at least '%s' or "
+"higher to proceed.\n"
+"Please ask the package author to rebuild the package using a newer Listaller "
+"version."
+msgstr ""
+
+msgid "Tried to access locked database! This shouldn't happen."
+msgstr "Pokus o přistup k uzamčené databázi! To by se nemělo stát."
+
+msgid "Tried to access locked database! This shouldn't happen. Message: %s"
+msgstr "Pokus o přístup k uzamčené databázi! To by se nemělo dít. Zpráva: %s"
+
+msgid "Tried to perform action on invalid IPK package."
+msgstr "Pokus o provedení činnosti v neplatném balíčku IPK."
+
+msgid ""
+"Tried to perform action on private software database, but the database is "
+"not opened! (this should never happen!)"
+msgstr ""
+"Pokus o provedení činnosti na soukromé databázi softwaru, ale databáze není "
+"otevřena! (to by se nikdy nemělo stát!)"
+
+msgid ""
+"Tried to perform action on shared software database, but the database is not "
+"opened! (maybe a permission problem?)"
+msgstr ""
+"Pokus o provedení činnosti na sdílené databázi softwaru, ale databáze není "
+"otevřena! (možná problém s oprávněním?)"
+
+msgid "Tried to write on readonly database! (This should never happen)"
+msgstr ""
+"Pokus o zápis do databáze pouze pro čtení! (To by se nikdy nemělo stát)"
+
+msgid "Trust is full"
+msgstr "Důvěra je plná"
+
+msgid "Trust is marginal"
+msgstr "Důvěra je okrajová"
+
+msgid "Trust is ultimate."
+msgstr "Důvěra je konečná."
+
+msgid "Trust level is unknown"
+msgstr ""
+
+msgid ""
+"Trying to remove local application, but AppManager is in superuser mode!\n"
+"Setting AppManager to local mode now."
+msgstr ""
+"Pokus o odstranění místní aplikace, ale správce aplikací je v režimu\n"
+"superuživatele! Nastavování správce do místního režimu."
+
+msgid ""
+"Trying to remove shared application, but AppManager is not in superuser "
+"mode!\n"
+"Setting AppManager to superuse mode now."
+msgstr ""
+"Pokus o odstranění sdílené aplikace, ale správce aplikací není v režimu "
+"superuživatele!\n"
+"Nastavování správce do režimu superuživatele."
+
+msgid "Unable to add a dependency to database: %s"
+msgstr "Nelze přidat závislost do databáze: %s"
+
+msgid "Unable to add application file list to database: %s"
+msgstr "Nelze přidat seznam souborů aplikace do databáze: %s"
+
+msgid "Unable to add application to database: %s"
+msgstr "Nelze přidat aplikaci do databáze: %s"
+
+msgid "Unable to build package: %s"
+msgstr "Nelze sestavit balíček: %s"
+
+msgid "Unable to count applications: %s"
+msgstr "Nelze spočítat aplikace: %s"
+
+msgid "Unable to create database config table: %s"
+msgstr "Nelze vytvořit tabulku nastavení databáze: %s"
+
+msgid "Unable to create database tables: %s"
+msgstr "Nelze vytvořit tabulky databáze: %s"
+
+msgid "Unable to create destination directory."
+msgstr "Nelze vytvořit cílový adresář."
+
+msgid "Unable to create file '%s'!"
+msgstr "Nelze vytvořit soubor '%s'!"
+
+msgid "Unable to download feed %s. Message: %s"
+msgstr "Nelze stáhnout kanál %s. Zpráva: %s"
+
+msgid ""
+"Unable to download package for '%s'\n"
+"Error: %s"
+msgstr ""
+
+msgid "Unable to extract IPK data!"
+msgstr "Nelze extrahovat data IPK!"
+
+msgid "Unable to extract IPK metadata!"
+msgstr "Nelze extrahovat metadata IPK!"
+
+msgid "Unable to extract data file %s. Message: %s"
+msgstr "Nelze extrahovat datový soubor %s. Zpráva: %s"
+
+msgid ""
+"Unable to extract data file %s. This IPK package might be damaged, please "
+"obtain a new copy."
+msgstr ""
+"Nelze extrahovat datový soubor %s. Tento balíček IPK mže být poškozen, "
+"prosím pořiďte si novou kopii."
+
+msgid "Unable to extract file '%s' for dependency '%s'!"
+msgstr "Nelze extrahovat soubor %s pro závislost '%s'!"
+
+msgid "Unable to extract file. %s"
+msgstr "Nelze extrahovat soubor. %s"
+
+msgid "Unable to extract signature! Maybe package is not signed."
+msgstr "Nelze extrahovat podpis! Balíček možná není podepsán."
+
+msgid "Unable to fetch application by id: %s"
+msgstr "Nelze získat aplikaci podle id: %s"
+
+msgid "Unable to fetch application by name: %s"
+msgstr "Nelze získat aplikaci podle názvu: %s"
+
+msgid "Unable to fetch application file list: %s"
+msgstr "Nelze získat soubor seznamu aplikaci: %s"
+
+msgid ""
+"Unable to fetch repository contents for: '%s'\n"
+"Error: %s"
+msgstr ""
+
+msgid ""
+"Unable to find a matching implementation of '%s' for your system/"
+"architecture."
+msgstr ""
+"Nelze získat shodující se implementaci '%s' pro váš systém/architekturu."
+
+msgid "Unable to find valid candidate to satisfy dependency '%s'!"
+msgstr "Nelze najít platného kandidáta k uspokojení závislosti '%s'!"
+
+msgid "Unable to get meta-information list: %s"
+msgstr "Nelze získat seznam metainformací: %s"
+
+msgid ""
+"Unable to install module '%s' which is required for this installation.\n"
+"Message: %s"
+msgstr ""
+
+msgid ""
+"Unable to install module '%s' which is required for this installation.\n"
+"Unable to find a method to satisfy the dependency."
+msgstr ""
+
+msgid ""
+"Unable to load package information and initialize installation. The IPK "
+"package might be damaged."
+msgstr ""
+
+msgid ""
+"Unable to load valid application from AppData. The XML file might be "
+"malformed or lacking data."
+msgstr ""
+
+msgid "Unable to open database for writing: %s"
+msgstr "Nelze otevřít databázi pro zápis: %s"
+
+msgid "Unable to open database read-only: %s"
+msgstr ""
+
+msgid "Unable to open software database for reading & writing!"
+msgstr "Nelze otevřít databáze softwaru pro čtení a zápis!"
+
+msgid "Unable to open software database for reading only!"
+msgstr "Nelze otevřít databáze softwaru pouze pro čtení!"
+
+msgid "Unable to read package signature! Message: %s"
+msgstr "Nelze přečíst podpis balíčku! Zpráva: %s"
+
+msgid "Unable to remove application from database: %s"
+msgstr "Nelze odstranit aplikaci z databáze: %s"
+
+msgid "Unable to save modified desktop-file! %s"
+msgstr ""
+
+msgid "Unable to search application database: %s"
+msgstr "Nelze hledat v databázi aplikace: %s"
+
+msgid "Unable to write application file list! Message: %s"
+msgstr "Nelze zapsat soubor seznam aplikace! Zpráva: %s"
+
+msgid "Unable to write meta information! Message: %s"
+msgstr "Nelze zapsat meta informace! Zpráva: %s"
+
+msgid "Unable to write signature file! Message: %s"
+msgstr "Nelze zapsat soubor podpisu! Zpráva: %s"
+
+msgid "Unknown"
+msgstr ""
+
+msgid ""
+"Update of application '%s' failed. Maybe the update information is out of "
+"date. Please refresh it and try again."
+msgstr ""
+
+msgid ""
+"Update of application '%s' failed. Something bad happened. Please install "
+"the application again!"
+msgstr ""
+
+msgid ""
+"Update of application '%s' failed. Unable to remove the old application."
+msgstr ""
+
+msgid "Updating package cache"
+msgstr ""
+
+msgid "Use recursive mode"
+msgstr "Použít rekurzivní režim"
+
+msgid ""
+"Validation of file %s failed! This IPK file might have been modified after "
+"creation.\n"
+"Please obtain a new copy and try again."
+msgstr ""
+"Ověření souboru %s selhalo! Tento soubor IPK mohl být po vytvoření změněn.\n"
+"Prosím obstarejte si novou kopii a zkuste to znovu."
+
+msgid "Validity is undefined"
+msgstr "Platnost není určena"
+
+msgid "We do not know a metadata-file for application '%s'!"
+msgstr "Pro aplikaci '%s' není známý soubor plochy!"
+
+msgid "XML file is not a valid ZI feed!"
+msgstr ""
+
+msgid ""
+"You are not allowed to install this package, because it's security level is "
+"'%s' and you need at least a package with security-level '%s'.\n"
+"Please obtain this application from a safe source with good signature and "
+"try again!"
+msgstr ""
+
+msgid ""
+"You are not allowed to update the application '%s'! The security level of "
+"the update is '%s' and you need at least security-level '%s'.\n"
+"Please make sure you trusted this signature and that your system is not "
+"compromised!"
+msgstr ""
+
+msgid ""
+"You need to agree with the license to install & use the application. Exiting "
+"setup now."
+msgstr ""
+
+msgid "You need to be root to change Listaller's key database!"
+msgstr ""
+
+msgid "Your package has errors and was therefore not generated."
+msgstr ""
+
+msgid "ZI XML file '%s' is damaged."
+msgstr "Soubor ZI XML '%s' je poškozený."
+
+msgid "[None]"
+msgstr ""
+
+msgid "bad"
+msgstr ""
+
+msgid "dangerous"
+msgstr ""
+
+msgid "error: %s"
+msgstr "chyba: %s"
+
+msgid "high"
+msgstr ""
+
+msgid "low"
+msgstr ""
+
+msgid "medium"
+msgstr ""
+
+msgid "n/a"
+msgstr ""
+
+msgid "no"
+msgstr ""
+
+msgid "okay"
+msgstr ""
+
+msgid "personal"
+msgstr "osobní"
+
+msgid "shared"
+msgstr "sdílené"
+
+msgid ""
+"status ....: %s\n"
+"summary ...:%s\n"
+"fingerprint: %s\n"
+"created ...: %s\n"
+"expires ...: %s\n"
+"validity ..: %s\n"
+"val.reason : %s\n"
+"pubkey algo: %s\n"
+"digest algo: %s\n"
+"pka address: %s\n"
+"pka trust .: %s\n"
+"other flags:%s%s\n"
+"notations .: %s"
+msgstr ""
+
+msgid "yes"
+msgstr ""

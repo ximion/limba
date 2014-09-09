@@ -1,0 +1,16 @@
+*~
+*.bak
+*.or
+*.o
+*.so
+*.user
+*.pc
+*.cache
+*.anjuta
+*.kdev4
+build
+.anjuta_sym_db.db
+.kdev_include_paths
+moc_*
+Makefile
+.directory

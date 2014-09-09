@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-app-package">
+    <sub-class-of type="application/x-tar"/>
+    <_comment>Software installation package</_comment>
+    <generic-icon name="package-x-ipk"/>
+    <alias type="application/x-ipk"/>
+    <glob pattern="*.ipk"/>
+    <glob pattern="*.lpk"/>
+  </mime-type>
+</mime-info>
