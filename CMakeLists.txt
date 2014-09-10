@@ -75,9 +75,11 @@ add_custom_target(distclean
 )
 
 #
-# l10n
+# Generic dependencies
 #
+# These packages are definitively needed and are used everywhere
 find_package (Gettext REQUIRED)
+find_package(GLIB 2.40 REQUIRED COMPONENTS "gio" "gobject")
 
 #
 # Default paths

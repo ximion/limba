@@ -1,21 +1,16 @@
 # CMakeLists for LI-BuildTools
 
-find_package(GLIB2 REQUIRED)
-pkg_check_modules(GIO2 REQUIRED gio-2.0)
-
 set(BUILDLIST_SOURCES buildlist.vala
 )
 
-link_libraries(${GLIB2_LIBRARIES}
-	       ${GEE_LIBRARIES}
+link_libraries(${GLIB_LIBRARIES}
 	       ${GIO2_LIBRARIES}
 )
 
 include_directories(${CMAKE_BINARY_DIR}
 		    ${CMAKE_CURRENT_SOURCE_DIR}
-		    ${GLIB2_INCLUDE_DIR}
+		    ${GLIB_INCLUDE_DIRS}
 		    ${GEE_INCLUDE_DIR}
-		    ${GIO2_INCLUDE_DIR}
 )
 
 add_definitions(${GEE_CFLAGS} ${GEE_CFLAGS_OTHER})
