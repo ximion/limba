@@ -22,29 +22,30 @@
 #error "Only <listaller.h> can be included directly."
 #endif
 
-#ifndef __LI_CONFIG_FILE_H
-#define __LI_CONFIG_FILE_H
+#ifndef __LI_CONFIG_DATA_H
+#define __LI_CONFIG_DATA_H
 
 #include <glib-object.h>
+#include <gio/gio.h>
 
-#define LI_TYPE_CONFIG_FILE			(li_config_file_get_type())
-#define LI_CONFIG_FILE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_CONFIG_FILE, LiConfigFile))
-#define LI_CONFIG_FILE_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_CONFIG_FILE, LiConfigFileClass))
-#define LI_IS_CONFIG_FILE(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_CONFIG_FILE))
-#define LI_IS_CONFIG_FILE_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_CONFIG_FILE))
-#define LI_CONFIG_FILE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_CONFIG_FILE, LiConfigFileClass))
+#define LI_TYPE_CONFIG_DATA			(li_config_data_get_type())
+#define LI_CONFIG_DATA(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_CONFIG_DATA, LiConfigData))
+#define LI_CONFIG_DATA_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_CONFIG_DATA, LiConfigDataClass))
+#define LI_IS_CONFIG_DATA(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_CONFIG_DATA))
+#define LI_IS_CONFIG_DATA_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_CONFIG_DATA))
+#define LI_CONFIG_DATA_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_CONFIG_DATA, LiConfigDataClass))
 
 G_BEGIN_DECLS
 
-typedef struct _LiConfigFile		LiConfigFile;
-typedef struct _LiConfigFileClass	LiConfigFileClass;
+typedef struct _LiConfigData		LiConfigData;
+typedef struct _LiConfigDataClass	LiConfigDataClass;
 
-struct _LiConfigFile
+struct _LiConfigData
 {
 	GObject			parent;
 };
 
-struct _LiConfigFileClass
+struct _LiConfigDataClass
 {
 	GObjectClass		parent_class;
 	/*< private >*/
@@ -58,9 +59,12 @@ struct _LiConfigFileClass
 	void (*_as_reserved8)	(void);
 };
 
-GType			li_config_file_get_type	(void);
-LiConfigFile	*li_config_file_new		(void);
+GType			li_config_data_get_type	(void);
+LiConfigData	*li_config_data_new		(void);
+
+void			li_config_data_load_file (LiConfigData *lcd,
+										  GFile *file);
 
 G_END_DECLS
 
-#endif /* __LI_CONFIG_FILE_H */
+#endif /* __LI_CONFIG_DATA_H */
