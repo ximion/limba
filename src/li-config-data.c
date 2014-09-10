@@ -41,8 +41,8 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiConfigData, li_config_data, G_TYPE_OBJECT)
 static void
 li_config_data_finalize (GObject *object)
 {
-	LiConfigData *lcd = LI_CONFIG_DATA (object);
-	LiConfigDataPrivate *priv = GET_PRIVATE (lcd);
+	LiConfigData *cdata = LI_CONFIG_DATA (object);
+	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
 	g_ptr_array_unref (priv->content);
 
@@ -53,9 +53,9 @@ li_config_data_finalize (GObject *object)
  * li_config_data_init:
  **/
 static void
-li_config_data_init (LiConfigData *lcd)
+li_config_data_init (LiConfigData *cdata)
 {
-	LiConfigDataPrivate *priv = GET_PRIVATE (lcd);
+	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
 	priv->content = g_ptr_array_new_with_free_func (g_free);
 }
@@ -64,19 +64,20 @@ li_config_data_init (LiConfigData *lcd)
  * li_config_data_load_file:
  */
 void
-li_config_data_load_file (LiConfigData *lcd, GFile *file)
+li_config_data_load_file (LiConfigData *cdata, GFile *file)
 {
 	gchar* line = NULL;
 	GFileInputStream* ir;
 	GDataInputStream* dis;
-	LiConfigDataPrivate *priv = GET_PRIVATE (lcd);
+	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
 	ir = g_file_read (file, NULL, NULL);
 	dis = g_data_input_stream_new ((GInputStream*) ir);
 	g_object_unref (ir);
 
 	/* clear the array */
-	g_ptr_array_remove_range (priv->content, 0, priv->content->len);
+	if (priv->content->len > 0)
+		g_ptr_array_remove_range (priv->content, 0, priv->content->len);
 
 	while (TRUE) {
 		line = g_data_input_stream_read_line (dis, NULL, NULL, NULL);
@@ -111,7 +112,7 @@ li_config_data_class_init (LiConfigDataClass *klass)
 LiConfigData *
 li_config_data_new (void)
 {
-	LiConfigData *lcd;
-	lcd = g_object_new (LI_TYPE_CONFIG_DATA, NULL);
-	return LI_CONFIG_DATA (lcd);
+	LiConfigData *cdata;
+	cdata = g_object_new (LI_TYPE_CONFIG_DATA, NULL);
+	return LI_CONFIG_DATA (cdata);
 }

@@ -1,0 +1,7 @@
+Version: 2.0
+
+AutoFindDeps: true
+FilesRoot: %INSTDIR%
+InstallModes: Shared, Private, Test
+License: GPLv3+
+Requires: dummy-module-dep-listallertest (>= 1.2)

@@ -1,0 +1,3 @@
+This is just a sample package for testing autopackage.
+
+Edit the "etc" entry in /var/packages/@foobar/foobar/1.0/prefixes.

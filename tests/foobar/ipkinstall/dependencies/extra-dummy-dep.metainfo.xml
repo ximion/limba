@@ -1,0 +1,10 @@
+<!-- A simple dummy dependency -->
+<!-- FOR TESTING ONLY -->
+
+<component>
+	<name>Dummy Module Dependency (on Listaller itself)</name>
+	<id>dummy-module-dep-listallertest</id>
+	<provides>
+		<library>liblistaller-glib.so</library>
+	</provides>
+</component>

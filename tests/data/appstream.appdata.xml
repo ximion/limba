@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>foobar.desktop</id>
+  <metadata_license>CC0</metadata_license>
+  <pkgname>foobar-1</pkgname>
+  <name>FooBar</name>
+  <summary>A simple dummy application</summary>
+  <description>
+    <p>Foobar is an application which does absolutely nothing.
+      Really, it's completely useless!</p>
+    <p>Things you can expect from FooBar:</p>
+    <ul>
+      <li>Does _nothing_</li>
+      <li>No shiny graphic effects</li>
+      <li>Bad user experience</li>
+    </ul>
+    <p>The only purpose of Foobar is to be the guinea-pig app for
+      Listaller testing scripts.
+    </p>
+  </description>
+  <url type="homepage">https://listaller.tenstral.net</url>
+  <releases>
+    <release version="1.0" timestamp="20140416" />
+  </releases>
+  <author>Myself</author>
+</component>

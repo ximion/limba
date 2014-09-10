@@ -1,0 +1,29 @@
+This is NAME-OF-INFO-FILE, produced by makeinfo version 4.1 from
+bar.info.
+
+INFO-DIR-SECTION Programming & development tools
+START-INFO-DIR-ENTRY
+* Foobar: (%PREFIX%/foo).       A simple test program
+END-INFO-DIR-ENTRY
+
+
+   This file documents ...
+
+   Copyright YEAR COPYRIGHT-OWNER
+
+   Permission is granted to ...
+
+
+File: NAME-OF-INFO-FILE,  Node: Top,  Up: (dir)
+
+TITLE
+*****
+
+   Some random info file for foobar.
+
+
+
+Tag Table:
+Node: Top172
+
+End Tag Table

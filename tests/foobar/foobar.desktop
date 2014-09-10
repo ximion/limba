@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Listaller FooBar
+Comment=Listaller FooBar Test Program
+Exec=%INST%/foo
+Encoding=UTF-8
+Terminal=true
+Type=Application
+Categories=Application;Core;
+Icon=help-browser
+X-Publisher=Listaller Project
+X-AllowRemove=true
+X-AppVersion=1.0

@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+# -*- mode: makefile; coding: utf-8 -*-
+
+compile:
+	appcompile
+
+strip:
+	-appcompile --strip
+
+binary: compile strip
