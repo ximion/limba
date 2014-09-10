@@ -1,6 +1,6 @@
 # CMakeLists for the Listaller library
 
-find_package(GLIB2 2.36 REQUIRED)
+find_package(GLIB2 2.40 REQUIRED)
 pkg_check_modules(GIO2 REQUIRED gio-2.0)
 find_package(GI REQUIRED)
 find_library(M_LIB m)
