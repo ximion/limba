@@ -9,16 +9,19 @@ set(INTROSPECTION_SCANNER_ARGS "--identifier-prefix=Li" "--symbol-prefix=li" "--
 set(INTROSPECTION_COMPILER_ARGS "--includedir=${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(LIBLISTALLER_SRC
+		li-utils.c
 		li-config-data.c
 		li-ipk-package.c
 )
 
 set(LIBLISTALLER_PUBLIC_HEADERS
 		listaller.h
+		li-utils.h
 		li-ipk-package.h
 )
 
 set(LIBLISTALLR_PRIVATE_HEADERS
+		li-utils-private.h
 		li-config-data.h
 )
 
