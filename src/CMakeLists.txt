@@ -34,7 +34,7 @@ add_definitions("-DI_KNOW_THE_PACKAGEKIT_GLIB2_API_IS_SUBJECT_TO_CHANGE"
 set(LILIB_VERSION "${LISTALLER_VERSION_MAJOR}.${LISTALLER_VERSION_MINOR}.${LISTALLER_VERSION_PATCH}")
 
 # ensure that the GI compiler has been found (apparently, the automatic tests fail on some machines)
-if (INTROSPECTION_COMPILER STREQUAL "")
+if (NOT INTROSPECTION_FOUND)
   message(FATAL_ERROR "GObject-Introspection was not found! Please install it to continue.")
 endif()
 
