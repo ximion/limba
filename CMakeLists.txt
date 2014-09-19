@@ -50,14 +50,20 @@ option(LIBUILD "Build and install the LIBuild facilities" OFF)
 option(VISUAL_LDD "Build the Visual-LDD utility" OFF)
 option(L10N "Enable localization" ON)
 
+#
+# Default paths
+#
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX
-    "/usr" CACHE PATH "Listaller default install prefix" FORCE)
+    "/usr" CACHE PATH "Default install prefix" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
-add_definitions(-DCMAKE_INSTALL_PREFIX="\"${CMAKE_INSTALL_PREFIX}\"")
-add_definitions(-DCMAKE_INSTALL_LIBDIR="\"${CMAKE_INSTALL_LIBDIR}\"")
-
+# Special case for /etc and /var when prefix is /usr
+if(${CMAKE_INSTALL_PREFIX} STREQUAL "/usr")
+  set(CMAKE_INSTALL_SYSCONFDIR "/etc" CACHE PATH "read-only single-machine data (etc)")
+  set(CMAKE_INSTALL_LOCALSTATEDIR "/var" CACHE PATH "modifiable single-machine data (var)")
+endif(${CMAKE_INSTALL_PREFIX} STREQUAL "/usr")
+include(GNUInstallDirs)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/data/cmake/)
 
 message(STATUS "Compiling Listaller version ${LISTALLER_VERSION}")
@@ -70,10 +76,6 @@ add_custom_target(uninstall
   "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
 )
 
-add_custom_target(distclean
-  "make clean"
-)
-
 #
 # Generic dependencies
 #
@@ -82,27 +84,11 @@ find_package (Gettext REQUIRED)
 find_package(GLIB 2.40 REQUIRED COMPONENTS "gio" "gobject")
 
 #
-# Default paths
-#
-set(CMAKE_INSTALL_LIBDIR "lib/${CMAKE_LIBRARY_ARCHITECTURE}" CACHE PATH "Installation directory for libraries")
-set(BIN_INSTALL_DIR bin CACHE PATH "Installation directory for executables")
-set(INC_INSTALL_DIR include CACHE PATH "Installation directory for headers")
-set(DATA_INSTALL_DIR share/listaller CACHE PATH "Installation directory for data files")
-set(SYSCONF_INSTALL_DIR /etc CACHE PATH "Installation directory for system configuration files")
-
-#
 # Configure files
 #
-set (PREFIXDIR "${CMAKE_INSTALL_PREFIX}")
-set (DATADIR "${CMAKE_INSTALL_PREFIX}/share")
-set (PKGDATADIR "${DATA_INSTALL_DIR}")
-set (LIBDIR "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
-set (PKGLIBDIR "${LIBDIR}/listaller")
 set (GETTEXT_PACKAGE "listaller")
-set (LOCALE_DIR "${DATADIR}/locale")
 set (VERSION "${LISTALLER_VERSION}")
 set (BUILDDIR "${CMAKE_BINARY_DIR}")
-
 configure_file(config.h.in ${CMAKE_BINARY_DIR}/config.h)
 
 #
