@@ -64,6 +64,12 @@ LiConfigData	*li_config_data_new		(void);
 
 void			li_config_data_load_file (LiConfigData *lcd,
 										  GFile *file);
+gboolean		li_config_data_open_block (LiConfigData *cdata,
+											const gchar *field,
+											const gchar *value,
+											gboolean reset_index);
+gchar			*li_config_data_get_value (LiConfigData *cdata,
+											const gchar *field);
 
 G_END_DECLS
 

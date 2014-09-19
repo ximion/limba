@@ -1,0 +1,15 @@
+Version: 2.0
+
+Section: test1
+FilesRoot: %INSTDIR%
+Sample: valueX
+Requires: dummy-module-dep-listallertest (>= 1.2)
+
+Section: test2
+Example: yes
+Sample: valueY
+Multiline: A
+ B
+   C
+ D
+Next: None
