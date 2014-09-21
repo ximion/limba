@@ -330,3 +330,27 @@ li_compute_checksum_for_file (const gchar *fname)
 
 	return g_strdup (sum);
 }
+
+/**
+ * li_save_string_to_file:
+ */
+gboolean
+li_save_string_to_file (const gchar *fname, const gchar *data, gboolean override, GError **error)
+{
+	_cleanup_object_unref_ GFile *file;
+	_cleanup_object_unref_ GFileOutputStream *file_stream = NULL;
+	_cleanup_object_unref_ GDataOutputStream *data_stream = NULL;
+
+	file = g_file_new_for_path (fname);
+	if ((!override) && (g_file_query_exists (file, NULL)))
+		return FALSE;
+
+	file_stream = g_file_create (file, G_FILE_CREATE_REPLACE_DESTINATION, NULL, error);
+	if (error != NULL)
+		return FALSE;
+	data_stream = g_data_output_stream_new (G_OUTPUT_STREAM (file_stream));
+	g_data_output_stream_put_string (data_stream, data, NULL, error);
+	if (error != NULL)
+		return FALSE;
+	return TRUE;
+}

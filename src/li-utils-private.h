@@ -28,11 +28,19 @@ G_BEGIN_DECLS
 gboolean		li_utils_touch_dir (const gchar* dirname);
 gboolean		li_utils_delete_dir_recursive (const gchar* dirname);
 gchar			*li_string_strip (const gchar* str);
-GPtrArray		*li_utils_find_files_matching (const gchar* dir, const gchar* pattern, gboolean recursive);
-GPtrArray		*li_utils_find_files (const gchar* dir, gboolean recursive);
+GPtrArray		*li_utils_find_files_matching (const gchar* dir,
+												const gchar* pattern,
+												gboolean recursive);
+GPtrArray		*li_utils_find_files (const gchar* dir,
+									gboolean recursive);
 gboolean		li_utils_is_root (void);
-gchar			*li_str_replace (const gchar* str, const gchar* old_str, const gchar* new_str);
+gchar			*li_str_replace (const gchar* str,
+								const gchar* old_str,
+								const gchar* new_str);
 gchar			*li_compute_checksum_for_file (const gchar *fname);
+gboolean		li_save_string_to_file (const gchar *fname,
+										const gchar *data, gboolean override,
+										GError **error);
 
 G_END_DECLS
 

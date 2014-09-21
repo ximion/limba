@@ -76,6 +76,8 @@ GList			*li_file_list_get_files (LiFileList *flist);
 gboolean		li_file_list_add_file (LiFileList *flist,
 										const gchar *fname,
 										const gchar *dest);
+gboolean		li_file_list_save_to_file (LiFileList *flist,
+											const gchar *fname);
 
 G_END_DECLS
 

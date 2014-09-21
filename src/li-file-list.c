@@ -210,6 +210,75 @@ li_file_list_get_files (LiFileList *flist)
 }
 
 /**
+ * li_file_list_save_to_file:
+ */
+gboolean
+li_file_list_save_to_file (LiFileList *flist, const gchar *fname)
+{
+	GHashTable *dir_table;
+	GPtrArray *fe_array;
+	GHashTableIter iter;
+	gpointer key, value;
+	GList *l;
+	GList *list;
+	gchar *str;
+	GString *res;
+	gboolean ret;
+	LiFileListPrivate *priv = GET_PRIVATE (flist);
+
+	dir_table = g_hash_table_new_full (g_str_hash,
+						g_str_equal,
+						g_free,
+						(GDestroyNotify) g_ptr_array_unref);
+
+	list = li_file_list_get_files (flist);
+	for (l = list; l != NULL; l = l->next) {
+		LiFileEntry *fe = LI_FILE_ENTRY (l->data);
+
+		fe_array = g_hash_table_lookup (dir_table, li_file_entry_get_destination (fe));
+
+		if (fe_array == NULL) {
+			fe_array = g_ptr_array_new_with_free_func (g_object_unref);
+			g_ptr_array_add (fe_array, g_object_ref (fe));
+			g_hash_table_insert (dir_table,
+							g_strdup (li_file_entry_get_destination (fe)),
+							fe_array);
+		} else {
+			g_ptr_array_add (fe_array, g_object_ref (fe));
+		}
+	}
+	g_list_free (list);
+
+	/* create file contents */
+	res = g_string_new ("");
+	g_string_append_printf (res, "# %s\n\n", priv->comment);
+
+	g_hash_table_iter_init (&iter, dir_table);
+	while (g_hash_table_iter_next (&iter, &key, &value)) {
+		guint i;
+		fe_array = (GPtrArray *) value;
+
+		g_string_append_printf (res, ":: %s\n", (gchar *) key);
+		for (i = 0; i < fe_array->len; i++) {
+			LiFileEntry *fe = g_ptr_array_index (fe_array, i);
+
+			if (priv->has_hashes) {
+				g_string_append_printf (res, "%s %s\n", li_file_entry_get_fname (fe), li_file_entry_get_hash (fe));
+			} else {
+				g_string_append_printf (res, "%s\n", li_file_entry_get_fname (fe));
+			}
+		}
+	}
+	g_hash_table_unref (dir_table);
+
+	str = g_string_free (res, FALSE);
+	ret = li_save_string_to_file (fname, str, FALSE, NULL);
+	g_free (str);
+
+	return ret;
+}
+
+/**
  * li_file_list_add_file:
  */
 gboolean

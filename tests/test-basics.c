@@ -126,9 +126,22 @@ test_filelist ()
 
 	fname = g_build_filename (datadir, "doap.doap", NULL);
 	li_file_list_add_file (flist, fname, "%INST%/test");
+	g_free (fname);
+
+	fname = g_build_filename (datadir, "xfile1.bin", NULL);
+	li_file_list_add_file (flist, fname, "%INST%");
+	g_free (fname);
+
+	fname = g_build_filename (datadir, "test-files.list", NULL);
+	li_file_list_add_file (flist, fname, "%INST%/test");
+	g_free (fname);
+
+	fname = g_build_filename (datadir, "appstream.appdata.xml", NULL);
+	li_file_list_add_file (flist, fname, "%INST%");
+	g_free (fname);
 
 	files = li_file_list_get_files (flist);
-	g_assert (g_list_length (files) == 1);
+	g_assert (g_list_length (files) == 4);
 	for (l = files; l != NULL; l = l->next) {
 		_cleanup_free_ gchar *str;
 		LiFileEntry *fe = (LiFileEntry*) l->data;
@@ -144,6 +157,11 @@ test_filelist ()
 		g_debug ("%s", str);
 	}
 	g_list_free (files);
+
+	ret = li_file_list_save_to_file (flist, "/tmp/test.list");
+	//! g_assert (ret);
+
+	g_object_unref (flist);
 }
 
 int
