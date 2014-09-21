@@ -11,6 +11,7 @@ set(INTROSPECTION_COMPILER_ARGS "--includedir=${CMAKE_CURRENT_SOURCE_DIR}")
 set(LIBLISTALLER_SRC
 		li-utils.c
 		li-config-data.c
+		li-file-entry.c
 		li-ipk-package.c
 )
 
@@ -23,6 +24,7 @@ set(LIBLISTALLER_PUBLIC_HEADERS
 set(LIBLISTALLR_PRIVATE_HEADERS
 		li-utils-private.h
 		li-config-data.h
+		li-file-entry.h
 )
 
 add_definitions("-DI_KNOW_THE_PACKAGEKIT_GLIB2_API_IS_SUBJECT_TO_CHANGE"
