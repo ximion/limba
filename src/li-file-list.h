@@ -26,6 +26,7 @@
 #define __LI_FILE_LIST_H
 
 #include <glib-object.h>
+#include "li-file-entry.h"
 
 #define LI_TYPE_FILE_LIST			(li_file_list_get_type())
 #define LI_FILE_LIST(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_FILE_LIST, LiFileList))
@@ -68,6 +69,9 @@ const gchar		*li_file_list_get_root_dir (LiFileList *flist);
 void			li_file_list_set_root_dir (LiFileList *flist, const gchar *root_dir);
 
 gboolean		li_file_list_has_hashes (LiFileList *flist);
+
+gboolean		li_file_list_open_file (LiFileList *flist, const gchar *fname);
+GList			*li_file_list_get_files (LiFileList *flist);
 
 G_END_DECLS
 

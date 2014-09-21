@@ -26,6 +26,7 @@
 extern "C" {
 #endif
 
+#include <li-utils.h>
 #include <li-ipk-package.h>
 
 #ifdef __cplusplus

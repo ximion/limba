@@ -153,6 +153,8 @@ gchar*
 li_file_entry_get_full_path (LiFileEntry *fe)
 {
 	LiFileEntryPrivate *priv = GET_PRIVATE (fe);
+	if ((priv->destination == NULL) || (priv->fname == NULL))
+		return g_strdup ("");
 	return g_build_filename (priv->destination, priv->fname, NULL);
 }
 
@@ -237,12 +239,14 @@ li_file_entry_new (void)
  * Hash function for #LiFileEntry objects
  */
 guint
-li_file_entry_hash_func (LiFileEntry *fe)
+li_file_entry_hash_func (gconstpointer ptr)
 {
 	guint res = 0U;
+	LiFileEntry *fe;
 	gchar* str;
 	g_return_val_if_fail (fe != NULL, 0U);
 
+	fe = LI_FILE_ENTRY (ptr);
 	str = li_file_entry_get_full_path (fe);
 	res = g_str_hash (str);
 	g_free (str);

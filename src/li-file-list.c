@@ -25,7 +25,12 @@
 
 #include "li-file-list.h"
 
+#include <config.h>
 #include <glib.h>
+#include <gio/gio.h>
+#include <glib/gi18n-lib.h>
+
+#include "li-utils.h"
 #include "li-file-entry.h"
 
 typedef struct _LiFileListPrivate	LiFileListPrivate;
@@ -94,6 +99,117 @@ li_file_list_has_hashes (LiFileList *flist)
 }
 
 /**
+ * li_file_list_append_data_from_file:
+ */
+static gboolean
+li_file_list_append_data_from_file (LiFileList *flist, const gchar *fname)
+{
+	GFile *file;
+	_cleanup_free_ gchar* line = NULL;
+	_cleanup_free_ gchar *current_dir = NULL;
+	GFileInputStream* ir;
+	GDataInputStream* dis;
+	LiFileEntry *fe;
+	gboolean ret = FALSE;
+	LiFileListPrivate *priv = GET_PRIVATE (flist);
+
+	file = g_file_new_for_path (fname);
+	if (!g_file_query_exists (file, NULL)) {
+		g_warning (_("File '%s' doesn't exist."), fname);
+		goto out;
+	}
+
+	ir = g_file_read (file, NULL, NULL);
+	dis = g_data_input_stream_new ((GInputStream*) ir);
+	g_object_unref (ir);
+
+	while (TRUE) {
+		line = g_data_input_stream_read_line (dis, NULL, NULL, NULL);
+		if (line == NULL) {
+			break;
+		}
+
+		/* ignore empty lines */
+		if (li_str_empty (line))
+			continue;
+
+		/* ignore comments */
+		if (g_str_has_prefix (line, "#"))
+			continue;
+
+		/* new directory? */
+		if (g_str_has_prefix (line, ":: ")) {
+			if (current_dir != NULL)
+				g_free (current_dir);
+			current_dir = g_strdup (&line[3]);
+			continue;
+		}
+
+		/* do we have a directory? */
+		if (current_dir == NULL)
+			continue;
+
+		fe = li_file_entry_new ();
+		if (priv->has_hashes) {
+			gchar **strv;
+			gint strv_len;
+
+			strv = g_strsplit (line, " ", 2);
+			strv_len = g_strv_length (strv);
+			if (strv_len < 2) {
+				g_warning ("File list '%s' is broken: Could not find hash for '%s'", fname, line);
+				g_strfreev (strv);
+				goto out;
+			}
+			li_file_entry_set_hash (fe, strv[0]);
+			li_file_entry_set_fname (fe, strv[1]);
+			g_strfreev (strv);
+		} else {
+			li_file_entry_set_fname (fe, line);
+		}
+		li_file_entry_set_destination (fe, current_dir);
+
+		/* add the new file entry */
+		g_hash_table_insert (priv->list,
+							li_file_entry_get_full_path (fe),
+							fe);
+	}
+
+	ret = TRUE;
+
+out:
+	g_object_unref (file);
+	g_object_unref (dis);
+
+	return ret;
+}
+
+/**
+ * li_file_list_open_file:
+ */
+gboolean
+li_file_list_open_file (LiFileList *flist, const gchar *fname)
+{
+	LiFileListPrivate *priv = GET_PRIVATE (flist);
+
+	g_hash_table_remove_all (priv->list);
+	return li_file_list_append_data_from_file (flist, fname);
+}
+
+/**
+ * li_file_list_get_files:
+ *
+ * Returns: (transfer container): A list of #LiFileEntry objects
+ */
+GList*
+li_file_list_get_files (LiFileList *flist)
+{
+	LiFileListPrivate *priv = GET_PRIVATE (flist);
+
+	return g_hash_table_get_values (priv->list);
+}
+
+/**
  * li_file_list_finalize:
  **/
 static void
@@ -103,6 +219,8 @@ li_file_list_finalize (GObject *object)
 	LiFileListPrivate *priv = GET_PRIVATE (flist);
 
 	g_hash_table_unref (priv->list);
+	g_free (priv->comment);
+	g_free (priv->root_dir);
 
 	G_OBJECT_CLASS (li_file_list_parent_class)->finalize (object);
 }
@@ -115,8 +233,8 @@ li_file_list_init (LiFileList *flist)
 {
 	LiFileListPrivate *priv = GET_PRIVATE (flist);
 
-	priv->list = g_hash_table_new_full ((GHashFunc) li_file_entry_hash_func,
-						(GEqualFunc) li_file_entry_equal_func,
+	priv->list = g_hash_table_new_full (g_str_hash,
+						g_str_equal,
 						g_free,
 						(GDestroyNotify) g_object_unref);
 	priv->comment = g_strdup ("IPK file list");

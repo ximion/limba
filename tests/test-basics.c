@@ -22,6 +22,7 @@
 #include "listaller.h"
 
 #include "li-config-data.h"
+#include "li-file-list.h"
 
 static gchar *datadir = NULL;
 
@@ -67,6 +68,54 @@ test_configdata ()
 	g_object_unref (cdata);
 }
 
+void
+test_filelist ()
+{
+	LiFileList *flist;
+	gchar *fname;
+	GList *files;
+	GList *l;
+	const gchar *cstr;
+	gboolean ret;
+
+	/* create new file list with hashes */
+	flist = li_file_list_new (TRUE);
+
+	/* open */
+	fname = g_build_filename (datadir, "test-files.list", NULL);
+	ret = li_file_list_open_file (flist, fname);
+	g_free (fname);
+	g_assert (ret);
+
+	files = li_file_list_get_files (flist);
+	g_assert (g_list_length (files) == 8);
+	for (l = files; l != NULL; l = l->next) {
+		_cleanup_free_ gchar *str;
+		LiFileEntry *fe = (LiFileEntry*) l->data;
+
+		if (g_strcmp0 (li_file_entry_get_fname (fe), "libvorbis.so.0") == 0) {
+			cstr = li_file_entry_get_destination (fe);
+			g_assert (g_strcmp0 (cstr, "%INST%/libs64") == 0);
+			cstr = li_file_entry_get_hash (fe);
+			g_assert (g_strcmp0 (cstr, "9abdb152eed431cf205917c778e80d398ef9406201d0467fbf70a68c21e2a6ff") == 0);
+		} else if (g_strcmp0 (li_file_entry_get_fname (fe), "name with spaces.txt") == 0) {
+			cstr = li_file_entry_get_destination (fe);
+			g_assert (g_strcmp0 (cstr, "%INST%/libs64") == 0);
+			cstr = li_file_entry_get_hash (fe);
+			g_assert (g_strcmp0 (cstr, "86fbf88bf19ed4c44f6f6aef1c17300395d46cab175eecf28d9f306d9272e32a") == 0);
+		} else if (g_strcmp0 (li_file_entry_get_fname (fe), "StartApp") == 0) {
+			cstr = li_file_entry_get_destination (fe);
+			g_assert (g_strcmp0 (cstr, "%INST%") == 0);
+			cstr = li_file_entry_get_hash (fe);
+			g_assert (g_strcmp0 (cstr, "0ce781271b68e2c97b77e750ba899ff7d6cb64e9fdbd3d635c2696edf51af8e7") == 0);
+		}
+
+		str = li_file_entry_to_string (fe);
+		g_debug ("%s", str);
+	}
+	g_list_free (files);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -89,6 +138,7 @@ main (int argc, char **argv)
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);
 
 	g_test_add_func ("/Listaller/ConfigData", test_configdata);
+	g_test_add_func ("/Listaller/FileList", test_filelist);
 
 	ret = g_test_run ();
 	g_free (datadir);
