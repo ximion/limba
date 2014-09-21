@@ -95,6 +95,10 @@ void			li_file_entry_set_hash (LiFileEntry *fe,
 gchar			*li_file_entry_get_full_path (LiFileEntry *fe);
 gboolean		li_file_entry_is_installed (LiFileEntry *fe);
 
+guint			li_file_entry_hash_func (LiFileEntry *fe);
+gboolean		li_file_entry_equal_func (LiFileEntry *a,
+										  LiFileEntry *b);
+
 G_END_DECLS
 
 #endif /* __LI_FILE_ENTRY_H */

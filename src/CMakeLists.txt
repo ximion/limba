@@ -12,6 +12,7 @@ set(LIBLISTALLER_SRC
 		li-utils.c
 		li-config-data.c
 		li-file-entry.c
+		li-file-list.c
 		li-ipk-package.c
 )
 
@@ -25,6 +26,7 @@ set(LIBLISTALLR_PRIVATE_HEADERS
 		li-utils-private.h
 		li-config-data.h
 		li-file-entry.h
+		li-file-list.h
 )
 
 add_definitions("-DI_KNOW_THE_PACKAGEKIT_GLIB2_API_IS_SUBJECT_TO_CHANGE"

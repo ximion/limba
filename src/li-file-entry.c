@@ -41,31 +41,6 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiFileEntry, li_file_entry, G_TYPE_OBJECT)
 #define GET_PRIVATE(o) (li_file_entry_get_instance_private (o))
 
 /**
- * li_file_entry_finalize:
- **/
-static void
-li_file_entry_finalize (GObject *object)
-{
-	LiFileEntry *fe = LI_FILE_ENTRY (object);
-	LiFileEntryPrivate *priv = GET_PRIVATE (fe);
-
-	g_free (priv->fname);
-	g_free (priv->fname_installed);
-	g_free (priv->destination);
-	g_free (priv->hash);
-
-	G_OBJECT_CLASS (li_file_entry_parent_class)->finalize (object);
-}
-
-/**
- * li_file_entry_init:
- **/
-static void
-li_file_entry_init (LiFileEntry *fe)
-{
-}
-
-/**
  * li_file_entry_get_kind:
  */
 LiFileEntryKind
@@ -206,6 +181,31 @@ li_file_entry_to_string (LiFileEntry *fe)
 }
 
 /**
+ * li_file_entry_finalize:
+ **/
+static void
+li_file_entry_finalize (GObject *object)
+{
+	LiFileEntry *fe = LI_FILE_ENTRY (object);
+	LiFileEntryPrivate *priv = GET_PRIVATE (fe);
+
+	g_free (priv->fname);
+	g_free (priv->fname_installed);
+	g_free (priv->destination);
+	g_free (priv->hash);
+
+	G_OBJECT_CLASS (li_file_entry_parent_class)->finalize (object);
+}
+
+/**
+ * li_file_entry_init:
+ **/
+static void
+li_file_entry_init (LiFileEntry *fe)
+{
+}
+
+/**
  * li_file_entry_class_init:
  **/
 static void
@@ -229,4 +229,45 @@ li_file_entry_new (void)
 	LiFileEntry *fe;
 	fe = g_object_new (LI_TYPE_FILE_ENTRY, NULL);
 	return LI_FILE_ENTRY (fe);
+}
+
+/**
+ * li_file_entry_hash_func:
+ *
+ * Hash function for #LiFileEntry objects
+ */
+guint
+li_file_entry_hash_func (LiFileEntry *fe)
+{
+	guint res = 0U;
+	gchar* str;
+	g_return_val_if_fail (fe != NULL, 0U);
+
+	str = li_file_entry_get_full_path (fe);
+	res = g_str_hash (str);
+	g_free (str);
+	return res;
+}
+
+/**
+ * li_file_entry_equal_func:
+ *
+ * Equality-checking function for #LiFileEntry objects
+ */
+gboolean
+li_file_entry_equal_func (LiFileEntry *a, LiFileEntry *b)
+{
+	const gchar *fname_a;
+	const gchar *fname_b;
+	const gchar *dest_a;
+	const gchar *dest_b;
+
+	fname_a = li_file_entry_get_fname (a);
+	fname_b = li_file_entry_get_fname (b);
+	dest_a = li_file_entry_get_destination (a);
+	dest_b = li_file_entry_get_destination (b);
+
+	if ((g_strcmp0 (fname_a, fname_b) == 0) && (g_strcmp0 (dest_a, dest_b) == 0))
+		return TRUE;
+	return FALSE;
 }
