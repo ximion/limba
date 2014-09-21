@@ -73,6 +73,10 @@ gboolean		li_file_list_has_hashes (LiFileList *flist);
 gboolean		li_file_list_open_file (LiFileList *flist, const gchar *fname);
 GList			*li_file_list_get_files (LiFileList *flist);
 
+gboolean		li_file_list_add_file (LiFileList *flist,
+										const gchar *fname,
+										const gchar *dest);
+
 G_END_DECLS
 
 #endif /* __LI_FILE_LIST_H */

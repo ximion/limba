@@ -31,6 +31,7 @@
 #include <glib/gi18n-lib.h>
 
 #include "li-utils.h"
+#include "li-utils-private.h"
 #include "li-file-entry.h"
 
 typedef struct _LiFileListPrivate	LiFileListPrivate;
@@ -205,8 +206,35 @@ GList*
 li_file_list_get_files (LiFileList *flist)
 {
 	LiFileListPrivate *priv = GET_PRIVATE (flist);
-
 	return g_hash_table_get_values (priv->list);
+}
+
+/**
+ * li_file_list_add_file:
+ */
+gboolean
+li_file_list_add_file (LiFileList *flist, const gchar *fname, const gchar *dest)
+{
+	LiFileEntry *fe;
+	_cleanup_free_ gchar *checksum;
+	_cleanup_free_ gchar *basename;
+	LiFileListPrivate *priv = GET_PRIVATE (flist);
+
+	checksum = li_compute_checksum_for_file (fname);
+	if (checksum == NULL)
+		return FALSE;
+
+	basename = g_path_get_basename (fname);
+
+	fe = li_file_entry_new ();
+	li_file_entry_set_fname (fe, basename);
+	li_file_entry_set_destination (fe, dest);
+	li_file_entry_set_hash (fe, checksum);
+	g_hash_table_insert (priv->list,
+							li_file_entry_get_full_path (fe),
+							fe);
+
+	return TRUE;
 }
 
 /**

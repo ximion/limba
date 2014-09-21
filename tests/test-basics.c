@@ -78,6 +78,8 @@ test_filelist ()
 	const gchar *cstr;
 	gboolean ret;
 
+	g_debug ("File list read test");
+
 	/* create new file list with hashes */
 	flist = li_file_list_new (TRUE);
 
@@ -108,6 +110,34 @@ test_filelist ()
 			g_assert (g_strcmp0 (cstr, "%INST%") == 0);
 			cstr = li_file_entry_get_hash (fe);
 			g_assert (g_strcmp0 (cstr, "0ce781271b68e2c97b77e750ba899ff7d6cb64e9fdbd3d635c2696edf51af8e7") == 0);
+		}
+
+		str = li_file_entry_to_string (fe);
+		g_debug ("%s", str);
+	}
+	g_list_free (files);
+	g_object_unref (flist);
+
+	/* ********************************** */
+	g_debug ("File list write test");
+
+	/* create new file list with hashes */
+	flist = li_file_list_new (TRUE);
+
+	fname = g_build_filename (datadir, "doap.doap", NULL);
+	li_file_list_add_file (flist, fname, "%INST%/test");
+
+	files = li_file_list_get_files (flist);
+	g_assert (g_list_length (files) == 1);
+	for (l = files; l != NULL; l = l->next) {
+		_cleanup_free_ gchar *str;
+		LiFileEntry *fe = (LiFileEntry*) l->data;
+
+		if (g_strcmp0 (li_file_entry_get_fname (fe), "doap.doap") == 0) {
+			cstr = li_file_entry_get_destination (fe);
+			g_assert (g_strcmp0 (cstr, "%INST%/test") == 0);
+			cstr = li_file_entry_get_hash (fe);
+			g_assert (g_strcmp0 (cstr, "d44259c22a3878a62b2963984e4c749a959dd42fe16f83f60f1841ac4d2fa617") == 0);
 		}
 
 		str = li_file_entry_to_string (fe);

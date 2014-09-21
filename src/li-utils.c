@@ -296,3 +296,37 @@ li_str_replace (const gchar *str, const gchar *old, const gchar *new)
 
 	return ret;
 }
+
+/**
+ * li_compute_checksum_for_file:
+ *
+ * Create a SHA256 checksum for the given file
+ */
+gchar*
+li_compute_checksum_for_file (const gchar *fname)
+{
+	const GChecksumType cstype = G_CHECKSUM_SHA256;
+	_cleanup_checksum_free_ GChecksum *cs;
+	guchar data[4096] = {0};
+	size_t size = 0;
+	FILE *input;
+	const gchar *sum;
+
+	cs = g_checksum_new (cstype);
+	input = fopen (fname, "rb");
+
+	/* return NULL if we were unable to open the file */
+	if (input == NULL)
+		return NULL;
+
+	/* build the checksum */
+	do {
+		size = read (fileno (input), (void*) data, (gsize) 4096);
+		g_checksum_update (cs, data, size);
+	} while (size == 4096);
+	close (fileno (input));
+
+	sum = g_checksum_get_string (cs);
+
+	return g_strdup (sum);
+}
