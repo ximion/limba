@@ -1,6 +1,9 @@
 # CMakeLists for the Listaller library
 
 find_package(GI REQUIRED)
+pkg_check_modules(APPSTREAM REQUIRED appstream>=0.7.0)
+find_package(LibArchive REQUIRED)
+find_package(GPGMe REQUIRED)
 find_library(M_LIB m)
 
 include(GObjectIntrospectionMacros)
@@ -13,12 +16,16 @@ set(LIBLISTALLER_SRC
 		li-config-data.c
 		li-file-entry.c
 		li-file-list.c
+		li-entity.c
+		li-ipk-control.c
 		li-ipk-package.c
 )
 
 set(LIBLISTALLER_PUBLIC_HEADERS
 		listaller.h
 		li-utils.h
+		li-entity.h
+		li-ipk-control.h
 		li-ipk-package.h
 )
 
@@ -47,7 +54,10 @@ set_target_properties(listaller PROPERTIES VERSION ${LILIB_VERSION} SOVERSION ${
 
 include_directories(${CMAKE_BINARY_DIR}
 			${CMAKE_CURRENT_SOURCE_DIR}
-		    ${GLIB_INCLUDE_DIRS}
+			${GLIB_INCLUDE_DIRS}
+			${APPSTREAM_INCLUDE_DIRS}
+			${LibArchive_INCLUDE_DIR}
+			${GPGME_VANILLA_INCLUDE_DIR}
 )
 
 target_link_libraries(listaller
@@ -55,6 +65,9 @@ target_link_libraries(listaller
 		${GLIB_GIO_LIBRARIES}
 		${GLIB_GOBJECT_LIBRARIES}
 		${M_LIB}
+		${APPSTREAM_LIBRARIES}
+		${LibArchive_LIBRARIES}
+		${GPGME_VANILLA_LIBRARIES}
 )
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/listaller.pc.in ${CMAKE_CURRENT_BINARY_DIR}/listaller.pc @ONLY)
@@ -70,7 +83,7 @@ endmacro(_list_prefix)
 
 set(introspection_files ${LIBLISTALLER_SRC} ${LIBLISTALLER_PUBLIC_HEADERS})
 set(Listaller_1_0_gir "listaller")
-set(Listaller_1_0_gir_INCLUDES GObject-2.0 Gio-2.0)
+set(Listaller_1_0_gir_INCLUDES GObject-2.0 Gio-2.0 Appstream-0.7)
 set(Listaller_1_0_gir_CFLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/" "-DLI_COMPILATION")
 set(Listaller_1_0_gir_LIBS listaller)
 

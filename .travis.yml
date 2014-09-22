@@ -8,7 +8,7 @@ compiler:
   - clang
 before_script:
   - env | sort
-  - sudo add-apt-repository "deb mirror://mirrors.ubuntu.com/mirrors.txt trusty main restricted universe multiverse" -y
+  - sudo add-apt-repository "deb mirror://mirrors.ubuntu.com/mirrors.txt utopic main restricted universe multiverse" -y
   - sudo apt-get update -qq
   - sudo apt-get install -qq cmake intltool libglib2.0-dev libarchive-dev libgpgme11-dev gtk-doc-tools libgirepository1.0-dev
 script:

@@ -48,7 +48,7 @@ typedef enum {
 	LI_FILE_ENTRY_KIND_UNKNOWN,
 	LI_FILE_ENTRY_KIND_FILE,
 	LI_FILE_ENTRY_KIND_DIRECTORY,
-	AS_URL_KIND_LAST
+	LI_FILE_ENTRY_KIND_LAST
 } LiFileEntryKind;
 
 typedef struct _LiFileEntry		LiFileEntry;

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*-
  *
- * Copyright (C) 2018-2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2008-2014 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -27,6 +27,8 @@ extern "C" {
 #endif
 
 #include <li-utils.h>
+#include <li-entity.h>
+#include <li-ipk-control.h>
 #include <li-ipk-package.h>
 
 #ifdef __cplusplus
