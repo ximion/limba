@@ -1,7 +1,6 @@
 # CMakeLists for the Listaller library
 
 find_package(GI REQUIRED)
-pkg_check_modules(APPSTREAM REQUIRED appstream>=0.7.0)
 find_package(LibArchive REQUIRED)
 find_package(GPGMe REQUIRED)
 find_library(M_LIB m)

@@ -80,8 +80,9 @@ add_custom_target(uninstall
 # Generic dependencies
 #
 # These packages are definitively needed and are used everywhere
-find_package (Gettext REQUIRED)
+find_package(Gettext REQUIRED)
 find_package(GLIB 2.40 REQUIRED COMPONENTS "gio" "gobject")
+pkg_check_modules(APPSTREAM REQUIRED appstream>=0.7.2)
 
 #
 # Configure files

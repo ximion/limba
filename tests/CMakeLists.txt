@@ -1,7 +1,5 @@
 # CMakeLists for UAI Unit Tests
 
-pkg_check_modules(APPSTREAM REQUIRED appstream)
-
 link_libraries(${GLIB_LIBRARIES}
 		${GLIB_GIO_LIBRARIES}
 		${GLIB_GOBJECT_LIBRARIES}
