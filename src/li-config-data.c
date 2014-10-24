@@ -207,7 +207,7 @@ li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 	for (i = 0; i < priv->content->len; i++) {
 		gchar *line;
 		gchar *field_data;
-		if (i < priv->current_block_id)
+		if (((int) i) < priv->current_block_id)
 			continue;
 		line = (gchar*) g_ptr_array_index (priv->content, i);
 

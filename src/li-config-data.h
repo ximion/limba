@@ -62,7 +62,7 @@ struct _LiConfigDataClass
 GType			li_config_data_get_type	(void);
 LiConfigData	*li_config_data_new		(void);
 
-void			li_config_data_load_file (LiConfigData *lcd,
+void			li_config_data_load_file (LiConfigData *cdata,
 										  GFile *file);
 gboolean		li_config_data_open_block (LiConfigData *cdata,
 											const gchar *field,

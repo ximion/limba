@@ -9,9 +9,9 @@
 
 /* Paths */
 #define LOCALEDIR "@CMAKE_INSTALL_FULL_LOCALEDIR@"
-#define PKGLIBDIR "@CMAKE_INSTALL_FULL_LIBEXECDIR@/listaller"
+#define PKGLIBDIR "@CMAKE_INSTALL_FULL_LIBEXECDIR@/limba"
 #define PREFIXDIR "@CMAKE_INSTALL_PREFIX@"
-#define DATADIR "@CMAKE_INSTALL_FULL_DATADIR@/listaller"
+#define DATADIR "@CMAKE_INSTALL_FULL_DATADIR@/limba"
 #define LIBDIR "@CMAKE_INSTALL_FULL_LIBDIR@"
 #define BUILDDIR "@CMAKE_BINARY_DIR@"
 
@@ -29,13 +29,13 @@
 
 
 /* Name of package */
-#define PACKAGE_NAME "listaller-core"
+#define PACKAGE_NAME "limba"
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "http://bugs.launchpad.net/listaller"
+#define PACKAGE_BUGREPORT "?"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL "http://listaller.tenstral.net"
+#define PACKAGE_URL "http://limba.tenstral.net"
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "@VERSION@"

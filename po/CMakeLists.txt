@@ -9,7 +9,7 @@ if (LC_INTLTOOL_UPDATE STREQUAL "")
 	message (FATAL_ERROR "Intltool was not found! Please install it to continue!")
 endif (LC_INTLTOOL_UPDATE STREQUAL "")
 
-set(LPKNAME "listaller")
+set(LPKNAME "limba")
 
 add_custom_target (l10n-update
 	${LC_INTLTOOL_UPDATE} -p -g "${LPKNAME}"

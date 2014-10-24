@@ -1,10 +1,7 @@
-# CMakeLists for the Listaller Project
-project(listaller)
+# CMakeLists for the Limba Project
+project(limba)
 
 cmake_minimum_required(VERSION 2.8.6 FATAL_ERROR)
-
-#UNSET THIS VARIABLE AT RELEASE TIME
-set(VERSION_SUFFIX "-dev")
 
 set(CMAKE_BUILD_TYPE "Debug")
 
@@ -27,13 +24,12 @@ if(VERSION_SUFFIX MATCHES "-dev")
 	endif()
 endif()
 
-set(LISTALLER_VERSION_MAJOR  "0")
-set(LISTALLER_VERSION_MINOR  "6")
-set(LISTALLER_VERSION_PATCH  "0")
-set(LISTALLER_VERSION_SUFFIX "${VERSION_SUFFIX}")
-set(LISTALLER_VERSION "${LISTALLER_VERSION_MAJOR}.${LISTALLER_VERSION_MINOR}.${LISTALLER_VERSION_PATCH}")
+set(LIMBA_VERSION_MAJOR  "0")
+set(LIMBA_VERSION_MINOR  "1")
+set(LIMBA_VERSION_PATCH  "0")
+set(LIMBA_VERSION "${LIMBA_VERSION_MAJOR}.${LIMBA_VERSION_MINOR}.${LIMBA_VERSION_PATCH}")
 
-set(LISTALLER_API_LEVEL "0")
+set(LIMBA_API_LEVEL "0")
 
 # Forbid in-tree building
 if(${CMAKE_SOURCE_DIR} MATCHES ${CMAKE_BINARY_DIR})
@@ -66,7 +62,7 @@ endif(${CMAKE_INSTALL_PREFIX} STREQUAL "/usr")
 include(GNUInstallDirs)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/data/cmake/)
 
-message(STATUS "Compiling Listaller version ${LISTALLER_VERSION}")
+message(STATUS "Compiling Listaller version ${LIMBA_VERSION}")
 
 configure_file("${CMAKE_SOURCE_DIR}/data/cmake/cmake_uninstall.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
@@ -77,18 +73,22 @@ add_custom_target(uninstall
 )
 
 #
-# Generic dependencies
+# External dependencies
 #
-# These packages are definitively needed and are used everywhere
 find_package(Gettext REQUIRED)
-find_package(GLIB 2.40 REQUIRED COMPONENTS "gio" "gobject")
+find_package(GLIB 2.40 REQUIRED COMPONENTS "gio" "gobject" "gio-unix")
 pkg_check_modules(APPSTREAM REQUIRED appstream>=0.7.2)
+
+find_package(GI REQUIRED)
+find_package(LibArchive REQUIRED)
+find_package(GPGMe REQUIRED)
+find_library(M_LIB m)
 
 #
 # Configure files
 #
-set (GETTEXT_PACKAGE "listaller")
-set (VERSION "${LISTALLER_VERSION}")
+set (GETTEXT_PACKAGE "limba")
+set (VERSION "${LIMBA_VERSION}")
 set (BUILDDIR "${CMAKE_BINARY_DIR}")
 configure_file(config.h.in ${CMAKE_BINARY_DIR}/config.h)
 
@@ -113,8 +113,8 @@ add_definitions("-D_FILE_OFFSET_BITS=64")
 find_package(PkgConfig REQUIRED)
 
 add_subdirectory(src)
+add_subdirectory(tools)
 add_subdirectory(data)
-add_subdirectory(contrib)
 add_subdirectory(tests)
 if (GETTEXT_FOUND AND L10N)
   add_subdirectory(po)
