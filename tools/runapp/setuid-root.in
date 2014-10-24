@@ -1,0 +1,6 @@
+#!/bin/sh
+
+RUNAPP_PROGRAM="@CMAKE_CURRENT_BINARY_DIR@/runapp"
+
+sudo chown root.root $RUNAPP_PROGRAM
+sudo chmod +s $RUNAPP_PROGRAM
