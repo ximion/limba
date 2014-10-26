@@ -87,6 +87,8 @@ LiIPKPackage	*li_ipk_package_new		(void);
 gboolean		li_ipk_package_open_file (LiIPKPackage *ipk,
 										const gchar *filename,
 										GError **error);
+gboolean		li_ipk_package_install (LiIPKPackage *ipk,
+										GError **error);
 
 G_END_DECLS
 

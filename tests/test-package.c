@@ -30,12 +30,18 @@ test_package_read ()
 {
 	LiIPKPackage *ipk;
 	gchar *fname;
+	GError *error = NULL;
 
 	fname = g_build_filename (datadir, "test.ipk", NULL);
 	ipk = li_ipk_package_new ();
 
-	li_ipk_package_open_file (ipk, fname, NULL);
+	li_ipk_package_open_file (ipk, fname, &error);
+	g_assert_no_error (error);
 
+	li_ipk_package_install (ipk, &error);
+	g_assert_no_error (error);
+
+	g_object_unref (ipk);
 }
 
 int

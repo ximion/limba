@@ -102,6 +102,7 @@ gchar			*li_compute_checksum_for_file (const gchar *fname);
 gboolean		li_save_string_to_file (const gchar *fname,
 										const gchar *data, gboolean override,
 										GError **error);
+gchar			*li_utils_get_tmp_dir (const gchar *prefix);
 
 G_END_DECLS
 

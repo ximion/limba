@@ -44,6 +44,7 @@ typedef struct _LiIPKPackagePrivate	LiIPKPackagePrivate;
 struct _LiIPKPackagePrivate
 {
 	gchar *filename;
+	gchar *tmp_dir;
 	LiIPKControl *ctl;
 };
 
@@ -60,8 +61,11 @@ li_ipk_package_finalize (GObject *object)
 	LiIPKPackage *ipk = LI_IPK_PACKAGE (object);
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
-	g_free (priv->filename);
 	g_object_unref (priv->ctl);
+	if (priv->tmp_dir != NULL)
+		g_free (priv->tmp_dir);
+	if (priv->filename != NULL)
+		g_free (priv->filename);
 
 	G_OBJECT_CLASS (li_ipk_package_parent_class)->finalize (object);
 }
@@ -72,9 +76,11 @@ li_ipk_package_finalize (GObject *object)
 static void
 li_ipk_package_init (LiIPKPackage *ipk)
 {
+	gchar *template;
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	priv->ctl = li_ipk_control_new ();
+	priv->tmp_dir = NULL;
 }
 
 /**
@@ -217,6 +223,7 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 {
 	struct archive *ar;
 	struct archive_entry* e;
+	gchar *tmp_str;
 	GError *tmp_error = NULL;
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
@@ -236,6 +243,11 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 
 	g_free (priv->filename);
 	priv->filename = g_strdup (filename);
+	/* create our own tmpdir */
+	g_free (priv->tmp_dir);
+	tmp_str = g_path_get_basename (priv->filename);
+	priv->tmp_dir = li_utils_get_tmp_dir (tmp_str);
+	g_free (tmp_str);
 
 	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
 		const gchar *pathname;
@@ -261,6 +273,45 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 	archive_read_free (ar);
 
 	return TRUE;
+}
+
+/**
+ * li_ipk_package_install:
+ */
+gboolean
+li_ipk_package_install (LiIPKPackage *ipk, GError **error)
+{
+	struct archive *ar;
+	struct archive_entry* e;
+	GError *tmp_error = NULL;
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+
+	ar = li_ipk_package_open_base_ipk (ipk, priv->filename, &tmp_error);
+	if ((ar == NULL) || (tmp_error != NULL)) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
+		const gchar *pathname;
+
+		pathname = archive_entry_pathname (e);
+		if (g_strcmp0 (pathname, "main-data.tar.xz") == 0) {
+			li_ipk_package_extract_entry_to (ipk, ar, e, priv->tmp_dir, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				archive_read_free (ar);
+				return FALSE;
+			}
+		} else {
+			archive_read_data_skip (ar);
+		}
+	}
+
+	// TODO
+
+	archive_read_close (ar);
+	archive_read_free (ar);
 }
 
 /**

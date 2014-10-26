@@ -29,6 +29,7 @@
 #include <glib/gi18n-lib.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <errno.h>
 
 /**
  * SECTION:li-utils
@@ -354,4 +355,33 @@ li_save_string_to_file (const gchar *fname, const gchar *data, gboolean override
 	if (error != NULL)
 		return FALSE;
 	return TRUE;
+}
+
+/**
+ * li_utils_get_tmp_dir:
+ */
+gchar*
+li_utils_get_tmp_dir (const gchar *prefix)
+{
+	gchar *template;
+	gchar *path;
+	gchar *tmp_dir = NULL;
+	const gchar *tmp_root_path = "/var/tmp/limba";
+
+	li_utils_touch_dir (tmp_root_path);
+
+	template = g_strdup_printf ("%s-XXXXXX", prefix);
+	/* create temporary directory */
+	path = g_build_filename (tmp_root_path, template, NULL);
+	g_free (template);
+
+	tmp_dir = mkdtemp (path);
+	if (tmp_dir == NULL) {
+		g_critical ("Unable to create temporary directory! Error: %s", g_strerror (errno));
+		tmp_dir = path;
+	}
+	tmp_dir = g_strdup (tmp_dir);
+	g_free (path);
+
+	return tmp_dir;
 }
