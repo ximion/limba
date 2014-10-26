@@ -18,8 +18,8 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if !defined (__LISTALLER_H) && !defined (LI_COMPILATION)
-#error "Only <listaller.h> can be included directly."
+#if !defined (__LIMBA_H) && !defined (LI_COMPILATION)
+#error "Only <limba.h> can be included directly."
 #endif
 
 #ifndef __LI_IPK_CONTROL_H

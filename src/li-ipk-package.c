@@ -26,10 +26,14 @@
 #include "config.h"
 #include "li-ipk-package.h"
 
+#include <glib/gi18n-lib.h>
+#include <archive_entry.h>
+#include <archive.h>
+
 typedef struct _LiIPKPackagePrivate	LiIPKPackagePrivate;
 struct _LiIPKPackagePrivate
 {
-
+	gchar *filename;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiIPKPackage, li_ipk_package, G_TYPE_OBJECT)
@@ -55,6 +59,70 @@ static void
 li_ipk_package_init (LiIPKPackage *ipk)
 {
 
+}
+
+static struct archive*
+li_ipk_package_open_base_ipk (LiIPKPackage *ipk, const gchar *filename, GError **error)
+{
+	struct archive *ar;
+	int res;
+
+	/* create new archive object for reading */
+	ar = archive_read_new ();
+	/* disable compression, as the main tarball is not compressed */
+	archive_read_support_filter_none (ar);
+	/* ipk bundles are GNU Tarballs */
+	archive_read_support_format_tar (ar);
+
+	/* open the file, exit on error */
+	res = archive_read_open_filename (ar, filename, (gsize) 4096);
+	if (res != ARCHIVE_OK) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_ARCHIVE,
+				_("Could not open IPK file! Error: %s"), archive_error_string (ar));
+		archive_read_free (ar);
+		return NULL;
+	}
+
+	return ar;
+}
+
+/**
+ * li_ipk_package_open_file:
+ */
+gboolean
+li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **error)
+{
+	struct archive *ar;
+
+	if (!g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_NOT_FOUND,
+				_("Package file '%s' was not found."), filename);
+		return FALSE;
+	}
+
+	ar = li_ipk_package_open_base_ipk (ipk, filename, error);
+	if (ar == NULL)
+		return FALSE;
+
+	return TRUE;
+}
+
+/**
+ * li_package_error_quark:
+ *
+ * Return value: An error quark.
+ **/
+GQuark
+li_package_error_quark (void)
+{
+	static GQuark quark = 0;
+	if (!quark)
+		quark = g_quark_from_static_string ("LiPackageError");
+	return quark;
 }
 
 /**

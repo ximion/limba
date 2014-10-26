@@ -18,8 +18,8 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if !defined (__LISTALLER_H) && !defined (LI_COMPILATION)
-#error "Only <listaller.h> can be included directly."
+#if !defined (__LIMBA_H) && !defined (LI_COMPILATION)
+#error "Only <limba.h> can be included directly."
 #endif
 
 #ifndef __LI_IPK_PACKAGE_H
@@ -35,6 +35,25 @@
 #define LI_IPK_PACKAGE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_IPK_PACKAGE, LiIPKPackageClass))
 
 G_BEGIN_DECLS
+
+/**
+ * LiPackageError:
+ * @LI_PACKAGE_ERROR_FAILED:			Generic failure
+ * @LI_PACKAGE_ERROR_NOT_FOUND:			A required file or entity was not found
+ * @LI_PACKAGE_ERROR_ARCHIVE:			Error in the archive structure
+ *
+ * The error type.
+ **/
+typedef enum {
+	LI_PACKAGE_ERROR_FAILED,
+	LI_PACKAGE_ERROR_NOT_FOUND,
+	LI_PACKAGE_ERROR_ARCHIVE,
+	/*< private >*/
+	LI_PACKAGE_ERROR_LAST
+} LiPackageError;
+
+#define	LI_PACKAGE_ERROR li_package_error_quark ()
+GQuark li_package_error_quark (void);
 
 typedef struct _LiIPKPackage		LiIPKPackage;
 typedef struct _LiIPKPackageClass	LiIPKPackageClass;
@@ -60,6 +79,10 @@ struct _LiIPKPackageClass
 
 GType			li_ipk_package_get_type	(void);
 LiIPKPackage	*li_ipk_package_new		(void);
+
+gboolean		li_ipk_package_open_file (LiIPKPackage *ipk,
+										const gchar *filename,
+										GError **error);
 
 G_END_DECLS
 
