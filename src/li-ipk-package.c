@@ -26,14 +26,25 @@
 #include "config.h"
 #include "li-ipk-package.h"
 
+#include "limba.h"
+#include "li-utils-private.h"
+
 #include <glib/gi18n-lib.h>
 #include <archive_entry.h>
 #include <archive.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+
+#define DEFAULT_BLOCK_SIZE 65536
 
 typedef struct _LiIPKPackagePrivate	LiIPKPackagePrivate;
 struct _LiIPKPackagePrivate
 {
 	gchar *filename;
+	LiIPKControl *ctl;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiIPKPackage, li_ipk_package, G_TYPE_OBJECT)
@@ -46,8 +57,11 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiIPKPackage, li_ipk_package, G_TYPE_OBJECT)
 static void
 li_ipk_package_finalize (GObject *object)
 {
-	/* LiIPKPackage *ipk = LI_IPK_PACKAGE (object);
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk); */
+	LiIPKPackage *ipk = LI_IPK_PACKAGE (object);
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+
+	g_free (priv->filename);
+	g_object_unref (priv->ctl);
 
 	G_OBJECT_CLASS (li_ipk_package_parent_class)->finalize (object);
 }
@@ -58,7 +72,114 @@ li_ipk_package_finalize (GObject *object)
 static void
 li_ipk_package_init (LiIPKPackage *ipk)
 {
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
+	priv->ctl = li_ipk_control_new ();
+}
+
+/**
+ * li_ipk_package_read_entry:
+ */
+static gchar*
+li_ipk_package_read_entry (LiIPKPackage *ipk, struct archive* ar, GError **error)
+{
+	const void *buff = NULL;
+	gsize size = 0UL;
+	off_t offset = {0};
+	off_t output_offset = {0};
+	gsize bytes_to_write = 0UL;
+	GString *res;
+
+	res = g_string_new ("");
+	while (archive_read_data_block (ar, &buff, &size, &offset) == ARCHIVE_OK) {
+		g_string_append_len (res, buff, size);
+	}
+
+	return g_string_free (res, FALSE);;
+}
+
+/**
+ * li_ipk_package_extract_entry_to:
+ */
+static gboolean
+li_ipk_package_extract_entry_to (LiIPKPackage *ipk, struct archive* ar, struct archive_entry* e, const gchar* dest, GError **error)
+{
+	_cleanup_free_ gchar *fname;
+	const gchar *cstr;
+	gchar *str;
+	gboolean ret;
+	gint fd;
+	const void *buff = NULL;
+	gsize size = 0UL;
+	off_t offset = {0};
+	off_t output_offset = {0};
+	gsize bytes_to_write = 0UL;
+	gssize bytes_written = 0L;
+	gssize total_written = 0L;
+
+	cstr = archive_entry_pathname (e);
+	str = g_path_get_basename (cstr);
+	fname = g_build_filename (dest, str, NULL);
+	g_free (str);
+
+	if (g_file_test (fname, G_FILE_TEST_EXISTS)) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_OVERRIDE,
+				_("Could not override file '%s'. The file already exists!"), fname);
+		return FALSE;
+	}
+
+	fd = open (fname, (O_CREAT | O_WRONLY) | O_TRUNC, ((S_IRUSR | S_IWUSR) | S_IRGRP) | S_IROTH);
+	if (fd < 0) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_EXTRACT,
+				_("Unable to extract file. Error: %s"), g_strerror (errno));
+		return FALSE;
+	}
+
+	ret = TRUE;
+	while (archive_read_data_block (ar, &buff, &size, &offset) == ARCHIVE_OK) {
+		if (offset > output_offset) {
+			lseek (fd, offset - output_offset, SEEK_CUR);
+			output_offset = offset;
+		}
+		while (size > (gssize) 0) {
+			bytes_to_write = size;
+			if (bytes_to_write > DEFAULT_BLOCK_SIZE)
+				bytes_to_write = DEFAULT_BLOCK_SIZE;
+
+			bytes_written = write (fd, buff, bytes_to_write);
+			if (bytes_written < ((gssize) 0)) {
+				g_set_error (error,
+					LI_PACKAGE_ERROR,
+					LI_PACKAGE_ERROR_EXTRACT,
+					_("Unable to extract file. Error: %s"), g_strerror (errno));
+				ret = FALSE;
+				break;
+			}
+			output_offset += bytes_written;
+			total_written += bytes_written;
+			buff += bytes_written;
+			size -= bytes_written;
+		}
+		if (!ret)
+			break;
+	}
+
+	if (close (fd) != 0) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_FAILED,
+				_("Closing of file desriptor failed. Error: %s"), g_strerror (errno));
+		return FALSE;
+	}
+
+	/* apply permissions from the archive */
+	chmod (fname, archive_entry_mode (e));
+
+	return ret;
 }
 
 static struct archive*
@@ -95,6 +216,9 @@ gboolean
 li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **error)
 {
 	struct archive *ar;
+	struct archive_entry* e;
+	GError *tmp_error = NULL;
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	if (!g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
 		g_set_error (error,
@@ -104,9 +228,37 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 		return FALSE;
 	}
 
-	ar = li_ipk_package_open_base_ipk (ipk, filename, error);
-	if (ar == NULL)
+	ar = li_ipk_package_open_base_ipk (ipk, filename, &tmp_error);
+	if ((ar == NULL) || (tmp_error != NULL)) {
+		g_propagate_error (error, tmp_error);
 		return FALSE;
+	}
+
+	g_free (priv->filename);
+	priv->filename = g_strdup (filename);
+
+	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
+		const gchar *pathname;
+
+		pathname = archive_entry_pathname (e);
+		if (g_strcmp0 (pathname, "control") == 0) {
+			gchar *ctl_data;
+			ctl_data = li_ipk_package_read_entry (ipk, ar, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				archive_read_free (ar);
+				return FALSE;
+			}
+			li_ipk_control_load_data (priv->ctl, ctl_data);
+			g_free (ctl_data);
+		} else {
+			archive_read_data_skip (ar);
+		}
+
+	}
+
+	archive_read_close (ar);
+	archive_read_free (ar);
 
 	return TRUE;
 }

@@ -65,12 +65,34 @@ li_config_data_init (LiConfigData *cdata)
 }
 
 /**
+ * li_config_data_load_data:
+ */
+void
+li_config_data_load_data (LiConfigData *cdata, const gchar *data)
+{
+	gchar **lines = NULL;
+	guint i;
+	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
+
+	/* clear the array */
+	if (priv->content->len > 0)
+		g_ptr_array_remove_range (priv->content, 0, priv->content->len);
+
+	lines = g_strsplit (data, "\n", -1);
+	for (i = 0; lines[i] != NULL; i++) {
+		g_ptr_array_add (priv->content, g_strdup (lines[i]));
+	}
+
+	g_strfreev (lines);
+}
+
+/**
  * li_config_data_load_file:
  */
 void
 li_config_data_load_file (LiConfigData *cdata, GFile *file)
 {
-	gchar* line = NULL;
+	gchar *line = NULL;
 	GFileInputStream* ir;
 	GDataInputStream* dis;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);

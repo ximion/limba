@@ -61,6 +61,8 @@ struct _LiIPKControlClass
 GType			li_ipk_control_get_type	(void);
 LiIPKControl	*li_ipk_control_new		(void);
 
+void 			li_ipk_control_load_data (LiIPKControl *ipkc, const gchar *data);
+
 G_END_DECLS
 
 #endif /* __LI_IPK_CONTROL_H */

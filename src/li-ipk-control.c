@@ -62,6 +62,16 @@ li_ipk_control_init (LiIPKControl *ipkc)
 }
 
 /**
+ * li_ipk_control_load_data:
+ */
+void
+li_ipk_control_load_data (LiIPKControl *ipkc, const gchar *data)
+{
+	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	li_config_data_load_data (priv->cdata, data);
+}
+
+/**
  * li_ipk_control_class_init:
  **/
 static void

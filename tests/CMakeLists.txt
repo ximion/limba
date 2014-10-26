@@ -18,3 +18,8 @@ include_directories(${CMAKE_BINARY_DIR}
 add_executable(li-test-basics test-basics.c)
 add_dependencies(li-test-basics limba)
 add_test(basic-test li-test-basics ${CMAKE_CURRENT_SOURCE_DIR})
+
+# IPK package tests
+add_executable(li-test-package test-package.c)
+add_dependencies(li-test-package limba)
+add_test(package-test li-test-package ${CMAKE_CURRENT_SOURCE_DIR})

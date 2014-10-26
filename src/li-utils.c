@@ -19,6 +19,7 @@
  */
 
 #include "li-utils.h"
+#include "li-utils-private.h"
 
 #include <config.h>
 #include <glib.h>
