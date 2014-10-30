@@ -85,8 +85,8 @@ mount_overlay (const gchar *bundle)
 	LiConfigData *cdata;
 
 	/* check if the bundle exists */
-	main_data_path = g_build_filename (APP_INSTALL_ROOT, bundle, "data", NULL);
-	fname = g_build_filename (APP_INSTALL_ROOT, bundle, "control", NULL);
+	main_data_path = g_build_filename (LI_INSTALL_ROOT, bundle, "data", NULL);
+	fname = g_build_filename (LI_INSTALL_ROOT, bundle, "control", NULL);
 	file = g_file_new_for_path (fname);
 	g_free (fname);
 
@@ -117,8 +117,8 @@ mount_overlay (const gchar *bundle)
 		gchar *bundle_data_path;
 		g_strstrip (dep_bundles[i]);
 
-		bundle_data_path = g_build_filename (APP_INSTALL_ROOT, dep_bundles[i], "data", NULL);
-		fname = g_build_filename (APP_INSTALL_ROOT, dep_bundles[i], "control", NULL);
+		bundle_data_path = g_build_filename (LI_INSTALL_ROOT, dep_bundles[i], "data", NULL);
+		fname = g_build_filename (LI_INSTALL_ROOT, dep_bundles[i], "control", NULL);
 		if (!g_file_test (fname, G_FILE_TEST_IS_REGULAR)) {
 			fprintf (stderr, "The bundle '%s' does not exist.\n", dep_bundles[i]);
 			res = 1;

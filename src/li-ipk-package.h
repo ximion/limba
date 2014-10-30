@@ -41,6 +41,7 @@ G_BEGIN_DECLS
  * @LI_PACKAGE_ERROR_FAILED:		Generic failure
  * @LI_PACKAGE_ERROR_NOT_FOUND:		A required file or entity was not found
  * @LI_PACKAGE_ERROR_ARCHIVE:		Error in the archive structure
+ * @LI_PACKAGE_ERROR_DATA_MISSING:	Some data is missing in the archive
  * @LI_PACKAGE_ERROR_OVERRIDE:		Could not override file
  * @LI_PACKAGE_ERROR_EXTRACT:		Could not extract data
  *
@@ -50,6 +51,7 @@ typedef enum {
 	LI_PACKAGE_ERROR_FAILED,
 	LI_PACKAGE_ERROR_NOT_FOUND,
 	LI_PACKAGE_ERROR_ARCHIVE,
+	LI_PACKAGE_ERROR_DATA_MISSING,
 	LI_PACKAGE_ERROR_OVERRIDE,
 	LI_PACKAGE_ERROR_EXTRACT,
 	/*< private >*/

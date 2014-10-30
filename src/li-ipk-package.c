@@ -32,20 +32,23 @@
 #include <glib/gi18n-lib.h>
 #include <archive_entry.h>
 #include <archive.h>
+#include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
+#include <appstream.h>
 
 #define DEFAULT_BLOCK_SIZE 65536
 
 typedef struct _LiIPKPackagePrivate	LiIPKPackagePrivate;
 struct _LiIPKPackagePrivate
 {
-	gchar *filename;
+	FILE *archive_file;
 	gchar *tmp_dir;
 	LiIPKControl *ctl;
+	AsComponent *cpt;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiIPKPackage, li_ipk_package, G_TYPE_OBJECT)
@@ -64,8 +67,10 @@ li_ipk_package_finalize (GObject *object)
 	g_object_unref (priv->ctl);
 	if (priv->tmp_dir != NULL)
 		g_free (priv->tmp_dir);
-	if (priv->filename != NULL)
-		g_free (priv->filename);
+	if (priv->archive_file != NULL)
+		fclose (priv->archive_file);
+	if (priv->cpt != NULL)
+		g_object_unref (priv->cpt);
 
 	G_OBJECT_CLASS (li_ipk_package_parent_class)->finalize (object);
 }
@@ -81,6 +86,7 @@ li_ipk_package_init (LiIPKPackage *ipk)
 
 	priv->ctl = li_ipk_control_new ();
 	priv->tmp_dir = NULL;
+	priv->archive_file = NULL;
 }
 
 /**
@@ -101,7 +107,7 @@ li_ipk_package_read_entry (LiIPKPackage *ipk, struct archive* ar, GError **error
 		g_string_append_len (res, buff, size);
 	}
 
-	return g_string_free (res, FALSE);;
+	return g_string_free (res, FALSE);
 }
 
 /**
@@ -188,11 +194,15 @@ li_ipk_package_extract_entry_to (LiIPKPackage *ipk, struct archive* ar, struct a
 	return ret;
 }
 
+/**
+ * li_ipk_package_open_base_ipk:
+ **/
 static struct archive*
-li_ipk_package_open_base_ipk (LiIPKPackage *ipk, const gchar *filename, GError **error)
+li_ipk_package_open_base_ipk (LiIPKPackage *ipk, GError **error)
 {
 	struct archive *ar;
 	int res;
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	/* create new archive object for reading */
 	ar = archive_read_new ();
@@ -202,7 +212,8 @@ li_ipk_package_open_base_ipk (LiIPKPackage *ipk, const gchar *filename, GError *
 	archive_read_support_format_tar (ar);
 
 	/* open the file, exit on error */
-	res = archive_read_open_filename (ar, filename, (gsize) 4096);
+	rewind (priv->archive_file);
+	res = archive_read_open_FILE (ar, priv->archive_file);
 	if (res != ARCHIVE_OK) {
 		g_set_error (error,
 				LI_PACKAGE_ERROR,
@@ -215,6 +226,21 @@ li_ipk_package_open_base_ipk (LiIPKPackage *ipk, const gchar *filename, GError *
 	return ar;
 }
 
+static void
+li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError **error)
+{
+	AsMetadata *mdata;
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+
+	/* ensure we don't leak memory, even if we are using this function wrong... */
+	if (priv->cpt != NULL)
+		g_object_unref (priv->cpt);
+
+	mdata = as_metadata_new ();
+	priv->cpt = as_metadata_parse_data (mdata, data, error);
+	g_object_unref (mdata);
+}
+
 /**
  * li_ipk_package_open_file:
  */
@@ -225,6 +251,7 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 	struct archive_entry* e;
 	gchar *tmp_str;
 	GError *tmp_error = NULL;
+	gboolean ret = FALSE;
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	if (!g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
@@ -235,17 +262,24 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 		return FALSE;
 	}
 
-	ar = li_ipk_package_open_base_ipk (ipk, filename, &tmp_error);
+	priv->archive_file = fopen (filename, "r");
+	if (priv->archive_file == NULL) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_ARCHIVE,
+				_("Could not open IPK file! Error: %s"), g_strerror (errno));
+		return FALSE;
+	}
+
+	ar = li_ipk_package_open_base_ipk (ipk, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
 
-	g_free (priv->filename);
-	priv->filename = g_strdup (filename);
 	/* create our own tmpdir */
 	g_free (priv->tmp_dir);
-	tmp_str = g_path_get_basename (priv->filename);
+	tmp_str = g_path_get_basename (filename);
 	priv->tmp_dir = li_utils_get_tmp_dir (tmp_str);
 	g_free (tmp_str);
 
@@ -258,21 +292,64 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 			ctl_data = li_ipk_package_read_entry (ipk, ar, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
-				archive_read_free (ar);
-				return FALSE;
+				goto out;
 			}
 			li_ipk_control_load_data (priv->ctl, ctl_data);
 			g_free (ctl_data);
+		} else if (g_strcmp0 (pathname, "metainfo.xml") == 0) {
+			gchar *as_data;
+			as_data = li_ipk_package_read_entry (ipk, ar, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
+			li_ipk_package_read_component_data (ipk, as_data, &tmp_error);
+			g_free (as_data);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
 		} else {
 			archive_read_data_skip (ar);
 		}
-
 	}
 
+	ret = TRUE;
+
+out:
 	archive_read_close (ar);
 	archive_read_free (ar);
 
-	return TRUE;
+	return ret;
+}
+
+/**
+ * li_ipk_package_build_package_id:
+ * Create a unique identifier for this software.
+ */
+static gchar*
+li_ipk_package_build_package_id (AsComponent *cpt)
+{
+	gchar *tmp;
+	GString *uname;
+
+	uname = g_string_new ("");
+	tmp = li_str_replace (as_component_get_id (cpt), ".desktop", "");
+	g_strstrip (tmp);
+	if ((tmp == NULL) || (g_strcmp0 (tmp, "") == 0)) {
+		g_free (tmp);
+		tmp = li_str_replace (as_component_get_name (cpt), " ", "_");
+		if ((tmp == NULL) || (g_strcmp0 (tmp, "") == 0)) {
+			g_free (tmp);
+			/* no unique name is possible, we give up */
+			return NULL;
+		}
+	}
+	g_string_append (uname, tmp);
+
+	// TODO: Append version to string.
+
+	return g_string_free (uname, FALSE);
 }
 
 /**
@@ -282,22 +359,51 @@ gboolean
 li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 {
 	struct archive *ar;
-	struct archive_entry* e;
+	struct archive_entry* e1;
+	struct archive *payload_ar;
+	struct archive_entry* en;
 	GError *tmp_error = NULL;
+	_cleanup_free_ gchar *pkg_name = NULL;
+	_cleanup_free_ gchar *pkg_root_dir = NULL;
+	gchar *tmp;
+	gint res;
+	gboolean ret;
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
-	ar = li_ipk_package_open_base_ipk (ipk, priv->filename, &tmp_error);
+	/* test if we have all data we need for extraction */
+	if (priv->cpt == NULL) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Could not install package: Component metadata is missing."));
+		return FALSE;
+	}
+
+	/* do we have a valid id? */
+	pkg_name = li_ipk_package_build_package_id (priv->cpt);
+	if (pkg_name == NULL) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Unable to determine a valid package name."));
+		return FALSE;
+	}
+
+	/* the directory where all package data is installed to */
+	pkg_root_dir = g_build_filename (LI_INSTALL_ROOT, pkg_name, NULL);
+
+	ar = li_ipk_package_open_base_ipk (ipk, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
 
-	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
+	while (archive_read_next_header (ar, &e1) == ARCHIVE_OK) {
 		const gchar *pathname;
 
-		pathname = archive_entry_pathname (e);
+		pathname = archive_entry_pathname (e1);
 		if (g_strcmp0 (pathname, "main-data.tar.xz") == 0) {
-			li_ipk_package_extract_entry_to (ipk, ar, e, priv->tmp_dir, &tmp_error);
+			li_ipk_package_extract_entry_to (ipk, ar, e1, priv->tmp_dir, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				archive_read_free (ar);
@@ -308,10 +414,68 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 		}
 	}
 
-	// TODO
-
 	archive_read_close (ar);
 	archive_read_free (ar);
+
+	/* open the payload archive */
+	payload_ar = archive_read_new ();
+	archive_read_support_filter_xz (payload_ar);
+	archive_read_support_format_tar (payload_ar);
+
+	tmp = g_build_filename (priv->tmp_dir, "main-data.tar.xz", NULL);
+	if (!g_file_test (tmp, G_FILE_TEST_EXISTS)) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Unable to find or unpack package payload."));
+		g_free (tmp);
+		archive_read_free (payload_ar);
+		return FALSE;
+	}
+
+	/* open the file, exit on error */
+	res = archive_read_open_filename (payload_ar, tmp, DEFAULT_BLOCK_SIZE);
+	g_free (tmp);
+	if (res != ARCHIVE_OK) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_ARCHIVE,
+				_("Could not open IPK payload! Error: %s"), archive_error_string (ar));
+		archive_read_free (payload_ar);
+		return NULL;
+	}
+
+	/* install payload */
+	while (archive_read_next_header (payload_ar, &en) == ARCHIVE_OK) {
+		const gchar *filename;
+		gchar *path;
+		_cleanup_free_ gchar *dest_path;
+
+		filename = archive_entry_pathname (en);
+		path = g_path_get_dirname (filename);
+		dest_path = g_build_filename (pkg_root_dir, "data", path, NULL);
+		g_free (path);
+
+		if (!li_utils_touch_dir (dest_path)) {
+			g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_EXTRACT,
+				_("Could not create directory structure '%s'."), dest_path);
+				archive_read_free (payload_ar);
+				return NULL;
+		}
+
+		li_ipk_package_extract_entry_to (ipk, payload_ar, en, dest_path, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			archive_read_free (ar);
+			return FALSE;
+		}
+	}
+
+	archive_read_free (payload_ar);
+
+	return TRUE;
 }
 
 /**

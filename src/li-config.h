@@ -26,7 +26,7 @@
 G_BEGIN_DECLS
 
 #define APP_ROOT_PREFIX "/opt/approot/"
-#define APP_INSTALL_ROOT "/opt/software/"
+#define LI_INSTALL_ROOT "/opt/software/"
 
 G_END_DECLS
 
