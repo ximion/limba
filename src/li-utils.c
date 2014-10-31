@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <uuid/uuid.h>
 
 /**
  * SECTION:li-utils
@@ -384,4 +385,19 @@ li_utils_get_tmp_dir (const gchar *prefix)
 	g_free (path);
 
 	return tmp_dir;
+}
+
+/**
+ * li_get_uuid_string:
+ */
+gchar*
+li_get_uuid_string (void)
+{
+	uuid_t uuid;
+	gchar *str;
+
+	uuid_generate_time_safe(uuid);
+	uuid_unparse_lower(uuid, str);
+
+	return str;
 }

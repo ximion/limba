@@ -57,10 +57,6 @@ create_mount_namespace (void)
 
 	return 0;
 
-oom:
-	fprintf (stderr, "Out of memory.\n");
-	return 3;
-
 error_out:
 	while (mount_count-- > 0)
 		umount (APP_ROOT_PREFIX);
@@ -106,7 +102,6 @@ mount_overlay (const gchar *bundle)
 		dep_bundles = g_new0 (gchar*, 1);
 		dep_bundles[0] = NULL;
 	} else {
-		guint i;
 		dep_bundles = g_strsplit (deps_str, ",", -1);
 	}
 	g_free (deps_str);

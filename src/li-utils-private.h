@@ -103,6 +103,7 @@ gboolean		li_save_string_to_file (const gchar *fname,
 										const gchar *data, gboolean override,
 										GError **error);
 gchar			*li_utils_get_tmp_dir (const gchar *prefix);
+gchar			*li_get_uuid_string (void);
 
 G_END_DECLS
 

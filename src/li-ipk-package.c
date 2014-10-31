@@ -49,7 +49,9 @@ struct _LiIPKPackagePrivate
 	gchar *tmp_dir;
 	LiIPKControl *ctl;
 	AsComponent *cpt;
+
 	gchar *install_root;
+	gchar *id;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiIPKPackage, li_ipk_package, G_TYPE_OBJECT)
@@ -73,6 +75,7 @@ li_ipk_package_finalize (GObject *object)
 	if (priv->cpt != NULL)
 		g_object_unref (priv->cpt);
 	g_free (priv->install_root);
+	g_free (priv->id);
 
 	G_OBJECT_CLASS (li_ipk_package_parent_class)->finalize (object);
 }
@@ -83,7 +86,6 @@ li_ipk_package_finalize (GObject *object)
 static void
 li_ipk_package_init (LiIPKPackage *ipk)
 {
-	gchar *template;
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	priv->ctl = li_ipk_control_new ();
@@ -101,8 +103,6 @@ li_ipk_package_read_entry (LiIPKPackage *ipk, struct archive* ar, GError **error
 	const void *buff = NULL;
 	gsize size = 0UL;
 	off_t offset = {0};
-	off_t output_offset = {0};
-	gsize bytes_to_write = 0UL;
 	GString *res;
 
 	res = g_string_new ("");
@@ -229,10 +229,43 @@ li_ipk_package_open_base_ipk (LiIPKPackage *ipk, GError **error)
 	return ar;
 }
 
-static void
+/**
+ * li_ipk_package_get_version_from_component:
+ */
+static const gchar*
+li_ipk_package_get_version_from_component (AsComponent *cpt)
+{
+	GPtrArray *releases;
+	AsRelease *release = NULL;
+	guint64 timestamp = 0;
+	guint i;
+	const gchar *version = NULL;
+
+	releases = as_component_get_releases (cpt);
+	for (i = 0; i < releases->len; i++) {
+		AsRelease *r = AS_RELEASE (g_ptr_array_index (releases, i));
+		if (as_release_get_timestamp (r) >= timestamp) {
+				release = r;
+				timestamp = as_release_get_timestamp (r);
+		}
+	}
+	if (release != NULL) {
+		version = as_release_get_version (release);
+	}
+
+	return version;
+}
+
+/**
+ * li_ipk_package_read_component_data:
+ */
+static gboolean
 li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError **error)
 {
 	AsMetadata *mdata;
+	gchar *tmp;
+	const gchar *version;
+	GError *tmp_error = NULL;
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	/* ensure we don't leak memory, even if we are using this function wrong... */
@@ -240,8 +273,49 @@ li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError
 		g_object_unref (priv->cpt);
 
 	mdata = as_metadata_new ();
-	priv->cpt = as_metadata_parse_data (mdata, data, error);
+	priv->cpt = as_metadata_parse_data (mdata, data, &tmp_error);
 	g_object_unref (mdata);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	tmp = li_str_replace (as_component_get_id (priv->cpt), ".desktop", "");
+	g_strstrip (tmp);
+	if ((tmp == NULL) || (g_strcmp0 (tmp, "") == 0)) {
+		g_free (tmp);
+		tmp = li_str_replace (as_component_get_name (priv->cpt), " ", "_");
+		if ((tmp == NULL) || (g_strcmp0 (tmp, "") == 0)) {
+			g_free (tmp);
+			/* no package name is found, we give up */
+			g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Could not determine package name."));
+			return FALSE;
+		}
+	}
+	li_ipk_control_set_name (priv->ctl, tmp);
+	g_free (tmp);
+
+	version = li_ipk_package_get_version_from_component (priv->cpt);
+	if (version == NULL) {
+		/* no version? give up. */
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Could not determine package version."));
+		return FALSE;
+	}
+	li_ipk_control_set_pkg_version (priv->ctl, version);
+
+	/* now create a package-id */
+	tmp = g_strdup_printf ("%s-%s", li_ipk_control_get_name (priv->ctl),
+									li_ipk_control_get_pkg_version (priv->ctl));
+	li_ipk_package_set_id (ipk, tmp);
+	g_free (tmp);
+
+	return TRUE;
 }
 
 /**
@@ -326,61 +400,6 @@ out:
 	return ret;
 }
 
-static const gchar*
-li_ipk_package_get_version_from_component (AsComponent *cpt)
-{
-	GPtrArray *releases;
-	AsRelease *release = NULL;
-	guint64 timestamp = 0;
-	guint i;
-	const gchar *version = NULL;
-
-	releases = as_component_get_releases (cpt);
-	for (i = 0; i < releases->len; i++) {
-		AsRelease *r = AS_RELEASE (g_ptr_array_index (releases, i));
-		if (as_release_get_timestamp (r) >= timestamp) {
-				release = r;
-				timestamp = as_release_get_timestamp (r);
-		}
-	}
-	if (release != NULL) {
-		version = as_release_get_version (release);
-	}
-
-	return version;
-}
-
-/**
- * li_ipk_package_build_package_id:
- * Create a unique identifier for this software.
- */
-static gchar*
-li_ipk_package_build_package_id (LiIPKPackage *ipk)
-{
-	gchar *tmp;
-	GString *uname;
-	AsComponent *cpt;
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
-
-	cpt = priv->cpt;
-	uname = g_string_new ("");
-	tmp = li_str_replace (as_component_get_id (cpt), ".desktop", "");
-	g_strstrip (tmp);
-	if ((tmp == NULL) || (g_strcmp0 (tmp, "") == 0)) {
-		g_free (tmp);
-		tmp = li_str_replace (as_component_get_name (cpt), " ", "_");
-		if ((tmp == NULL) || (g_strcmp0 (tmp, "") == 0)) {
-			g_free (tmp);
-			/* no unique name is possible, we give up */
-			return NULL;
-		}
-	}
-	g_string_append (uname, tmp);
-	g_string_append_printf (uname, "-%s", li_ipk_control_get_pkg_version (priv->ctl));
-
-	return g_string_free (uname, FALSE);
-}
-
 /**
  * li_ipk_package_install:
  */
@@ -392,7 +411,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	struct archive *payload_ar;
 	struct archive_entry* en;
 	GError *tmp_error = NULL;
-	_cleanup_free_ gchar *pkg_name = NULL;
+	const gchar *pkg_id = NULL;
 	_cleanup_free_ gchar *pkg_root_dir = NULL;
 	gchar *tmp;
 	gint res;
@@ -410,7 +429,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	}
 
 	/* add the version number to our control data */
-	version = li_ipk_package_get_version_from_component (priv->cpt);
+	version = li_ipk_control_get_pkg_version (priv->ctl);
 	if (version == NULL) {
 		g_set_error (error,
 				LI_PACKAGE_ERROR,
@@ -418,20 +437,19 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 				_("Unable to determine package version."));
 		return FALSE;
 	}
-	li_ipk_control_set_pkg_version (priv->ctl, version);
 
 	/* do we have a valid id? */
-	pkg_name = li_ipk_package_build_package_id (ipk);
-	if (pkg_name == NULL) {
+	pkg_id = li_ipk_package_get_id (ipk);
+	if (pkg_id == NULL) {
 		g_set_error (error,
 				LI_PACKAGE_ERROR,
 				LI_PACKAGE_ERROR_DATA_MISSING,
-				_("Unable to determine a valid package name."));
+				_("Unable to determine a valid package identifier."));
 		return FALSE;
 	}
 
 	/* the directory where all package data is installed to */
-	pkg_root_dir = g_build_filename (priv->install_root, pkg_name, NULL);
+	pkg_root_dir = g_build_filename (priv->install_root, pkg_id, NULL);
 
 	ar = li_ipk_package_open_base_ipk (ipk, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {
@@ -548,6 +566,32 @@ li_ipk_package_set_install_root (LiIPKPackage *ipk, const gchar *dir)
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 	g_free (priv->install_root);
 	priv->install_root = g_strdup (dir);
+}
+
+/**
+ * li_ipk_package_get_id:
+ *
+ * Get the unique name of this package
+ */
+const gchar*
+li_ipk_package_get_id (LiIPKPackage *ipk)
+{
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	return priv->id;
+}
+
+/**
+ * li_ipk_package_set_id:
+ * @unique_name: A unique name, build from the package name and version
+ *
+ * Se the unique name for this package.
+ */
+void
+li_ipk_package_set_id (LiIPKPackage *ipk, const gchar *unique_name)
+{
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	g_free (priv->id);
+	priv->id = g_strdup (unique_name);
 }
 
 /**

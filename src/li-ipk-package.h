@@ -92,6 +92,14 @@ gboolean		li_ipk_package_open_file (LiIPKPackage *ipk,
 gboolean		li_ipk_package_install (LiIPKPackage *ipk,
 										GError **error);
 
+const gchar		*li_ipk_package_get_install_root (LiIPKPackage *ipk);
+void			li_ipk_package_set_install_root (LiIPKPackage *ipk,
+												const gchar *dir);
+
+const gchar		*li_ipk_package_get_id (LiIPKPackage *ipk);
+void			li_ipk_package_set_id (LiIPKPackage *ipk,
+										const gchar *unique_name);
+
 G_END_DECLS
 
 #endif /* __LI_IPK_PACKAGE_H */

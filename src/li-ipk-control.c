@@ -21,6 +21,9 @@
 /**
  * SECTION:li-ipk-control
  * @short_description: Control metadata for IPK packages
+ *
+ * TODO: Fix multiple issues e.g. don't immediately write the metadata
+ * to the internal serialization.
  */
 
 #include "config.h"
@@ -34,6 +37,7 @@ struct _LiIPKControlPrivate
 
 	/* cached data */
 	gchar *pkg_version;
+	gchar *name;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiIPKControl, li_ipk_control, G_TYPE_OBJECT)
@@ -41,7 +45,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiIPKControl, li_ipk_control, G_TYPE_OBJECT)
 #define GET_PRIVATE(o) (li_ipk_control_get_instance_private (o))
 
 /**
- * li_ipk_control_init:
+ * li_ipk_control_delete_cached_data:
  **/
 static void
 li_ipk_control_delete_cached_data (LiIPKControl *ipkc)
@@ -50,6 +54,9 @@ li_ipk_control_delete_cached_data (LiIPKControl *ipkc)
 	if (priv->pkg_version != NULL)
 		g_free (priv->pkg_version);
 	priv->pkg_version = NULL;
+	if (priv->name != NULL)
+		g_free (priv->name);
+	priv->name = NULL;
 }
 
 /**
@@ -120,6 +127,34 @@ li_ipk_control_set_pkg_version (LiIPKControl *ipkc, const gchar *version)
 	if (priv->pkg_version != NULL)
 		g_free (priv->pkg_version);
 	priv->pkg_version = NULL;
+}
+
+/**
+ * li_ipk_control_get_name:
+ */
+const gchar*
+li_ipk_control_get_name (LiIPKControl *ipkc)
+{
+	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	if (priv->name != NULL)
+		return priv->name;
+	priv->name = li_config_data_get_value (priv->cdata, "Name");
+	return priv->name;
+}
+
+/**
+ * li_ipk_control_set_name:
+ */
+void
+li_ipk_control_set_name (LiIPKControl *ipkc, const gchar *name)
+{
+	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	li_config_data_set_value (priv->cdata, "Name", name);
+
+	/* remove cached value */
+	if (priv->name != NULL)
+		g_free (priv->name);
+	priv->name = NULL;
 }
 
 /**

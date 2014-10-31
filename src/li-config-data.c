@@ -293,10 +293,11 @@ gboolean
 li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *value)
 {
 	gchar **value_lines;
+	gchar *tmp;
 	gint i;
 	GList *l;
 	_cleanup_free_ gchar *field_str;
-	gchar *data;
+	gchar *field_data;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
 	if (field == NULL)
@@ -309,12 +310,13 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 		priv->current_block_id = -1;
 
 	value_lines = g_strsplit (value, "\n", -1);
+	tmp = g_strjoinv ("\n ", value_lines);
 	field_str = g_strdup_printf ("%s:", field);
-	data = g_strdup_printf ("%s: %s", field, value);
+	field_data = g_strdup_printf ("%s: %s", field, tmp);
+	g_free (tmp);
 
 	for (l = priv->content; l != NULL; l = l->next) {
 		gchar *line;
-		gchar *field_data;
 
 		i = g_list_position (priv->content, l);
 		if (((int) i) < priv->current_block_id)
@@ -329,13 +331,13 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 				continue;
 			} else {
 				/* we can add data to this block and exit */
-				priv->content = g_list_insert_before (priv->content, l, data);
+				priv->content = g_list_insert_before (priv->content, l, field_data);
 				return TRUE;
 			}
 		}
 		if (g_str_has_prefix (line, field_str)) {
 			/* field already exists, replace it */
-			priv->content = g_list_insert_before (priv->content, l, data);
+			priv->content = g_list_insert_before (priv->content, l, field_data);
 			priv->content = g_list_remove_link (priv->content, l);
 			g_free (l->data);
 			g_list_free (l);
@@ -346,7 +348,7 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 	}
 
 	/* if we are here, we can just append the new data to the end of the list */
-	priv->content = g_list_append (priv->content, data);
+	priv->content = g_list_append (priv->content, field_data);
 
 	return TRUE;
 }
@@ -358,9 +360,7 @@ gchar*
 li_config_data_get_data (LiConfigData *cdata)
 {
 	GString *res;
-	gint i;
 	GList *l;
-	gboolean add_to_value = FALSE;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
 	if (priv->content == NULL) {
