@@ -22,46 +22,29 @@
 #error "Only <limba.h> can be included directly."
 #endif
 
-#ifndef __LI_INSTALLER_H
-#define __LI_INSTALLER_H
+#ifndef __LI_MANAGER_H
+#define __LI_MANAGER_H
 
 #include <glib-object.h>
 
-#define LI_TYPE_INSTALLER			(li_installer_get_type())
-#define LI_INSTALLER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_INSTALLER, LiInstaller))
-#define LI_INSTALLER_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_INSTALLER, LiInstallerClass))
-#define LI_IS_INSTALLER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_INSTALLER))
-#define LI_IS_INSTALLER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_INSTALLER))
-#define LI_INSTALLER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_INSTALLER, LiInstallerClass))
+#define LI_TYPE_MANAGER			(li_manager_get_type())
+#define LI_MANAGER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_MANAGER, LiManager))
+#define LI_MANAGER_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_MANAGER, LiManagerClass))
+#define LI_IS_MANAGER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_MANAGER))
+#define LI_IS_MANAGER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_MANAGER))
+#define LI_MANAGER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_MANAGER, LiManagerClass))
 
 G_BEGIN_DECLS
 
-/**
- * LiInstallerError:
- * @LI_INSTALLER_ERROR_FAILED:					Generic failure
- * @LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND:	A dependency was not found
- *
- * The error type.
- **/
-typedef enum {
-	LI_INSTALLER_ERROR_FAILED,
-	LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND,
-	/*< private >*/
-	LI_INSTALLER_ERROR_LAST
-} LiInstallerError;
+typedef struct _LiManager		LiManager;
+typedef struct _LiManagerClass	LiManagerClass;
 
-#define	LI_INSTALLER_ERROR li_installer_error_quark ()
-GQuark li_installer_error_quark (void);
-
-typedef struct _LiInstaller		LiInstaller;
-typedef struct _LiInstallerClass	LiInstallerClass;
-
-struct _LiInstaller
+struct _LiManager
 {
 	GObject			parent;
 };
 
-struct _LiInstallerClass
+struct _LiManagerClass
 {
 	GObjectClass		parent_class;
 	/*< private >*/
@@ -75,13 +58,11 @@ struct _LiInstallerClass
 	void (*_as_reserved8)	(void);
 };
 
-GType			li_installer_get_type	(void);
-LiInstaller		*li_installer_new		(void);
+GType			li_manager_get_type	(void);
+LiManager		*li_manager_new		(void);
 
-gboolean		li_installer_install_package (LiInstaller *inst,
-											const gchar *filename,
-											GError **error);
+GPtrArray		*li_manager_get_installed_software (LiManager *mgr);
 
 G_END_DECLS
 
-#endif /* __LI_INSTALLER_H */
+#endif /* __LI_MANAGER_H */

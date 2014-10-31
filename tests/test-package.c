@@ -32,7 +32,7 @@ test_package_read ()
 	gchar *fname;
 	GError *error = NULL;
 
-	fname = g_build_filename (datadir, "test.ipk", NULL);
+	fname = g_build_filename (datadir, "foo.ipk", NULL);
 	ipk = li_ipk_package_new ();
 
 	li_ipk_package_open_file (ipk, fname, &error);
@@ -65,7 +65,7 @@ main (int argc, char **argv)
 	/* critical, error and warnings are fatal */
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);
 
-	g_test_add_func ("/Listaller/IPKRead", test_package_read);
+	g_test_add_func ("/Limba/IPKRead", test_package_read);
 
 	ret = g_test_run ();
 	g_free (datadir);

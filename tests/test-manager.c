@@ -21,55 +21,18 @@
 #include <glib.h>
 #include "limba.h"
 
-#include "li-config-data.h"
-
 static gchar *datadir = NULL;
 
 void
-test_configdata ()
+test_manager ()
 {
-	LiConfigData *cdata;
-	gchar *fname;
-	GFile *file;
-	gboolean ret;
-	gchar *str;
+	LiManager *mgr;
 
-	fname = g_build_filename (datadir, "lidatafile.test", NULL);
-	file = g_file_new_for_path (fname);
-	g_free (fname);
-	g_assert (g_file_query_exists (file, NULL));
+	mgr = li_manager_new ();
 
-	cdata = li_config_data_new ();
-	li_config_data_load_file (cdata, file);
-	g_object_unref (file);
+	li_manager_get_installed_software (mgr);
 
-	ret = li_config_data_open_block (cdata, "Section", "test1", TRUE);
-	g_assert (ret);
-
-	str = li_config_data_get_value (cdata, "Sample");
-	ret = g_strcmp0 (str, "valueX") == 0;
-	g_assert (ret);
-	g_free (str);
-
-	ret = li_config_data_open_block (cdata, "Section", "test2", TRUE);
-	g_assert (ret);
-
-	str = li_config_data_get_value (cdata, "Sample");
-	ret = g_strcmp0 (str, "valueY") == 0;
-	g_assert (ret);
-	g_free (str);
-
-	str = li_config_data_get_value (cdata, "Multiline");
-	ret = g_strcmp0 (str, "A\nB\nC\nD") == 0;
-	g_assert (ret);
-	g_free (str);
-
-	str = li_config_data_get_data (cdata);
-	li_config_data_set_value (cdata, "Foooooo", "Baaaaaaar");
-	g_debug ("%s", str);
-	g_free (str);
-
-	g_object_unref (cdata);
+	g_object_unref (mgr);
 }
 
 int
@@ -93,7 +56,7 @@ main (int argc, char **argv)
 	/* critical, error and warnings are fatal */
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);
 
-	g_test_add_func ("/Limba/ConfigData", test_configdata);
+	g_test_add_func ("/Limba/Manager", test_manager);
 
 	ret = g_test_run ();
 	g_free (datadir);

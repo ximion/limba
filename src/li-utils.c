@@ -160,7 +160,7 @@ li_utils_find_files_matching (const gchar* dir, const gchar* pattern, gboolean r
 		path = g_build_filename (dir,
 								 g_file_info_get_name (file_info),
 								 NULL);
-		if ((!g_file_test (path, G_FILE_TEST_IS_REGULAR)) && (recursive)) {
+		if ((g_file_test (path, G_FILE_TEST_IS_DIR)) && (recursive)) {
 			GPtrArray *subdir_list;
 			guint i;
 			subdir_list = li_utils_find_files_matching (path, pattern, recursive);

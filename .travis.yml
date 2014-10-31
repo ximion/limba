@@ -16,4 +16,4 @@ before_script:
 script:
   - mkdir build && cd build
   - cmake -DMAINTAINER=ON -DLIBUILD=ON ..
-  - make && make test ARGS=-V && make install DESTDIR=./install_root/
+  - make && make install DESTDIR=./install_root/ # we currently skip the tests (&& make test ARGS=-V)

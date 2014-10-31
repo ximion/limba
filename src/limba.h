@@ -30,6 +30,8 @@ extern "C" {
 #include <li-utils.h>
 #include <li-ipk-control.h>
 #include <li-ipk-package.h>
+#include <li-installer.h>
+#include <li-manager.h>
 
 #ifdef __cplusplus
 };

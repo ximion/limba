@@ -595,6 +595,20 @@ li_ipk_package_set_id (LiIPKPackage *ipk, const gchar *unique_name)
 }
 
 /**
+ * li_ipk_package_get_control:
+ *
+ * Get the archive control metadata object.
+ *
+ * Returns: An instance of #LiIPKControl
+ */
+LiIPKControl*
+li_ipk_package_get_control (LiIPKPackage *ipk)
+{
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	return priv->ctl;
+}
+
+/**
  * li_package_error_quark:
  *
  * Return value: An error quark.

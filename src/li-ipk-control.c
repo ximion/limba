@@ -21,9 +21,6 @@
 /**
  * SECTION:li-ipk-control
  * @short_description: Control metadata for IPK packages
- *
- * TODO: Fix multiple issues e.g. don't immediately write the metadata
- * to the internal serialization.
  */
 
 #include "config.h"
@@ -33,12 +30,11 @@
 typedef struct _LiIPKControlPrivate	LiIPKControlPrivate;
 struct _LiIPKControlPrivate
 {
-	LiConfigData *cdata;
-
-	/* cached data */
-	gchar *pkg_version;
+	gchar *format_version;
+	gchar *version;
 	gchar *name;
 	gchar *framework_uuid;
+	gchar *dependencies;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiIPKControl, li_ipk_control, G_TYPE_OBJECT)
@@ -46,23 +42,45 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiIPKControl, li_ipk_control, G_TYPE_OBJECT)
 #define GET_PRIVATE(o) (li_ipk_control_get_instance_private (o))
 
 /**
- * li_ipk_control_delete_cached_data:
+ * li_ipk_control_fetch_values_from_cdata:
  **/
 static void
-li_ipk_control_delete_cached_data (LiIPKControl *ipkc)
+li_ipk_control_fetch_values_from_cdata (LiIPKControl *ipkc, LiConfigData *cdata)
 {
 	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	if (priv->pkg_version != NULL)
-		g_free (priv->pkg_version);
 
-	priv->pkg_version = NULL;
+	g_free (priv->name);
+	priv->name = li_config_data_get_value (cdata, "Name");
+
+	g_free (priv->version);
+	priv->version = li_config_data_get_value (cdata, "Version");
+
+	g_free (priv->dependencies);
+	priv->dependencies = li_config_data_get_value (cdata, "Requires");
+
+	g_free (priv->framework_uuid);
+	priv->framework_uuid = li_config_data_get_value (cdata, "Framework-UUID");
+}
+
+/**
+ * li_ipk_control_update_cdata_values:
+ **/
+static void
+li_ipk_control_update_cdata_values (LiIPKControl *ipkc, LiConfigData *cdata)
+{
+	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+
 	if (priv->name != NULL)
-		g_free (priv->name);
-	priv->name = NULL;
+		li_config_data_set_value (cdata, "Name", priv->name);
+
+	if (priv->version != NULL)
+		li_config_data_set_value (cdata, "Version", priv->version);
+
+	if (priv->dependencies != NULL)
+		li_config_data_set_value (cdata, "Requires", priv->dependencies);
 
 	if (priv->framework_uuid != NULL)
-		g_free (priv->framework_uuid);
-	priv->framework_uuid = NULL;
+		li_config_data_set_value (cdata, "Framework-UUID", priv->framework_uuid);
 }
 
 /**
@@ -74,8 +92,10 @@ li_ipk_control_finalize (GObject *object)
 	LiIPKControl *ipkc = LI_IPK_CONTROL (object);
 	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
 
-	g_object_unref (priv->cdata);
-	li_ipk_control_delete_cached_data (ipkc);
+	g_free (priv->name);
+	g_free (priv->version);
+	g_free (priv->dependencies);
+	g_free (priv->framework_uuid);
 
 	G_OBJECT_CLASS (li_ipk_control_parent_class)->finalize (object);
 }
@@ -87,7 +107,8 @@ static void
 li_ipk_control_init (LiIPKControl *ipkc)
 {
 	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	priv->cdata = li_config_data_new ();
+
+	priv->version = NULL;
 }
 
 /**
@@ -96,10 +117,12 @@ li_ipk_control_init (LiIPKControl *ipkc)
 void
 li_ipk_control_load_data (LiIPKControl *ipkc, const gchar *data)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	li_config_data_load_data (priv->cdata, data);
+	LiConfigData *cdata;
 
-	li_ipk_control_delete_cached_data (ipkc);
+	cdata = li_config_data_new ();
+	li_config_data_load_data (cdata, data);
+	li_ipk_control_fetch_values_from_cdata (ipkc, cdata);
+	g_object_unref (cdata);
 }
 
 /**
@@ -108,10 +131,12 @@ li_ipk_control_load_data (LiIPKControl *ipkc, const gchar *data)
 void
 li_ipk_control_load_file (LiIPKControl *ipkc, GFile *file)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	li_config_data_load_file (priv->cdata, file);
+	LiConfigData *cdata;
 
-	li_ipk_control_delete_cached_data (ipkc);
+	cdata = li_config_data_new ();
+	li_config_data_load_file (cdata, file);
+	li_ipk_control_fetch_values_from_cdata (ipkc, cdata);
+	g_object_unref (cdata);
 }
 
 /**
@@ -120,8 +145,15 @@ li_ipk_control_load_file (LiIPKControl *ipkc, GFile *file)
 gboolean
 li_ipk_control_save_to_file (LiIPKControl *ipkc, const gchar *filename)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	return li_config_data_save_to_file (priv->cdata, filename);
+	LiConfigData *cdata;
+	gboolean ret;
+
+	cdata = li_config_data_new ();
+	li_ipk_control_update_cdata_values (ipkc, cdata);
+	ret = li_config_data_save_to_file (cdata, filename);
+	g_object_unref (cdata);
+
+	return ret;
 }
 
 /**
@@ -133,10 +165,7 @@ const gchar*
 li_ipk_control_get_pkg_version (LiIPKControl *ipkc)
 {
 	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	if (priv->pkg_version != NULL)
-		return priv->pkg_version;
-	priv->pkg_version = li_config_data_get_value (priv->cdata, "PkgVersion");
-	return priv->pkg_version;
+	return priv->version;
 }
 
 /**
@@ -149,12 +178,8 @@ void
 li_ipk_control_set_pkg_version (LiIPKControl *ipkc, const gchar *version)
 {
 	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	li_config_data_set_value (priv->cdata, "PkgVersion", version);
-
-	/* remove cached value */
-	if (priv->pkg_version != NULL)
-		g_free (priv->pkg_version);
-	priv->pkg_version = NULL;
+	g_free (priv->version);
+	priv->version = g_strdup (version);
 }
 
 /**
@@ -164,9 +189,6 @@ const gchar*
 li_ipk_control_get_name (LiIPKControl *ipkc)
 {
 	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	if (priv->name != NULL)
-		return priv->name;
-	priv->name = li_config_data_get_value (priv->cdata, "Name");
 	return priv->name;
 }
 
@@ -177,12 +199,9 @@ void
 li_ipk_control_set_name (LiIPKControl *ipkc, const gchar *name)
 {
 	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	li_config_data_set_value (priv->cdata, "Name", name);
 
-	/* remove cached value */
-	if (priv->name != NULL)
-		g_free (priv->name);
-	priv->name = NULL;
+	g_free (priv->name);
+	priv->name = g_strdup (name);
 }
 
 /**
@@ -192,9 +211,6 @@ const gchar*
 li_ipk_control_get_framework_dependency (LiIPKControl *ipkc)
 {
 	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	if (priv->framework_uuid != NULL)
-		return priv->framework_uuid;
-	priv->framework_uuid = li_config_data_get_value (priv->cdata, "Framework-UUID");
 	return priv->framework_uuid;
 }
 
@@ -205,12 +221,31 @@ void
 li_ipk_control_set_framework_dependency (LiIPKControl *ipkc, const gchar *uuid)
 {
 	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
-	li_config_data_set_value (priv->cdata, "Framework-UUID", uuid);
 
-	/* remove cached value */
-	if (priv->framework_uuid != NULL)
-		g_free (priv->framework_uuid);
-	priv->framework_uuid = NULL;
+	g_free (priv->framework_uuid);
+	priv->framework_uuid = g_strdup (uuid);
+}
+
+/**
+ * li_ipk_control_get_dependencies:
+ */
+const gchar*
+li_ipk_control_get_dependencies (LiIPKControl *ipkc)
+{
+	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	return priv->dependencies;
+}
+
+/**
+ * li_ipk_control_set_dependencies:
+ */
+void
+li_ipk_control_set_dependencies (LiIPKControl *ipkc, const gchar *deps_string)
+{
+	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+
+	g_free (priv->dependencies);
+	priv->dependencies = g_strdup (deps_string);
 }
 
 /**

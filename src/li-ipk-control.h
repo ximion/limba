@@ -80,6 +80,10 @@ const gchar		*li_ipk_control_get_framework_dependency (LiIPKControl *ipkc);
 void			li_ipk_control_set_framework_dependency (LiIPKControl *ipkc,
 										const gchar *uuid);
 
+const gchar		*li_ipk_control_get_dependencies (LiIPKControl *ipkc);
+void			li_ipk_control_set_dependencies (LiIPKControl *ipkc,
+										const gchar *deps_string);
+
 
 G_END_DECLS
 
