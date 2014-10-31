@@ -26,6 +26,7 @@
 #define __LI_IPK_CONTROL_H
 
 #include <glib-object.h>
+#include <gio/gio.h>
 
 #define LI_TYPE_IPK_CONTROL			(li_ipk_control_get_type())
 #define LI_IPK_CONTROL(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_IPK_CONTROL, LiIPKControl))
@@ -61,7 +62,10 @@ struct _LiIPKControlClass
 GType			li_ipk_control_get_type	(void);
 LiIPKControl	*li_ipk_control_new		(void);
 
-void 			li_ipk_control_load_data (LiIPKControl *ipkc, const gchar *data);
+void			li_ipk_control_load_file (LiIPKControl *ipkc,
+											GFile *file);
+void 			li_ipk_control_load_data (LiIPKControl *ipkc,
+										const gchar *data);
 gboolean		li_ipk_control_save_to_file (LiIPKControl *ipkc,
 											const gchar *filename);
 
@@ -71,6 +75,10 @@ void			li_ipk_control_set_pkg_version (LiIPKControl *ipkc, const gchar *version)
 const gchar		*li_ipk_control_get_name (LiIPKControl *ipkc);
 void			li_ipk_control_set_name (LiIPKControl *ipkc,
 										const gchar *name);
+
+const gchar		*li_ipk_control_get_framework_dependency (LiIPKControl *ipkc);
+void			li_ipk_control_set_framework_dependency (LiIPKControl *ipkc,
+										const gchar *uuid);
 
 
 G_END_DECLS

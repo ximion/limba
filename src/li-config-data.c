@@ -227,10 +227,11 @@ li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 	gint i;
 	GList *l;
 	gboolean add_to_value = FALSE;
+	gboolean found = FALSE;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
 	if (priv->content == NULL) {
-		return g_strdup ("");
+		return NULL;
 	}
 
 	res = g_string_new ("");
@@ -258,6 +259,7 @@ li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 			if (g_str_has_prefix (line, " ")) {
 				g_strstrip (line);
 				g_string_append_printf (res, "\n%s", line);
+				found = TRUE;
 			} else {
 				break;
 			}
@@ -271,10 +273,17 @@ li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 			g_string_append (res, tmp[1]);
 			g_strfreev (tmp);
 			add_to_value = TRUE;
+			found = TRUE;
 		}
 		g_free (field_data);
 
 	};
+
+	if (!found) {
+		/* we did not find the field */
+		g_string_free (res, TRUE);
+		return FALSE;
+	}
 
 	return g_string_free (res, FALSE);
 }

@@ -74,11 +74,9 @@ mount_overlay (const gchar *bundle)
 	gchar *main_data_path = NULL;
 	gchar *fname = NULL;
 	GFile *file;
-	gchar *deps_str;
-	gchar **dep_bundles = NULL;
-	guint i;
+	const gchar *framework_uuid;
 	gchar *tmp;
-	LiConfigData *cdata;
+	LiIPKControl *ctl = NULL;
 
 	/* check if the bundle exists */
 	main_data_path = g_build_filename (LI_INSTALL_ROOT, bundle, "data", NULL);
@@ -93,41 +91,34 @@ mount_overlay (const gchar *bundle)
 		goto out;
 	}
 
-	cdata = li_config_data_new ();
-	li_config_data_load_file (cdata, file);
+	ctl = li_ipk_control_new ();
+	li_ipk_control_load_file (ctl, file);
 	g_object_unref (file);
 
-	deps_str = li_config_data_get_value (cdata, "AbsoluteDependencies");
-	if (deps_str == NULL) {
-		dep_bundles = g_new0 (gchar*, 1);
-		dep_bundles[0] = NULL;
-	} else {
-		dep_bundles = g_strsplit (deps_str, ",", -1);
+	framework_uuid = li_ipk_control_get_framework_dependency (ctl);
+	if (framework_uuid == NULL) {
+		g_error ("Sorry, I can not construct a new framework for this application to run in. Please do that manually!");
+		res = 3;
+		goto out;
 	}
-	g_free (deps_str);
-	g_object_unref (cdata);
 
+	if (g_strcmp0 (framework_uuid, "None") != 0) {
+		/* mount the desired framework */
+		gchar *bundle_path;
 
-	for (i = 0; dep_bundles[i] != NULL; i++) {
-		gchar *bundle_data_path;
-		g_strstrip (dep_bundles[i]);
-
-		bundle_data_path = g_build_filename (LI_INSTALL_ROOT, dep_bundles[i], "data", NULL);
-		fname = g_build_filename (LI_INSTALL_ROOT, dep_bundles[i], "control", NULL);
-		if (!g_file_test (fname, G_FILE_TEST_IS_REGULAR)) {
-			fprintf (stderr, "The bundle '%s' does not exist.\n", dep_bundles[i]);
+		bundle_path = g_build_filename (LI_INSTALL_ROOT, "tmp", framework_uuid, NULL);
+		if (!g_file_test (bundle_path, G_FILE_TEST_IS_DIR)) {
+			fprintf (stderr, "The framework '%s' does not exist.\n", framework_uuid);
 			res = 1;
-			g_free (fname);
-			g_free (bundle_data_path);
+			g_free (bundle_path);
 			goto out;
 		}
-		g_free (fname);
 
-		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", APP_ROOT_PREFIX, bundle_data_path);
+		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", APP_ROOT_PREFIX, bundle_path);
 		res = mount ("", APP_ROOT_PREFIX,
 					"overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
 		g_free (tmp);
-		g_free (bundle_data_path);
+		g_free (bundle_path);
 		if (res != 0) {
 			fprintf (stderr, "Unable to mount dependency directory.\n");
 			res = 1;
@@ -145,12 +136,10 @@ mount_overlay (const gchar *bundle)
 	}
 
 out:
-	if (fname != NULL)
-		g_free (fname);
 	if (main_data_path != NULL)
 		g_free (main_data_path);
-	if (dep_bundles != NULL)
-		g_strfreev (dep_bundles);
+	if (ctl != NULL)
+		g_object_unref (ctl);
 
 	return res;
 }
