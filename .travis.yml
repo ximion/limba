@@ -12,7 +12,7 @@ before_script:
   - sudo apt-get update -qq && sudo apt-get install -qq base-files software-properties-common build-essential zlib1g # workarounds for upgrade issues
   - sudo add-apt-repository ppa:ximion/packagekit -y
   - sudo apt-get update -qq
-  - sudo apt-get install -qq cmake intltool libglib2.0-dev libarchive-dev libappstream-dev libgpgme11-dev gtk-doc-tools libgirepository1.0-dev
+  - sudo apt-get install -qq cmake intltool libglib2.0-dev uuid-dev libarchive-dev libappstream-dev libgpgme11-dev gtk-doc-tools libgirepository1.0-dev
 script:
   - mkdir build && cd build
   - cmake -DMAINTAINER=ON -DLIBUILD=ON ..
