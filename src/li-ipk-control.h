@@ -63,6 +63,9 @@ LiIPKControl	*li_ipk_control_new		(void);
 
 void 			li_ipk_control_load_data (LiIPKControl *ipkc, const gchar *data);
 
+const gchar		*li_ipk_control_get_pkg_version (LiIPKControl *ipkc);
+void			li_ipk_control_set_pkg_version (LiIPKControl *ipkc, const gchar *version);
+
 G_END_DECLS
 
 #endif /* __LI_IPK_CONTROL_H */

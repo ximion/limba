@@ -26,11 +26,12 @@
 #include "li-config-data.h"
 
 #include "li-utils.h"
+#include "li-utils-private.h"
 
 typedef struct _LiConfigDataPrivate	LiConfigDataPrivate;
 struct _LiConfigDataPrivate
 {
-	GPtrArray *content;
+	GList *content;
 	gint current_block_id;
 };
 
@@ -47,7 +48,7 @@ li_config_data_finalize (GObject *object)
 	LiConfigData *cdata = LI_CONFIG_DATA (object);
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
-	g_ptr_array_unref (priv->content);
+	g_list_free_full (priv->content, g_free);
 
 	G_OBJECT_CLASS (li_config_data_parent_class)->finalize (object);
 }
@@ -60,7 +61,6 @@ li_config_data_init (LiConfigData *cdata)
 {
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
-	priv->content = g_ptr_array_new_with_free_func (g_free);
 	priv->current_block_id = -1;
 }
 
@@ -74,13 +74,15 @@ li_config_data_load_data (LiConfigData *cdata, const gchar *data)
 	guint i;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
-	/* clear the array */
-	if (priv->content->len > 0)
-		g_ptr_array_remove_range (priv->content, 0, priv->content->len);
+	/* clear the content list */
+	if (priv->content != NULL) {
+		g_list_free_full (priv->content, g_free);
+		priv->content = NULL;
+	}
 
 	lines = g_strsplit (data, "\n", -1);
 	for (i = 0; lines[i] != NULL; i++) {
-		g_ptr_array_add (priv->content, g_strdup (lines[i]));
+		priv->content = g_list_append (priv->content, g_strdup (lines[i]));
 	}
 
 	g_strfreev (lines);
@@ -102,8 +104,10 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file)
 	g_object_unref (ir);
 
 	/* clear the array */
-	if (priv->content->len > 0)
-		g_ptr_array_remove_range (priv->content, 0, priv->content->len);
+	if (priv->content != NULL) {
+		g_list_free_full (priv->content, g_free);
+		priv->content = NULL;
+	}
 
 	while (TRUE) {
 		line = g_data_input_stream_read_line (dis, NULL, NULL, NULL);
@@ -111,7 +115,7 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file)
 			break;
 		}
 
-		g_ptr_array_add (priv->content, line);
+		priv->content = g_list_append (priv->content, line);
 	}
 
 	g_object_unref (dis);
@@ -155,6 +159,7 @@ gboolean
 li_config_data_open_block (LiConfigData *cdata, const gchar *field, const gchar *value, gboolean reset_index)
 {
 	guint i;
+	GList *l;
 	guint block_id;
 	gboolean start = FALSE;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
@@ -162,7 +167,7 @@ li_config_data_open_block (LiConfigData *cdata, const gchar *field, const gchar 
 	if (reset_index)
 		li_config_data_reset (cdata);
 
-	if (priv->content->len == 0) {
+	if (priv->content == NULL) {
 		li_config_data_reset (cdata);
 		return FALSE;
 	}
@@ -172,12 +177,14 @@ li_config_data_open_block (LiConfigData *cdata, const gchar *field, const gchar 
 		start = TRUE;
 	}
 
-	for (i = 0; i < priv->content->len; i++) {
+	for (l = priv->content; l != NULL; l = l->next) {
 		gchar *line;
 		gchar *field_data;
+
+		i = g_list_position (priv->content, l);
 		if (((gint) i) < priv->current_block_id)
 			continue;
-		line = (gchar*) g_ptr_array_index (priv->content, i);
+		line = (gchar*) l->data;
 
 		if (li_line_empty (line)) {
 			start = TRUE;
@@ -217,21 +224,24 @@ gchar*
 li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 {
 	GString *res;
-	guint i;
+	gint i;
+	GList *l;
 	gboolean add_to_value = FALSE;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
-	if (priv->content->len == 0) {
+	if (priv->content == NULL) {
 		return g_strdup ("");
 	}
 
 	res = g_string_new ("");
-	for (i = 0; i < priv->content->len; i++) {
+	for (l = priv->content; l != NULL; l = l->next) {
 		gchar *line;
 		gchar *field_data;
-		if (((int) i) < priv->current_block_id)
+
+		i = g_list_position (priv->content, l);
+		if (i < priv->current_block_id)
 			continue;
-		line = (gchar*) g_ptr_array_index (priv->content, i);
+		line = (gchar*) l->data;
 
 		if (li_str_empty (line)) {
 			/* check if we should continue although we have reached the end of this block */
@@ -265,6 +275,104 @@ li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 		g_free (field_data);
 
 	};
+
+	return g_string_free (res, FALSE);
+}
+
+/**
+ * li_config_data_set_value:
+ * @field: The field which should be changed
+ * @value: The new value for the specified field
+ *
+ * Change the value of a field in the currently opened block.
+ * If the field does not exist, it will be created.
+ *
+ * Returns: %TRUE if value was sucessfully changed.
+ */
+gboolean
+li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *value)
+{
+	gchar **value_lines;
+	gint i;
+	GList *l;
+	_cleanup_free_ gchar *field_str;
+	gchar *data;
+	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
+
+	if (field == NULL)
+		return FALSE;
+	if (value == NULL)
+		return FALSE;
+
+	/* don't trost the current id pointer */
+	if (priv->content == NULL)
+		priv->current_block_id = -1;
+
+	value_lines = g_strsplit (value, "\n", -1);
+	field_str = g_strdup_printf ("%s:", field);
+	data = g_strdup_printf ("%s: %s", field, value);
+
+	for (l = priv->content; l != NULL; l = l->next) {
+		gchar *line;
+		gchar *field_data;
+
+		i = g_list_position (priv->content, l);
+		if (((int) i) < priv->current_block_id)
+			continue;
+		line = (gchar*) l->data;
+
+		if (li_str_empty (line)) {
+			/* check if we should continue although we have reached the end of this block */
+			if (priv->current_block_id < 0) {
+				/* a negative current block id means no block was opened previously, so we continue in that case
+				 and break otherwise */
+				continue;
+			} else {
+				/* we can add data to this block and exit */
+				priv->content = g_list_insert_before (priv->content, l, data);
+				return TRUE;
+			}
+		}
+		if (g_str_has_prefix (line, field_str)) {
+			/* field already exists, replace it */
+			priv->content = g_list_insert_before (priv->content, l, data);
+			priv->content = g_list_remove_link (priv->content, l);
+			g_free (l->data);
+			g_list_free (l);
+
+			/* we're done here */
+			return TRUE;
+		}
+	}
+
+	/* if we are here, we can just append the new data to the end of the list */
+	priv->content = g_list_append (priv->content, data);
+
+	return TRUE;
+}
+
+/**
+ * li_config_data_get_data:
+ */
+gchar*
+li_config_data_get_data (LiConfigData *cdata)
+{
+	GString *res;
+	gint i;
+	GList *l;
+	gboolean add_to_value = FALSE;
+	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
+
+	if (priv->content == NULL) {
+		return g_strdup ("");
+	}
+
+	res = g_string_new ("");
+	for (l = priv->content; l != NULL; l = l->next) {
+		gchar *line;
+		line = (gchar*) l->data;
+		g_string_append_printf (res, "\n%s", line);
+	}
 
 	return g_string_free (res, FALSE);
 }

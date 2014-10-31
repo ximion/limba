@@ -49,6 +49,7 @@ struct _LiIPKPackagePrivate
 	gchar *tmp_dir;
 	LiIPKControl *ctl;
 	AsComponent *cpt;
+	gchar *install_root;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiIPKPackage, li_ipk_package, G_TYPE_OBJECT)
@@ -71,6 +72,7 @@ li_ipk_package_finalize (GObject *object)
 		fclose (priv->archive_file);
 	if (priv->cpt != NULL)
 		g_object_unref (priv->cpt);
+	g_free (priv->install_root);
 
 	G_OBJECT_CLASS (li_ipk_package_parent_class)->finalize (object);
 }
@@ -87,6 +89,7 @@ li_ipk_package_init (LiIPKPackage *ipk)
 	priv->ctl = li_ipk_control_new ();
 	priv->tmp_dir = NULL;
 	priv->archive_file = NULL;
+	priv->install_root = g_strdup (LI_INSTALL_ROOT);
 }
 
 /**
@@ -323,16 +326,43 @@ out:
 	return ret;
 }
 
+static const gchar*
+li_ipk_package_get_version_from_component (AsComponent *cpt)
+{
+	GPtrArray *releases;
+	AsRelease *release = NULL;
+	guint64 timestamp = 0;
+	guint i;
+	const gchar *version = NULL;
+
+	releases = as_component_get_releases (cpt);
+	for (i = 0; i < releases->len; i++) {
+		AsRelease *r = AS_RELEASE (g_ptr_array_index (releases, i));
+		if (as_release_get_timestamp (r) >= timestamp) {
+				release = r;
+				timestamp = as_release_get_timestamp (r);
+		}
+	}
+	if (release != NULL) {
+		version = as_release_get_version (release);
+	}
+
+	return version;
+}
+
 /**
  * li_ipk_package_build_package_id:
  * Create a unique identifier for this software.
  */
 static gchar*
-li_ipk_package_build_package_id (AsComponent *cpt)
+li_ipk_package_build_package_id (LiIPKPackage *ipk)
 {
 	gchar *tmp;
 	GString *uname;
+	AsComponent *cpt;
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
+	cpt = priv->cpt;
 	uname = g_string_new ("");
 	tmp = li_str_replace (as_component_get_id (cpt), ".desktop", "");
 	g_strstrip (tmp);
@@ -346,8 +376,7 @@ li_ipk_package_build_package_id (AsComponent *cpt)
 		}
 	}
 	g_string_append (uname, tmp);
-
-	// TODO: Append version to string.
+	g_string_append_printf (uname, "-%s", li_ipk_control_get_pkg_version (priv->ctl));
 
 	return g_string_free (uname, FALSE);
 }
@@ -368,6 +397,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	gchar *tmp;
 	gint res;
 	gboolean ret;
+	const gchar *version;
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	/* test if we have all data we need for extraction */
@@ -379,8 +409,19 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 		return FALSE;
 	}
 
+	/* add the version number to our control data */
+	version = li_ipk_package_get_version_from_component (priv->cpt);
+	if (version == NULL) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Unable to determine package version."));
+		return FALSE;
+	}
+	li_ipk_control_set_pkg_version (priv->ctl, version);
+
 	/* do we have a valid id? */
-	pkg_name = li_ipk_package_build_package_id (priv->cpt);
+	pkg_name = li_ipk_package_build_package_id (ipk);
 	if (pkg_name == NULL) {
 		g_set_error (error,
 				LI_PACKAGE_ERROR,
@@ -390,7 +431,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	}
 
 	/* the directory where all package data is installed to */
-	pkg_root_dir = g_build_filename (LI_INSTALL_ROOT, pkg_name, NULL);
+	pkg_root_dir = g_build_filename (priv->install_root, pkg_name, NULL);
 
 	ar = li_ipk_package_open_base_ipk (ipk, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {
@@ -442,7 +483,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 				LI_PACKAGE_ERROR_ARCHIVE,
 				_("Could not open IPK payload! Error: %s"), archive_error_string (ar));
 		archive_read_free (payload_ar);
-		return NULL;
+		return FALSE;
 	}
 
 	/* install payload */
@@ -462,7 +503,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 				LI_PACKAGE_ERROR_EXTRACT,
 				_("Could not create directory structure '%s'."), dest_path);
 				archive_read_free (payload_ar);
-				return NULL;
+				return FALSE;
 		}
 
 		li_ipk_package_extract_entry_to (ipk, payload_ar, en, dest_path, &tmp_error);
@@ -476,6 +517,32 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	archive_read_free (payload_ar);
 
 	return TRUE;
+}
+
+/**
+ * li_ipk_package_get_install_root:
+ *
+ * Get the installation root directory
+ */
+const gchar*
+li_ipk_package_get_install_root (LiIPKPackage *ipk)
+{
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	return priv->install_root;
+}
+
+/**
+ * li_ipk_package_set_install_root:
+ * @dir: An absolute path to the installation root directory
+ *
+ * Set the directory where the software should be installed to.
+ */
+void
+li_ipk_package_set_install_root (LiIPKPackage *ipk, const gchar *dir)
+{
+	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	g_free (priv->install_root);
+	priv->install_root = g_strdup (dir);
 }
 
 /**

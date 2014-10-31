@@ -73,6 +73,8 @@ gboolean		li_config_data_open_block (LiConfigData *cdata,
 gchar			*li_config_data_get_value (LiConfigData *cdata,
 											const gchar *field);
 
+gchar			*li_config_data_get_data (LiConfigData *cdata);
+
 G_END_DECLS
 
 #endif /* __LI_CONFIG_DATA_H */

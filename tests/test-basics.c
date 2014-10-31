@@ -64,6 +64,11 @@ test_configdata ()
 	g_assert (ret);
 	g_free (str);
 
+	str = li_config_data_get_data (cdata);
+	li_config_data_set_value (cdata, "Foooooo", "Baaaaaaar");
+	g_debug ("%s", str);
+	g_free (str);
+
 	g_object_unref (cdata);
 }
 
