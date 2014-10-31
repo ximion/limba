@@ -10,6 +10,7 @@ set(LIBLIMBA_SRC
 	li-config-data.c
 	li-ipk-control.c
 	li-ipk-package.c
+	li-installer.c
 )
 
 set(LIBLIMBA_PUBLIC_HEADERS
@@ -17,6 +18,7 @@ set(LIBLIMBA_PUBLIC_HEADERS
 	li-utils.h
 	li-ipk-control.h
 	li-ipk-package.h
+	li-installer.h
 )
 
 set(LIBLIMBA_PRIVATE_HEADERS
