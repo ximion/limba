@@ -123,6 +123,16 @@ li_ipk_control_set_pkg_version (LiIPKControl *ipkc, const gchar *version)
 }
 
 /**
+ * li_ipk_control_save_to_file:
+ */
+gboolean
+li_ipk_control_save_to_file (LiIPKControl *ipkc, const gchar *filename)
+{
+	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	return li_config_data_save_to_file (priv->cdata, filename);
+}
+
+/**
  * li_ipk_control_class_init:
  **/
 static void

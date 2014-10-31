@@ -74,6 +74,8 @@ gchar			*li_config_data_get_value (LiConfigData *cdata,
 											const gchar *field);
 
 gchar			*li_config_data_get_data (LiConfigData *cdata);
+gboolean		li_config_data_save_to_file (LiConfigData *cdata,
+											const gchar *filename);
 
 G_END_DECLS
 

@@ -516,7 +516,12 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 
 	archive_read_free (payload_ar);
 
-	return TRUE;
+	/* install config data */
+	tmp = g_build_filename (pkg_root_dir, "control", NULL);
+	ret = li_ipk_control_save_to_file (priv->ctl, tmp);
+	g_free (tmp);
+
+	return ret;
 }
 
 /**

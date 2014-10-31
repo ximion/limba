@@ -371,10 +371,51 @@ li_config_data_get_data (LiConfigData *cdata)
 	for (l = priv->content; l != NULL; l = l->next) {
 		gchar *line;
 		line = (gchar*) l->data;
-		g_string_append_printf (res, "\n%s", line);
+		g_string_append_printf (res, "%s\n", line);
 	}
 
 	return g_string_free (res, FALSE);
+}
+
+/**
+ * li_config_data_save_to_file:
+ */
+gboolean
+li_config_data_save_to_file (LiConfigData *cdata, const gchar *filename)
+{
+	GFile *file;
+	GDataOutputStream *dos = NULL;
+	GFileOutputStream *fos;
+	GError *error = NULL;
+	gboolean ret = FALSE;
+	gchar *data = NULL;
+
+	file = g_file_new_for_path (filename);
+
+	fos = g_file_create (file, G_FILE_CREATE_REPLACE_DESTINATION, NULL, &error);
+	dos = g_data_output_stream_new ((GOutputStream*) fos);
+	g_object_unref (fos);
+	if (error != NULL) {
+		g_error_free (error);
+		goto out;
+	}
+
+	data = li_config_data_get_data (cdata);
+	g_data_output_stream_put_string (dos, data, NULL, &error);
+	if (error != NULL) {
+		g_error_free (error);
+		goto out;
+	}
+
+	ret = TRUE;
+out:
+	g_object_unref (file);
+	if (data != NULL)
+		g_free (data);
+	if (dos != NULL)
+		g_object_unref (dos);
+
+	return ret;
 }
 
 /**
