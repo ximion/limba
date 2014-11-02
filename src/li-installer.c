@@ -158,6 +158,7 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 	GPtrArray *deps = NULL;
 	guint i;
 	gboolean ret = FALSE;
+	gchar *uuid;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	pkg = li_ipk_package_new ();
@@ -191,11 +192,17 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 		g_object_unref (mgr);
 
 		/* now get the framework id for the new application, or create the framework */
-		li_polylinker_get_framework_for (priv->plink, deps, &tmp_error);
+		uuid = li_polylinker_get_framework_for (priv->plink, deps, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			goto out;
 		}
+
+		li_pkg_info_set_framework_dependency (info, uuid);
+		g_free (uuid);
+	} else {
+		/* if the installed software does not need a framework to run, we explicity state that */
+		li_pkg_info_set_framework_dependency (info, "None");
 	}
 
 	li_ipk_package_install (pkg, &tmp_error);

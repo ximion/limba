@@ -1,3 +1,23 @@
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*-
+ *
+ * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2012 Alexander Larsson <alexl@redhat.com>
+ *
+ * Licensed under the GNU General Public License Version 2
+ *
+ * This library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the license, or
+ * (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this library.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #define _GNU_SOURCE /* Required for CLONE_NEWNS */
 #include <limba.h>
@@ -97,7 +117,7 @@ mount_overlay (const gchar *bundle)
 
 	framework_uuid = li_pkg_info_get_framework_dependency (pki);
 	if (framework_uuid == NULL) {
-		g_error ("Sorry, I can not construct a new framework for this application to run in. Please do that manually!");
+		fprintf (stderr, "Sorry, I can not construct a new framework for this application to run in. Please do that manually!\n");
 		res = 3;
 		goto out;
 	}
