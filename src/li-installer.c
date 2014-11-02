@@ -120,23 +120,27 @@ li_installer_parse_dependency_string (const gchar *depstr)
  * li_installed_dep_is_installed:
  */
 gboolean
-li_installer_dep_is_installed (GPtrArray *installed_sw, LiPkgInfo *ipkc)
+li_installer_dep_is_installed (GPtrArray *installed_sw, LiPkgInfo *dep)
 {
 	guint i;
 	const gchar *dep_name;
 
-	dep_name = li_pkg_info_get_name (ipkc);
+	dep_name = li_pkg_info_get_name (dep);
 
 	for (i = 0; i < installed_sw->len; i++) {
 		const gchar *str;
-		LiPkgInfo *pkg = LI_PKG_INFO (g_ptr_array_index (installed_sw, i));
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (installed_sw, i));
 
-		str = li_pkg_info_get_name (pkg);
+		str = li_pkg_info_get_name (pki);
 		if (g_strcmp0 (dep_name, str) == 0) {
+			/* update version of the dependency to match the one of the installed software */
+			str = li_pkg_info_get_version (pki);
+			li_pkg_info_set_version (dep, str);
 			return TRUE;
 		}
 
 		// TODO: Check version as well
+
 	}
 
 	return FALSE;
@@ -150,10 +154,11 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 {
 	LiIPKPackage *pkg;
 	LiPkgInfo *info;
-	GError *tmp_error;
+	GError *tmp_error = NULL;
 	GPtrArray *deps = NULL;
 	guint i;
 	gboolean ret = FALSE;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	pkg = li_ipk_package_new ();
 	li_ipk_package_open_file (pkg, filename, &tmp_error);
@@ -184,6 +189,13 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 			}
 		}
 		g_object_unref (mgr);
+
+		/* now get the framework id for the new application, or create the framework */
+		li_polylinker_get_framework_for (priv->plink, deps, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
 	}
 
 	li_ipk_package_install (pkg, &tmp_error);

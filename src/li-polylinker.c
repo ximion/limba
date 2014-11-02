@@ -30,7 +30,11 @@
 #include "li-polylinker.h"
 
 #include <glib/gi18n-lib.h>
+#include <glib/gstdio.h>
+#include <unistd.h>
+#include <errno.h>
 
+#include "li-config.h"
 #include "li-pkg-info.h"
 #include "li-manager.h"
 #include "li-utils-private.h"
@@ -68,6 +72,101 @@ li_polylinker_init (LiPolylinker *plink)
 }
 
 /**
+ * li_utils_find_files_matching:
+ */
+static gboolean
+li_polylinker_link_software (const gchar* sw_dir, const gchar* frmw_destination, GError **error)
+{
+	GError *tmp_error = NULL;
+	GFileInfo *file_info;
+	GFileEnumerator *enumerator = NULL;
+	GFile *fdir;
+
+	fdir =  g_file_new_for_path (sw_dir);
+	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
+	if (tmp_error != NULL)
+		goto out;
+
+	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
+		gchar *path;
+		gchar *tmp;
+		gchar *dest_path;
+		gint res;
+
+		path = g_build_filename (sw_dir,
+								 g_file_info_get_name (file_info),
+								 NULL);
+		tmp = g_path_get_basename (path);
+		dest_path = g_build_filename (frmw_destination, tmp, NULL);
+		g_free (tmp);
+
+		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
+			/* if there is already a file with that name at the destination, we skip this directory */
+			if (g_file_test (dest_path, G_FILE_TEST_IS_REGULAR)) {
+				g_free (path);
+				g_free (dest_path);
+				continue;
+			}
+
+			/* create directory at destination */
+			if (!g_file_test (dest_path, G_FILE_TEST_IS_DIR)) {
+				res = g_mkdir (dest_path, 0755);
+				if (res != 0) {
+					g_set_error (error,
+						G_FILE_ERROR,
+						G_FILE_ERROR_FAILED,
+						_("Unable to create directory. Error: %s"), g_strerror (errno));
+					goto out;
+				}
+			}
+
+			li_polylinker_link_software (path, dest_path, &tmp_error);
+			/* if there was an error, exit */
+			if (tmp_error != NULL) {
+				g_free (path);
+				g_free (dest_path);
+				goto out;
+			}
+		} else {
+			if (g_file_test (path, G_FILE_TEST_IS_SYMLINK)) {
+				gchar *target;
+				target = g_file_read_link (path, &tmp_error);
+				if (tmp_error != NULL)
+					goto out;
+				res = symlink (target, dest_path);
+				g_free (target);
+			} else {
+				/* we have a file, link it */
+				res = link (path, dest_path);
+			}
+			if (res != 0) {
+				g_set_error (error,
+					G_FILE_ERROR,
+					G_FILE_ERROR_FAILED,
+					_("Unable to create symbolic link. Error: %s"), g_strerror (errno));
+				goto out;
+			}
+		}
+
+		g_free (path);
+		g_free (dest_path);
+	}
+	if (tmp_error != NULL)
+		goto out;
+
+out:
+	g_object_unref (fdir);
+	if (enumerator != NULL)
+		g_object_unref (enumerator);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/**
  * li_polylinker_get_framework_for:
  * @sw: A list of software as #LiPkgInfo
  *
@@ -76,11 +175,55 @@ li_polylinker_init (LiPolylinker *plink)
  * In case it doesn't exist yet, generate it.
  */
 gchar*
-li_polylinker_get_framework_for (LiPolylinker *plink, GPtrArray *sw)
+li_polylinker_get_framework_for (LiPolylinker *plink, GPtrArray *sw, GError **error)
 {
-	//LiPolylinkerPrivate *priv = GET_PRIVATE (plink);
+	guint i;
+	gchar *uuid;
+	gchar *frmw_path;
+	gboolean ret = TRUE;
+	GError *tmp_error = NULL;
+//	LiPolylinkerPrivate *priv = GET_PRIVATE (plink);
 
-	return NULL;
+	// TODO: Get list of frameworks and check if one already exists before creating a new one
+
+	uuid = li_get_uuid_string ();
+	frmw_path = g_build_filename (LI_INSTALL_ROOT, "tmp", uuid, "data", NULL);
+
+	li_touch_dir (frmw_path, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	for (i = 0; i < sw->len; i++) {
+		gchar *data_path;
+		const gchar *pkid;
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (sw, i));
+
+		pkid = li_pkg_info_get_id (pki);
+		if (pkid == NULL) {
+			g_warning ("Found package without identifier!");
+			continue;
+		}
+
+		data_path = g_build_filename (LI_INSTALL_ROOT, pkid, "data", NULL);
+		li_polylinker_link_software (data_path, frmw_path, &tmp_error);
+		g_free (data_path);
+
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+	}
+
+out:
+	g_free (frmw_path);
+	if (ret) {
+		return uuid;
+	} else {
+		g_free (uuid);
+		return NULL;
+	}
 }
 
 /**

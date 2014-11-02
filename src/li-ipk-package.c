@@ -307,13 +307,11 @@ li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError
 				_("Could not determine package version."));
 		return FALSE;
 	}
-	li_pkg_info_set_pkg_version (priv->info, version);
+	li_pkg_info_set_version (priv->info, version);
 
-	/* now create a package-id */
-	tmp = g_strdup_printf ("%s-%s", li_pkg_info_get_name (priv->info),
-									li_pkg_info_get_pkg_version (priv->info));
-	li_ipk_package_set_id (ipk, tmp);
-	g_free (tmp);
+	/* now get the package-id */
+	li_ipk_package_set_id (ipk,
+						   li_pkg_info_get_id (priv->info));
 
 	return TRUE;
 }
@@ -429,7 +427,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	}
 
 	/* add the version number to our control data */
-	version = li_pkg_info_get_pkg_version (priv->info);
+	version = li_pkg_info_get_version (priv->info);
 	if (version == NULL) {
 		g_set_error (error,
 				LI_PACKAGE_ERROR,
@@ -515,7 +513,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 		dest_path = g_build_filename (pkg_root_dir, "data", path, NULL);
 		g_free (path);
 
-		if (!li_utils_touch_dir (dest_path)) {
+		if (!li_touch_dir (dest_path, NULL)) {
 			g_set_error (error,
 				LI_PACKAGE_ERROR,
 				LI_PACKAGE_ERROR_EXTRACT,

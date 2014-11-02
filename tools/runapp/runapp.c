@@ -106,7 +106,7 @@ mount_overlay (const gchar *bundle)
 		/* mount the desired framework */
 		gchar *bundle_path;
 
-		bundle_path = g_build_filename (LI_INSTALL_ROOT, "tmp", framework_uuid, NULL);
+		bundle_path = g_build_filename (LI_INSTALL_ROOT, "tmp", framework_uuid, "data", NULL);
 		if (!g_file_test (bundle_path, G_FILE_TEST_IS_DIR)) {
 			fprintf (stderr, "The framework '%s' does not exist.\n", framework_uuid);
 			res = 1;

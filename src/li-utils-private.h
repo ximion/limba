@@ -86,7 +86,8 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 #define _cleanup_ptrarray_unref_ __attribute__ ((cleanup(gs_local_ptrarray_unref)))
 #define _cleanup_variant_unref_ __attribute__ ((cleanup(gs_local_variant_unref)))
 
-gboolean		li_utils_touch_dir (const gchar* dirname);
+gboolean		li_touch_dir (const gchar* dirname,
+							  GError **error);
 gboolean		li_utils_delete_dir_recursive (const gchar* dirname);
 gchar			*li_string_strip (const gchar* str);
 GPtrArray		*li_utils_find_files_matching (const gchar* dir,

@@ -50,26 +50,25 @@ li_str_empty (const gchar* str)
 }
 
 /**
- * li_utils_touch_dir:
+ * li_touch_dir:
  */
 gboolean
-li_utils_touch_dir (const gchar* dirname)
+li_touch_dir (const gchar* dirname, GError **error)
 {
 	GFile *d = NULL;
-	GError *error = NULL;
+	GError *tmp_error = NULL;
 	g_return_val_if_fail (dirname != NULL, FALSE);
 
 	d = g_file_new_for_path (dirname);
 	if (!g_file_query_exists (d, NULL)) {
-		g_file_make_directory_with_parents (d, NULL, &error);
-		if (error != NULL) {
-			g_critical ("Unable to create directory tree. Error: %s", error->message);
-			g_error_free (error);
-			return FALSE;
-		}
+		g_file_make_directory_with_parents (d, NULL, &tmp_error);
 	}
-	g_object_unref (d);
 
+	g_object_unref (d);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -369,7 +368,7 @@ li_utils_get_tmp_dir (const gchar *prefix)
 	gchar *tmp_dir = NULL;
 	const gchar *tmp_root_path = "/var/tmp/limba";
 
-	li_utils_touch_dir (tmp_root_path);
+	li_touch_dir (tmp_root_path, NULL);
 
 	template = g_strdup_printf ("%s-XXXXXX", prefix);
 	/* create temporary directory */
@@ -394,10 +393,10 @@ gchar*
 li_get_uuid_string (void)
 {
 	uuid_t uuid;
-	gchar *str;
+	char uuid_str[37];
 
 	uuid_generate_time_safe(uuid);
-	uuid_unparse_lower(uuid, str);
+	uuid_unparse_lower(uuid, uuid_str);
 
-	return str;
+	return g_strndup (uuid_str, 36);
 }

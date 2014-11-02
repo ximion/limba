@@ -62,27 +62,30 @@ struct _LiPkgInfoClass
 GType			li_pkg_info_get_type	(void);
 LiPkgInfo	*li_pkg_info_new		(void);
 
-void			li_pkg_info_load_file (LiPkgInfo *pkgi,
+void			li_pkg_info_load_file (LiPkgInfo *pki,
 											GFile *file);
-void 			li_pkg_info_load_data (LiPkgInfo *pkgi,
+void 			li_pkg_info_load_data (LiPkgInfo *pki,
 										const gchar *data);
-gboolean		li_pkg_info_save_to_file (LiPkgInfo *pkgi,
+gboolean		li_pkg_info_save_to_file (LiPkgInfo *pki,
 											const gchar *filename);
 
-const gchar		*li_pkg_info_get_pkg_version (LiPkgInfo *pkgi);
-void			li_pkg_info_set_pkg_version (LiPkgInfo *pkgi, const gchar *version);
+const gchar		*li_pkg_info_get_version (LiPkgInfo *pki);
+void			li_pkg_info_set_version (LiPkgInfo *pki,
+										const gchar *version);
 
-const gchar		*li_pkg_info_get_name (LiPkgInfo *pkgi);
-void			li_pkg_info_set_name (LiPkgInfo *pkgi,
+const gchar		*li_pkg_info_get_name (LiPkgInfo *pki);
+void			li_pkg_info_set_name (LiPkgInfo *pki,
 										const gchar *name);
 
-const gchar		*li_pkg_info_get_framework_dependency (LiPkgInfo *pkgi);
-void			li_pkg_info_set_framework_dependency (LiPkgInfo *pkgi,
+const gchar		*li_pkg_info_get_framework_dependency (LiPkgInfo *pki);
+void			li_pkg_info_set_framework_dependency (LiPkgInfo *pki,
 										const gchar *uuid);
 
-const gchar		*li_pkg_info_get_dependencies (LiPkgInfo *pkgi);
-void			li_pkg_info_set_dependencies (LiPkgInfo *pkgi,
+const gchar		*li_pkg_info_get_dependencies (LiPkgInfo *pki);
+void			li_pkg_info_set_dependencies (LiPkgInfo *pki,
 										const gchar *deps_string);
+
+const gchar		*li_pkg_info_get_id (LiPkgInfo *pki);
 
 
 G_END_DECLS

@@ -61,7 +61,9 @@ struct _LiPolylinkerClass
 GType			li_polylinker_get_type	(void);
 LiPolylinker	*li_polylinker_new		(void);
 
-gchar			*li_polylinker_get_framework_for (LiPolylinker *plink, GPtrArray *sw);
+gchar			*li_polylinker_get_framework_for (LiPolylinker *plink,
+												GPtrArray *sw,
+												GError **error);
 
 G_END_DECLS
 
