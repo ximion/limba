@@ -189,7 +189,7 @@ main (gint argc, gchar *argv[])
 	strv = g_strsplit (argv[1], ":", 2);
 	if (g_strv_length (strv) != 2) {
 		g_strfreev (strv);
-		fprintf (stderr, "No valid application bundle-executable found.\n");
+		fprintf (stderr, "No valid application-bundle / executable found.\n");
 		ret = 1;
 		goto out;
 	}

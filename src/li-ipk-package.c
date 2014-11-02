@@ -119,10 +119,12 @@ li_ipk_package_read_entry (LiIPKPackage *ipk, struct archive* ar, GError **error
 static gboolean
 li_ipk_package_extract_entry_to (LiIPKPackage *ipk, struct archive* ar, struct archive_entry* e, const gchar* dest, GError **error)
 {
-	_cleanup_free_ gchar *fname;
+	_cleanup_free_ gchar *fname = NULL;
 	const gchar *cstr;
+	const gchar *link_target;
 	gchar *str;
 	gboolean ret;
+	gint res;
 	gint fd;
 	const void *buff = NULL;
 	gsize size = 0UL;
@@ -131,6 +133,13 @@ li_ipk_package_extract_entry_to (LiIPKPackage *ipk, struct archive* ar, struct a
 	gsize bytes_to_write = 0UL;
 	gssize bytes_written = 0L;
 	gssize total_written = 0L;
+	mode_t filetype;
+
+	filetype = archive_entry_filetype (e);
+	if (filetype == S_IFDIR) {
+		/* we don't extract directories */
+		return TRUE;
+	}
 
 	cstr = archive_entry_pathname (e);
 	str = g_path_get_basename (cstr);
@@ -143,6 +152,36 @@ li_ipk_package_extract_entry_to (LiIPKPackage *ipk, struct archive* ar, struct a
 				LI_PACKAGE_ERROR_OVERRIDE,
 				_("Could not override file '%s'. The file already exists!"), fname);
 		return FALSE;
+	}
+
+	/* check if we are dealink with a symlink */
+	link_target = archive_entry_symlink (e);
+	if ((filetype == S_IFLNK) && (link_target != NULL)) {
+		res = symlink (link_target, fname);
+	} else {
+		link_target = archive_entry_hardlink (e);
+		if (link_target != NULL) {
+			res = symlink (link_target, fname);
+		}
+	}
+	if (link_target != NULL) {
+		if (res != 0) {
+			g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_EXTRACT,
+				_("Unable to create link. Error: %s"), g_strerror (errno));
+			return FALSE;
+		}
+		ret = TRUE;
+		goto done;
+	}
+
+	if (filetype != S_IFREG) {
+		/* do we really have to extract every type of file?
+		 * Symlinks and regular files should be enough for now */
+		g_debug ("Skipped extraction of file '%s': No regular file.",
+				 archive_entry_pathname (e));
+		return TRUE;
 	}
 
 	fd = open (fname, (O_CREAT | O_WRONLY) | O_TRUNC, ((S_IRUSR | S_IWUSR) | S_IRGRP) | S_IROTH);
@@ -191,6 +230,7 @@ li_ipk_package_extract_entry_to (LiIPKPackage *ipk, struct archive* ar, struct a
 		return FALSE;
 	}
 
+done:
 	/* apply permissions from the archive */
 	chmod (fname, archive_entry_mode (e));
 
