@@ -8,8 +8,9 @@ set(INTROSPECTION_COMPILER_ARGS "--includedir=${CMAKE_CURRENT_SOURCE_DIR}")
 set(LIBLIMBA_SRC
 	li-utils.c
 	li-config-data.c
-	li-ipk-control.c
+	li-pkg-info.c
 	li-ipk-package.c
+	li-polylinker.c
 	li-installer.c
 	li-manager.c
 )
@@ -17,7 +18,7 @@ set(LIBLIMBA_SRC
 set(LIBLIMBA_PUBLIC_HEADERS
 	limba.h
 	li-utils.h
-	li-ipk-control.h
+	li-pkg-info.h
 	li-ipk-package.h
 	li-installer.h
 	li-manager.h
@@ -26,6 +27,7 @@ set(LIBLIMBA_PUBLIC_HEADERS
 set(LIBLIMBA_PRIVATE_HEADERS
 	li-utils-private.h
 	li-config-data.h
+	li-polylinker.h
 )
 
 add_definitions("-DLI_COMPILATION"

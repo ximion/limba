@@ -28,7 +28,7 @@ extern "C" {
 
 #include <li-config.h>
 #include <li-utils.h>
-#include <li-ipk-control.h>
+#include <li-pkg-info.h>
 #include <li-ipk-package.h>
 #include <li-installer.h>
 #include <li-manager.h>

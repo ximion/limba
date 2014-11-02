@@ -76,7 +76,7 @@ mount_overlay (const gchar *bundle)
 	GFile *file;
 	const gchar *framework_uuid;
 	gchar *tmp;
-	LiIPKControl *ctl = NULL;
+	LiPkgInfo *pki = NULL;
 
 	/* check if the bundle exists */
 	main_data_path = g_build_filename (LI_INSTALL_ROOT, bundle, "data", NULL);
@@ -91,11 +91,11 @@ mount_overlay (const gchar *bundle)
 		goto out;
 	}
 
-	ctl = li_ipk_control_new ();
-	li_ipk_control_load_file (ctl, file);
+	pki = li_pkg_info_new ();
+	li_pkg_info_load_file (pki, file);
 	g_object_unref (file);
 
-	framework_uuid = li_ipk_control_get_framework_dependency (ctl);
+	framework_uuid = li_pkg_info_get_framework_dependency (pki);
 	if (framework_uuid == NULL) {
 		g_error ("Sorry, I can not construct a new framework for this application to run in. Please do that manually!");
 		res = 3;
@@ -138,8 +138,8 @@ mount_overlay (const gchar *bundle)
 out:
 	if (main_data_path != NULL)
 		g_free (main_data_path);
-	if (ctl != NULL)
-		g_object_unref (ctl);
+	if (pki != NULL)
+		g_object_unref (pki);
 
 	return res;
 }
@@ -177,7 +177,7 @@ main (gint argc, gchar *argv[])
 	uid_t uid=getuid(), euid=geteuid();
 
 	if (uid>0 && uid==euid) {
-		g_error ("This program needs the suid bit to be set to function correctly.");
+		g_error ("This program needs the suid bit to be set to function correpkiy.");
 		return 3;
 	}
 

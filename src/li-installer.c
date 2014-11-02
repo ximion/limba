@@ -28,14 +28,15 @@
 
 #include <glib/gi18n-lib.h>
 
-#include "li-ipk-control.h"
+#include "li-pkg-info.h"
 #include "li-ipk-package.h"
 #include "li-manager.h"
+#include "li-polylinker.h"
 
 typedef struct _LiInstallerPrivate	LiInstallerPrivate;
 struct _LiInstallerPrivate
 {
-	guint dummy;
+	LiPolylinker *plink;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
@@ -48,10 +49,10 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
 static void
 li_installer_finalize (GObject *object)
 {
-#if 0
 	LiInstaller *inst = LI_INSTALLER (object);
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
-#endif
+
+	g_object_unref (priv->plink);
 
 	G_OBJECT_CLASS (li_installer_parent_class)->finalize (object);
 }
@@ -62,6 +63,9 @@ li_installer_finalize (GObject *object)
 static void
 li_installer_init (LiInstaller *inst)
 {
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	priv->plink = li_polylinker_new ();
 }
 
 /**
@@ -83,12 +87,12 @@ li_installer_parse_dependency_string (const gchar *depstr)
 	for (i = 0; slices[i] != NULL; i++) {
 		gchar *dep_raw;
 		//gchar *dep_version;
-		LiIPKControl *ipkc;
+		LiPkgInfo *ipkc;
 
 		g_strstrip (slices[i]);
 		dep_raw = slices[i];
 
-		ipkc = li_ipk_control_new ();
+		ipkc = li_pkg_info_new ();
 		if (g_strrstr (dep_raw, "(") != NULL) {
 			gchar **strv;
 			//gchar *ver_tmp;
@@ -96,14 +100,14 @@ li_installer_parse_dependency_string (const gchar *depstr)
 			strv = g_strsplit (dep_raw, "(", 2);
 			g_strstrip (strv[0]);
 
-			li_ipk_control_set_name (ipkc, strv[0]);
+			li_pkg_info_set_name (ipkc, strv[0]);
 			//ver_tmp = strv[1];
 			//g_strstrip (ver_tmp);
 
 
 			// TODO: Extract version and relation (>>, >=, <=, ==, <<)
 		} else {
-			li_ipk_control_set_name (ipkc, dep_raw);
+			li_pkg_info_set_name (ipkc, dep_raw);
 		}
 
 		g_ptr_array_add (array, ipkc);
@@ -116,18 +120,18 @@ li_installer_parse_dependency_string (const gchar *depstr)
  * li_installed_dep_is_installed:
  */
 gboolean
-li_installer_dep_is_installed (GPtrArray *installed_sw, LiIPKControl *ipkc)
+li_installer_dep_is_installed (GPtrArray *installed_sw, LiPkgInfo *ipkc)
 {
 	guint i;
 	const gchar *dep_name;
 
-	dep_name = li_ipk_control_get_name (ipkc);
+	dep_name = li_pkg_info_get_name (ipkc);
 
 	for (i = 0; i < installed_sw->len; i++) {
 		const gchar *str;
-		LiIPKControl *pkg = LI_IPK_CONTROL (g_ptr_array_index (installed_sw, i));
+		LiPkgInfo *pkg = LI_PKG_INFO (g_ptr_array_index (installed_sw, i));
 
-		str = li_ipk_control_get_name (pkg);
+		str = li_pkg_info_get_name (pkg);
 		if (g_strcmp0 (dep_name, str) == 0) {
 			return TRUE;
 		}
@@ -145,7 +149,7 @@ gboolean
 li_installer_install_package (LiInstaller *inst, const gchar *filename, GError **error)
 {
 	LiIPKPackage *pkg;
-	LiIPKControl *ctl;
+	LiPkgInfo *info;
 	GError *tmp_error;
 	GPtrArray *deps = NULL;
 	guint i;
@@ -158,8 +162,8 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 		goto out;
 	}
 
-	ctl = li_ipk_package_get_control (pkg);
-	deps = li_installer_parse_dependency_string (li_ipk_control_get_dependencies (ctl));
+	info = li_ipk_package_get_info (pkg);
+	deps = li_installer_parse_dependency_string (li_pkg_info_get_dependencies (info));
 	if (deps != NULL) {
 		LiManager *mgr;
 		GPtrArray *installed_sw;
@@ -168,13 +172,13 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 		installed_sw = li_manager_get_installed_software (mgr);
 
 		for (i = 0; i < deps->len; i++) {
-			LiIPKControl *dep = LI_IPK_CONTROL (g_ptr_array_index (deps, i));
+			LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, i));
 
 			if (!li_installer_dep_is_installed (installed_sw, dep)) {
 				g_set_error (error,
 					LI_INSTALLER_ERROR,
 					LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND,
-					_("Could not find dependency: %s"), li_ipk_control_get_name (dep));
+					_("Could not find dependency: %s"), li_pkg_info_get_name (dep));
 				g_object_unref (mgr);
 				goto out;
 			}

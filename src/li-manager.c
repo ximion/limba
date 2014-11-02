@@ -27,7 +27,7 @@
 #include "li-manager.h"
 
 #include "li-utils-private.h"
-#include "li-ipk-control.h"
+#include "li-pkg-info.h"
 #include "li-config.h"
 
 typedef struct _LiManagerPrivate	LiManagerPrivate;
@@ -98,9 +98,9 @@ li_manager_find_installed_software (LiManager *mgr)
 			GFile *ctlfile;
 			ctlfile = g_file_new_for_path (path);
 			if (g_file_query_exists (ctlfile, NULL)) {
-				LiIPKControl *ctl;
-				ctl = li_ipk_control_new ();
-				li_ipk_control_load_file (ctl, ctlfile);
+				LiPkgInfo *ctl;
+				ctl = li_pkg_info_new ();
+				li_pkg_info_load_file (ctl, ctlfile);
 				g_ptr_array_add (priv->installed_sw, ctl);
 			}
 			g_object_unref (ctlfile);

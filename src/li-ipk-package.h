@@ -26,7 +26,7 @@
 #define __LI_IPK_PACKAGE_H
 
 #include <glib-object.h>
-#include "li-ipk-control.h"
+#include "li-pkg-info.h"
 
 #define LI_TYPE_IPK_PACKAGE			(li_ipk_package_get_type())
 #define LI_IPK_PACKAGE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_IPK_PACKAGE, LiIPKPackage))
@@ -101,7 +101,7 @@ const gchar		*li_ipk_package_get_id (LiIPKPackage *ipk);
 void			li_ipk_package_set_id (LiIPKPackage *ipk,
 										const gchar *unique_name);
 
-LiIPKControl	*li_ipk_package_get_control (LiIPKPackage *ipk);
+LiPkgInfo		*li_ipk_package_get_info (LiIPKPackage *ipk);
 
 G_END_DECLS
 

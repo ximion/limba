@@ -47,7 +47,7 @@ struct _LiIPKPackagePrivate
 {
 	FILE *archive_file;
 	gchar *tmp_dir;
-	LiIPKControl *ctl;
+	LiPkgInfo *info;
 	AsComponent *cpt;
 
 	gchar *install_root;
@@ -67,7 +67,7 @@ li_ipk_package_finalize (GObject *object)
 	LiIPKPackage *ipk = LI_IPK_PACKAGE (object);
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
-	g_object_unref (priv->ctl);
+	g_object_unref (priv->info);
 	if (priv->tmp_dir != NULL)
 		g_free (priv->tmp_dir);
 	if (priv->archive_file != NULL)
@@ -88,7 +88,7 @@ li_ipk_package_init (LiIPKPackage *ipk)
 {
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
-	priv->ctl = li_ipk_control_new ();
+	priv->info = li_pkg_info_new ();
 	priv->tmp_dir = NULL;
 	priv->archive_file = NULL;
 	priv->install_root = g_strdup (LI_INSTALL_ROOT);
@@ -295,7 +295,7 @@ li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError
 			return FALSE;
 		}
 	}
-	li_ipk_control_set_name (priv->ctl, tmp);
+	li_pkg_info_set_name (priv->info, tmp);
 	g_free (tmp);
 
 	version = li_ipk_package_get_version_from_component (priv->cpt);
@@ -307,11 +307,11 @@ li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError
 				_("Could not determine package version."));
 		return FALSE;
 	}
-	li_ipk_control_set_pkg_version (priv->ctl, version);
+	li_pkg_info_set_pkg_version (priv->info, version);
 
 	/* now create a package-id */
-	tmp = g_strdup_printf ("%s-%s", li_ipk_control_get_name (priv->ctl),
-									li_ipk_control_get_pkg_version (priv->ctl));
+	tmp = g_strdup_printf ("%s-%s", li_pkg_info_get_name (priv->info),
+									li_pkg_info_get_pkg_version (priv->info));
 	li_ipk_package_set_id (ipk, tmp);
 	g_free (tmp);
 
@@ -365,14 +365,14 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 
 		pathname = archive_entry_pathname (e);
 		if (g_strcmp0 (pathname, "control") == 0) {
-			gchar *ctl_data;
-			ctl_data = li_ipk_package_read_entry (ipk, ar, &tmp_error);
+			gchar *info_data;
+			info_data = li_ipk_package_read_entry (ipk, ar, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
 			}
-			li_ipk_control_load_data (priv->ctl, ctl_data);
-			g_free (ctl_data);
+			li_pkg_info_load_data (priv->info, info_data);
+			g_free (info_data);
 		} else if (g_strcmp0 (pathname, "metainfo.xml") == 0) {
 			gchar *as_data;
 			as_data = li_ipk_package_read_entry (ipk, ar, &tmp_error);
@@ -429,7 +429,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	}
 
 	/* add the version number to our control data */
-	version = li_ipk_control_get_pkg_version (priv->ctl);
+	version = li_pkg_info_get_pkg_version (priv->info);
 	if (version == NULL) {
 		g_set_error (error,
 				LI_PACKAGE_ERROR,
@@ -536,7 +536,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 
 	/* install config data */
 	tmp = g_build_filename (pkg_root_dir, "control", NULL);
-	ret = li_ipk_control_save_to_file (priv->ctl, tmp);
+	ret = li_pkg_info_save_to_file (priv->info, tmp);
 	g_free (tmp);
 
 	return ret;
@@ -595,17 +595,17 @@ li_ipk_package_set_id (LiIPKPackage *ipk, const gchar *unique_name)
 }
 
 /**
- * li_ipk_package_get_control:
+ * li_ipk_package_get_info:
  *
  * Get the archive control metadata object.
  *
- * Returns: An instance of #LiIPKControl
+ * Returns: An instance of #LiPkgInfo
  */
-LiIPKControl*
-li_ipk_package_get_control (LiIPKPackage *ipk)
+LiPkgInfo*
+li_ipk_package_get_info (LiIPKPackage *ipk)
 {
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
-	return priv->ctl;
+	return priv->info;
 }
 
 /**

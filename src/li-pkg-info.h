@@ -22,30 +22,30 @@
 #error "Only <limba.h> can be included directly."
 #endif
 
-#ifndef __LI_IPK_CONTROL_H
-#define __LI_IPK_CONTROL_H
+#ifndef __LI_PKG_INFO_H
+#define __LI_PKG_INFO_H
 
 #include <glib-object.h>
 #include <gio/gio.h>
 
-#define LI_TYPE_IPK_CONTROL			(li_ipk_control_get_type())
-#define LI_IPK_CONTROL(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_IPK_CONTROL, LiIPKControl))
-#define LI_IPK_CONTROL_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_IPK_CONTROL, LiIPKControlClass))
-#define LI_IS_IPK_CONTROL(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_IPK_CONTROL))
-#define LI_IS_IPK_CONTROL_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_IPK_CONTROL))
-#define LI_IPK_CONTROL_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_IPK_CONTROL, LiIPKControlClass))
+#define LI_TYPE_PKG_INFO			(li_pkg_info_get_type())
+#define LI_PKG_INFO(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_INFO, LiPkgInfo))
+#define LI_PKG_INFO_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_INFO, LiPkgInfoClass))
+#define LI_IS_PKG_INFO(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_INFO))
+#define LI_IS_PKG_INFO_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PKG_INFO))
+#define LI_PKG_INFO_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PKG_INFO, LiPkgInfoClass))
 
 G_BEGIN_DECLS
 
-typedef struct _LiIPKControl		LiIPKControl;
-typedef struct _LiIPKControlClass	LiIPKControlClass;
+typedef struct _LiPkgInfo		LiPkgInfo;
+typedef struct _LiPkgInfoClass	LiPkgInfoClass;
 
-struct _LiIPKControl
+struct _LiPkgInfo
 {
 	GObject			parent;
 };
 
-struct _LiIPKControlClass
+struct _LiPkgInfoClass
 {
 	GObjectClass		parent_class;
 	/*< private >*/
@@ -59,32 +59,32 @@ struct _LiIPKControlClass
 	void (*_as_reserved8)	(void);
 };
 
-GType			li_ipk_control_get_type	(void);
-LiIPKControl	*li_ipk_control_new		(void);
+GType			li_pkg_info_get_type	(void);
+LiPkgInfo	*li_pkg_info_new		(void);
 
-void			li_ipk_control_load_file (LiIPKControl *ipkc,
+void			li_pkg_info_load_file (LiPkgInfo *pkgi,
 											GFile *file);
-void 			li_ipk_control_load_data (LiIPKControl *ipkc,
+void 			li_pkg_info_load_data (LiPkgInfo *pkgi,
 										const gchar *data);
-gboolean		li_ipk_control_save_to_file (LiIPKControl *ipkc,
+gboolean		li_pkg_info_save_to_file (LiPkgInfo *pkgi,
 											const gchar *filename);
 
-const gchar		*li_ipk_control_get_pkg_version (LiIPKControl *ipkc);
-void			li_ipk_control_set_pkg_version (LiIPKControl *ipkc, const gchar *version);
+const gchar		*li_pkg_info_get_pkg_version (LiPkgInfo *pkgi);
+void			li_pkg_info_set_pkg_version (LiPkgInfo *pkgi, const gchar *version);
 
-const gchar		*li_ipk_control_get_name (LiIPKControl *ipkc);
-void			li_ipk_control_set_name (LiIPKControl *ipkc,
+const gchar		*li_pkg_info_get_name (LiPkgInfo *pkgi);
+void			li_pkg_info_set_name (LiPkgInfo *pkgi,
 										const gchar *name);
 
-const gchar		*li_ipk_control_get_framework_dependency (LiIPKControl *ipkc);
-void			li_ipk_control_set_framework_dependency (LiIPKControl *ipkc,
+const gchar		*li_pkg_info_get_framework_dependency (LiPkgInfo *pkgi);
+void			li_pkg_info_set_framework_dependency (LiPkgInfo *pkgi,
 										const gchar *uuid);
 
-const gchar		*li_ipk_control_get_dependencies (LiIPKControl *ipkc);
-void			li_ipk_control_set_dependencies (LiIPKControl *ipkc,
+const gchar		*li_pkg_info_get_dependencies (LiPkgInfo *pkgi);
+void			li_pkg_info_set_dependencies (LiPkgInfo *pkgi,
 										const gchar *deps_string);
 
 
 G_END_DECLS
 
-#endif /* __LI_IPK_CONTROL_H */
+#endif /* __LI_PKG_INFO_H */

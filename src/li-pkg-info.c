@@ -19,16 +19,16 @@
  */
 
 /**
- * SECTION:li-ipk-control
+ * SECTION:li-pkg-info
  * @short_description: Control metadata for IPK packages
  */
 
 #include "config.h"
-#include "li-ipk-control.h"
+#include "li-pkg-info.h"
 #include "li-config-data.h"
 
-typedef struct _LiIPKControlPrivate	LiIPKControlPrivate;
-struct _LiIPKControlPrivate
+typedef struct _LiPkgInfoPrivate	LiPkgInfoPrivate;
+struct _LiPkgInfoPrivate
 {
 	gchar *format_version;
 	gchar *version;
@@ -37,17 +37,17 @@ struct _LiIPKControlPrivate
 	gchar *dependencies;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (LiIPKControl, li_ipk_control, G_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_PRIVATE (LiPkgInfo, li_pkg_info, G_TYPE_OBJECT)
 
-#define GET_PRIVATE(o) (li_ipk_control_get_instance_private (o))
+#define GET_PRIVATE(o) (li_pkg_info_get_instance_private (o))
 
 /**
- * li_ipk_control_fetch_values_from_cdata:
+ * li_pkg_info_fetch_values_from_cdata:
  **/
 static void
-li_ipk_control_fetch_values_from_cdata (LiIPKControl *ipkc, LiConfigData *cdata)
+li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pkgi, LiConfigData *cdata)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 
 	g_free (priv->name);
 	priv->name = li_config_data_get_value (cdata, "Name");
@@ -63,12 +63,12 @@ li_ipk_control_fetch_values_from_cdata (LiIPKControl *ipkc, LiConfigData *cdata)
 }
 
 /**
- * li_ipk_control_update_cdata_values:
+ * li_pkg_info_update_cdata_values:
  **/
 static void
-li_ipk_control_update_cdata_values (LiIPKControl *ipkc, LiConfigData *cdata)
+li_pkg_info_update_cdata_values (LiPkgInfo *pkgi, LiConfigData *cdata)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 
 	if (priv->name != NULL)
 		li_config_data_set_value (cdata, "Name", priv->name);
@@ -84,72 +84,72 @@ li_ipk_control_update_cdata_values (LiIPKControl *ipkc, LiConfigData *cdata)
 }
 
 /**
- * li_ipk_control_finalize:
+ * li_pkg_info_finalize:
  **/
 static void
-li_ipk_control_finalize (GObject *object)
+li_pkg_info_finalize (GObject *object)
 {
-	LiIPKControl *ipkc = LI_IPK_CONTROL (object);
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfo *pkgi = LI_PKG_INFO (object);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 
 	g_free (priv->name);
 	g_free (priv->version);
 	g_free (priv->dependencies);
 	g_free (priv->framework_uuid);
 
-	G_OBJECT_CLASS (li_ipk_control_parent_class)->finalize (object);
+	G_OBJECT_CLASS (li_pkg_info_parent_class)->finalize (object);
 }
 
 /**
- * li_ipk_control_init:
+ * li_pkg_info_init:
  **/
 static void
-li_ipk_control_init (LiIPKControl *ipkc)
+li_pkg_info_init (LiPkgInfo *pkgi)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 
 	priv->version = NULL;
 }
 
 /**
- * li_ipk_control_load_data:
+ * li_pkg_info_load_data:
  */
 void
-li_ipk_control_load_data (LiIPKControl *ipkc, const gchar *data)
+li_pkg_info_load_data (LiPkgInfo *pkgi, const gchar *data)
 {
 	LiConfigData *cdata;
 
 	cdata = li_config_data_new ();
 	li_config_data_load_data (cdata, data);
-	li_ipk_control_fetch_values_from_cdata (ipkc, cdata);
+	li_pkg_info_fetch_values_from_cdata (pkgi, cdata);
 	g_object_unref (cdata);
 }
 
 /**
- * li_ipk_control_load_file:
+ * li_pkg_info_load_file:
  */
 void
-li_ipk_control_load_file (LiIPKControl *ipkc, GFile *file)
+li_pkg_info_load_file (LiPkgInfo *pkgi, GFile *file)
 {
 	LiConfigData *cdata;
 
 	cdata = li_config_data_new ();
 	li_config_data_load_file (cdata, file);
-	li_ipk_control_fetch_values_from_cdata (ipkc, cdata);
+	li_pkg_info_fetch_values_from_cdata (pkgi, cdata);
 	g_object_unref (cdata);
 }
 
 /**
- * li_ipk_control_save_to_file:
+ * li_pkg_info_save_to_file:
  */
 gboolean
-li_ipk_control_save_to_file (LiIPKControl *ipkc, const gchar *filename)
+li_pkg_info_save_to_file (LiPkgInfo *pkgi, const gchar *filename)
 {
 	LiConfigData *cdata;
 	gboolean ret;
 
 	cdata = li_config_data_new ();
-	li_ipk_control_update_cdata_values (ipkc, cdata);
+	li_pkg_info_update_cdata_values (pkgi, cdata);
 	ret = li_config_data_save_to_file (cdata, filename);
 	g_object_unref (cdata);
 
@@ -157,119 +157,119 @@ li_ipk_control_save_to_file (LiIPKControl *ipkc, const gchar *filename)
 }
 
 /**
- * li_ipk_control_get_pkg_version:
+ * li_pkg_info_get_pkg_version:
  *
  * Get the version for this package, if specified.
  */
 const gchar*
-li_ipk_control_get_pkg_version (LiIPKControl *ipkc)
+li_pkg_info_get_pkg_version (LiPkgInfo *pkgi)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 	return priv->version;
 }
 
 /**
- * li_ipk_control_set_pkg_version:
+ * li_pkg_info_set_pkg_version:
  * @version: A version string
  *
  * Set the version of this package
  */
 void
-li_ipk_control_set_pkg_version (LiIPKControl *ipkc, const gchar *version)
+li_pkg_info_set_pkg_version (LiPkgInfo *pkgi, const gchar *version)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 	g_free (priv->version);
 	priv->version = g_strdup (version);
 }
 
 /**
- * li_ipk_control_get_name:
+ * li_pkg_info_get_name:
  */
 const gchar*
-li_ipk_control_get_name (LiIPKControl *ipkc)
+li_pkg_info_get_name (LiPkgInfo *pkgi)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 	return priv->name;
 }
 
 /**
- * li_ipk_control_set_name:
+ * li_pkg_info_set_name:
  */
 void
-li_ipk_control_set_name (LiIPKControl *ipkc, const gchar *name)
+li_pkg_info_set_name (LiPkgInfo *pkgi, const gchar *name)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 
 	g_free (priv->name);
 	priv->name = g_strdup (name);
 }
 
 /**
- * li_ipk_control_get_depends_framework:
+ * li_pkg_info_get_depends_framework:
  */
 const gchar*
-li_ipk_control_get_framework_dependency (LiIPKControl *ipkc)
+li_pkg_info_get_framework_dependency (LiPkgInfo *pkgi)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 	return priv->framework_uuid;
 }
 
 /**
- * li_ipk_control_set_depends_framework:
+ * li_pkg_info_set_depends_framework:
  */
 void
-li_ipk_control_set_framework_dependency (LiIPKControl *ipkc, const gchar *uuid)
+li_pkg_info_set_framework_dependency (LiPkgInfo *pkgi, const gchar *uuid)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 
 	g_free (priv->framework_uuid);
 	priv->framework_uuid = g_strdup (uuid);
 }
 
 /**
- * li_ipk_control_get_dependencies:
+ * li_pkg_info_get_dependencies:
  */
 const gchar*
-li_ipk_control_get_dependencies (LiIPKControl *ipkc)
+li_pkg_info_get_dependencies (LiPkgInfo *pkgi)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 	return priv->dependencies;
 }
 
 /**
- * li_ipk_control_set_dependencies:
+ * li_pkg_info_set_dependencies:
  */
 void
-li_ipk_control_set_dependencies (LiIPKControl *ipkc, const gchar *deps_string)
+li_pkg_info_set_dependencies (LiPkgInfo *pkgi, const gchar *deps_string)
 {
-	LiIPKControlPrivate *priv = GET_PRIVATE (ipkc);
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pkgi);
 
 	g_free (priv->dependencies);
 	priv->dependencies = g_strdup (deps_string);
 }
 
 /**
- * li_ipk_control_class_init:
+ * li_pkg_info_class_init:
  **/
 static void
-li_ipk_control_class_init (LiIPKControlClass *klass)
+li_pkg_info_class_init (LiPkgInfoClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
-	object_class->finalize = li_ipk_control_finalize;
+	object_class->finalize = li_pkg_info_finalize;
 }
 
 /**
- * li_ipk_control_new:
+ * li_pkg_info_new:
  *
- * Creates a new #LiIPKControl.
+ * Creates a new #LiPkgInfo.
  *
- * Returns: (transfer full): a #LiIPKControl
+ * Returns: (transfer full): a #LiPkgInfo
  *
  **/
-LiIPKControl *
-li_ipk_control_new (void)
+LiPkgInfo *
+li_pkg_info_new (void)
 {
-	LiIPKControl *ipkc;
-	ipkc = g_object_new (LI_TYPE_IPK_CONTROL, NULL);
-	return LI_IPK_CONTROL (ipkc);
+	LiPkgInfo *pkgi;
+	pkgi = g_object_new (LI_TYPE_PKG_INFO, NULL);
+	return LI_PKG_INFO (pkgi);
 }
