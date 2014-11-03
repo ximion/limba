@@ -488,6 +488,19 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 
 	/* the directory where all package data is installed to */
 	pkg_root_dir = g_build_filename (priv->install_root, pkg_id, NULL);
+	if (g_file_test (pkg_root_dir, G_FILE_TEST_EXISTS)) {
+		g_debug ("Package '%s' is already installed, replacing with the new package contents.", pkg_id);
+		if (!li_utils_delete_dir_recursive (pkg_root_dir)) {
+			g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_EXTRACT,
+				_("Unable to remove existing installation of '%s (%s)'."),
+						 as_component_get_name (priv->cpt),
+						 pkg_id);
+				archive_read_free (payload_ar);
+			return FALSE;
+		}
+	}
 
 	ar = li_ipk_package_open_base_ipk (ipk, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {
