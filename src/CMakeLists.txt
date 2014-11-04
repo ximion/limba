@@ -10,7 +10,7 @@ set(LIBLIMBA_SRC
 	li-config-data.c
 	li-pkg-info.c
 	li-ipk-package.c
-	li-polylinker.c
+	li-runtime.c
 	li-installer.c
 	li-manager.c
 )
@@ -27,7 +27,7 @@ set(LIBLIMBA_PUBLIC_HEADERS
 set(LIBLIMBA_PRIVATE_HEADERS
 	li-utils-private.h
 	li-config-data.h
-	li-polylinker.h
+	li-runtime.h
 )
 
 add_definitions("-DLI_COMPILATION"

@@ -31,12 +31,12 @@
 #include "li-pkg-info.h"
 #include "li-ipk-package.h"
 #include "li-manager.h"
-#include "li-polylinker.h"
+#include "li-runtime.h"
 
 typedef struct _LiInstallerPrivate	LiInstallerPrivate;
 struct _LiInstallerPrivate
 {
-	LiPolylinker *plink;
+	LiManager *mgr;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
@@ -52,7 +52,7 @@ li_installer_finalize (GObject *object)
 	LiInstaller *inst = LI_INSTALLER (object);
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	g_object_unref (priv->plink);
+	g_object_unref (priv->mgr);
 
 	G_OBJECT_CLASS (li_installer_parent_class)->finalize (object);
 }
@@ -65,7 +65,7 @@ li_installer_init (LiInstaller *inst)
 {
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	priv->plink = li_polylinker_new ();
+	priv->mgr = li_manager_new ();
 }
 
 /**
@@ -158,8 +158,8 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 	GPtrArray *deps = NULL;
 	guint i;
 	gboolean ret = FALSE;
-	gchar *uuid;
-	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+	LiRuntime *rt;
+	//! LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	pkg = li_ipk_package_new ();
 	li_ipk_package_open_file (pkg, filename, &tmp_error);
@@ -191,18 +191,19 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 		}
 		g_object_unref (mgr);
 
-		/* now get the framework id for the new application, or create the framework */
-		uuid = li_polylinker_get_framework_for (priv->plink, deps, &tmp_error);
-		if (tmp_error != NULL) {
+		/* now get the runtime-env id for the new application, or create the runtime */
+		rt = li_runtime_create_with_members (deps, &tmp_error);
+		if ((tmp_error != NULL) || (rt == NULL)) {
 			g_propagate_error (error, tmp_error);
 			goto out;
 		}
 
-		li_pkg_info_set_framework_dependency (info, uuid);
-		g_free (uuid);
+		li_pkg_info_set_runtime_dependency (info,
+										li_runtime_get_uuid (rt));
+		g_object_unref (rt);
 	} else {
-		/* if the installed software does not need a framework to run, we explicity state that */
-		li_pkg_info_set_framework_dependency (info, "None");
+		/* if the installed software does not need a runtime to run, we explicity state that */
+		li_pkg_info_set_runtime_dependency (info, "None");
 	}
 
 	li_ipk_package_install (pkg, &tmp_error);

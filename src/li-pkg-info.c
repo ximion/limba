@@ -34,7 +34,7 @@ struct _LiPkgInfoPrivate
 	gchar *id; /* auto-generated */
 	gchar *version;
 	gchar *name;
-	gchar *framework_uuid;
+	gchar *runtime_uuid;
 	gchar *dependencies;
 };
 
@@ -62,8 +62,8 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 	g_free (priv->dependencies);
 	priv->dependencies = li_config_data_get_value (cdata, "Requires");
 
-	g_free (priv->framework_uuid);
-	priv->framework_uuid = li_config_data_get_value (cdata, "Framework-UUID");
+	g_free (priv->runtime_uuid);
+	priv->runtime_uuid = li_config_data_get_value (cdata, "Runtime-UUID");
 }
 
 /**
@@ -83,8 +83,8 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 	if (priv->dependencies != NULL)
 		li_config_data_set_value (cdata, "Requires", priv->dependencies);
 
-	if (priv->framework_uuid != NULL)
-		li_config_data_set_value (cdata, "Framework-UUID", priv->framework_uuid);
+	if (priv->runtime_uuid != NULL)
+		li_config_data_set_value (cdata, "Runtime-UUID", priv->runtime_uuid);
 }
 
 /**
@@ -100,7 +100,7 @@ li_pkg_info_finalize (GObject *object)
 	g_free (priv->name);
 	g_free (priv->version);
 	g_free (priv->dependencies);
-	g_free (priv->framework_uuid);
+	g_free (priv->runtime_uuid);
 
 	G_OBJECT_CLASS (li_pkg_info_parent_class)->finalize (object);
 }
@@ -220,25 +220,25 @@ li_pkg_info_set_name (LiPkgInfo *pki, const gchar *name)
 }
 
 /**
- * li_pkg_info_get_depends_framework:
+ * li_pkg_info_get_runtime_dependency:
  */
 const gchar*
-li_pkg_info_get_framework_dependency (LiPkgInfo *pki)
+li_pkg_info_get_runtime_dependency (LiPkgInfo *pki)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
-	return priv->framework_uuid;
+	return priv->runtime_uuid;
 }
 
 /**
- * li_pkg_info_set_depends_framework:
+ * li_pkg_info_set_runtime_dependency:
  */
 void
-li_pkg_info_set_framework_dependency (LiPkgInfo *pki, const gchar *uuid)
+li_pkg_info_set_runtime_dependency (LiPkgInfo *pki, const gchar *uuid)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 
-	g_free (priv->framework_uuid);
-	priv->framework_uuid = g_strdup (uuid);
+	g_free (priv->runtime_uuid);
+	priv->runtime_uuid = g_strdup (uuid);
 }
 
 /**

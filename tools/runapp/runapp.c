@@ -94,7 +94,7 @@ mount_overlay (const gchar *bundle)
 	gchar *main_data_path = NULL;
 	gchar *fname = NULL;
 	GFile *file;
-	const gchar *framework_uuid;
+	const gchar *runtime_uuid;
 	gchar *tmp;
 	LiPkgInfo *pki = NULL;
 
@@ -115,20 +115,20 @@ mount_overlay (const gchar *bundle)
 	li_pkg_info_load_file (pki, file);
 	g_object_unref (file);
 
-	framework_uuid = li_pkg_info_get_framework_dependency (pki);
-	if (framework_uuid == NULL) {
-		fprintf (stderr, "Sorry, I can not construct a new framework for this application to run in. Please do that manually!\n");
+	runtime_uuid = li_pkg_info_get_runtime_dependency (pki);
+	if (runtime_uuid == NULL) {
+		fprintf (stderr, "Sorry, I can not construct a new runtime environment for this application. Please do that manually!\n");
 		res = 3;
 		goto out;
 	}
 
-	if (g_strcmp0 (framework_uuid, "None") != 0) {
-		/* mount the desired framework */
+	if (g_strcmp0 (runtime_uuid, "None") != 0) {
+		/* mount the desired runtime */
 		gchar *bundle_path;
 
-		bundle_path = g_build_filename (LI_INSTALL_ROOT, "tmp", framework_uuid, "data", NULL);
+		bundle_path = g_build_filename (LI_INSTALL_ROOT, "tmp", runtime_uuid, "data", NULL);
 		if (!g_file_test (bundle_path, G_FILE_TEST_IS_DIR)) {
-			fprintf (stderr, "The framework '%s' does not exist.\n", framework_uuid);
+			fprintf (stderr, "The runtime '%s' does not exist.\n", runtime_uuid);
 			res = 1;
 			g_free (bundle_path);
 			goto out;
@@ -140,7 +140,7 @@ mount_overlay (const gchar *bundle)
 		g_free (tmp);
 		g_free (bundle_path);
 		if (res != 0) {
-			fprintf (stderr, "Unable to mount dependency directory.\n");
+			fprintf (stderr, "Unable to mount runtime directory.\n");
 			res = 1;
 			goto out;
 		}

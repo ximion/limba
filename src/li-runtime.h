@@ -22,29 +22,30 @@
 #error "Only <limba.h> can be included directly."
 #endif
 
-#ifndef __LI_POLYLINKER_H
-#define __LI_POLYLINKER_H
+#ifndef __LI_RUNTIME_H
+#define __LI_RUNTIME_H
 
 #include <glib-object.h>
+#include <gio/gio.h>
 
-#define LI_TYPE_POLYLINKER			(li_polylinker_get_type())
-#define LI_POLYLINKER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_POLYLINKER, LiPolylinker))
-#define LI_POLYLINKER_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_POLYLINKER, LiPolylinkerClass))
-#define LI_IS_POLYLINKER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_POLYLINKER))
-#define LI_IS_POLYLINKER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_POLYLINKER))
-#define LI_POLYLINKER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_POLYLINKER, LiPolylinkerClass))
+#define LI_TYPE_RUNTIME			(li_runtime_get_type())
+#define LI_RUNTIME(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_RUNTIME, LiRuntime))
+#define LI_RUNTIME_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_RUNTIME, LiRuntimeClass))
+#define LI_IS_RUNTIME(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_RUNTIME))
+#define LI_IS_RUNTIME_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_RUNTIME))
+#define LI_RUNTIME_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_RUNTIME, LiRuntimeClass))
 
 G_BEGIN_DECLS
 
-typedef struct _LiPolylinker		LiPolylinker;
-typedef struct _LiPolylinkerClass	LiPolylinkerClass;
+typedef struct _LiRuntime		LiRuntime;
+typedef struct _LiRuntimeClass	LiRuntimeClass;
 
-struct _LiPolylinker
+struct _LiRuntime
 {
 	GObject			parent;
 };
 
-struct _LiPolylinkerClass
+struct _LiRuntimeClass
 {
 	GObjectClass		parent_class;
 	/*< private >*/
@@ -58,13 +59,19 @@ struct _LiPolylinkerClass
 	void (*_as_reserved8)	(void);
 };
 
-GType			li_polylinker_get_type	(void);
-LiPolylinker	*li_polylinker_new		(void);
+GType			li_runtime_get_type	(void);
+LiRuntime		*li_runtime_new		(void);
 
-gchar			*li_polylinker_get_framework_for (LiPolylinker *plink,
-												GPtrArray *sw,
+gboolean		li_runtime_load_directory (LiRuntime *rt,
+											const gchar *dir,
+											GError **error);
+
+const gchar		*li_runtime_get_uuid (LiRuntime *rt);
+
+LiRuntime		*li_runtime_create_with_members (GPtrArray *members,
 												GError **error);
+
 
 G_END_DECLS
 
-#endif /* __LI_POLYLINKER_H */
+#endif /* __LI_RUNTIME_H */
