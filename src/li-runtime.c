@@ -73,7 +73,6 @@ li_runtime_fetch_values_from_cdata (LiRuntime *rt, LiConfigData *cdata)
 	g_free (tmp);
 }
 
-#if 0
 /**
  * li_runtime_update_cdata_values:
  **/
@@ -97,7 +96,6 @@ li_runtime_update_cdata_values (LiRuntime *rt, LiConfigData *cdata)
 	g_string_free (str, TRUE);
 
 }
-#endif
 
 /**
  * li_runtime_finalize:
@@ -181,10 +179,63 @@ li_runtime_get_uuid (LiRuntime *rt)
 }
 
 /**
- * li_utils_find_files_matching:
+ * li_runtime_get_data_path:
+ *
+ * Get the path to the data of this runtime.
+ */
+gchar*
+li_runtime_get_data_path (LiRuntime *rt)
+{
+	LiRuntimePrivate *priv = GET_PRIVATE (rt);
+	return g_build_filename (LI_SOFTWARE_ROOT, "tmp", priv->uuid, "data", NULL);
+}
+
+/**
+ * li_runtime_add_member:
+ */
+void
+li_runtime_add_member (LiRuntime *rt, const gchar *pkg_id)
+{
+	LiRuntimePrivate *priv = GET_PRIVATE (rt);
+	g_ptr_array_add (priv->members, g_strdup (pkg_id));
+}
+
+/**
+ * li_runtime_save:
+ *
+ * Save the runtime metadata.
+ */
+gboolean
+li_runtime_save (LiRuntime *rt, GError **error)
+{
+	gboolean ret;
+	LiConfigData *cdata;
+	gchar *control_fname;
+	GError *tmp_error = NULL;
+	LiRuntimePrivate *priv = GET_PRIVATE (rt);
+
+	control_fname = g_build_filename (LI_SOFTWARE_ROOT, "tmp", priv->uuid, "control", NULL);
+
+	cdata = li_config_data_new ();
+	li_runtime_update_cdata_values (rt, cdata);
+	ret = li_config_data_save_to_file (cdata, control_fname, &tmp_error);
+	g_object_unref (cdata);
+	g_free (control_fname);
+
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+	}
+
+	return ret;
+}
+
+/**
+ * li_runtime_link_data_path:
+ *
+ * Helper for li_runtime_link_software()
  */
 static gboolean
-li_runtime_link_software (const gchar* sw_dir, const gchar* frmw_destination, GError **error)
+li_runtime_link_data_path (const gchar* sw_dir, const gchar* rt_destination, GError **error)
 {
 	GError *tmp_error = NULL;
 	GFileInfo *file_info;
@@ -206,7 +257,7 @@ li_runtime_link_software (const gchar* sw_dir, const gchar* frmw_destination, GE
 								 g_file_info_get_name (file_info),
 								 NULL);
 		tmp = g_path_get_basename (path);
-		dest_path = g_build_filename (frmw_destination, tmp, NULL);
+		dest_path = g_build_filename (rt_destination, tmp, NULL);
 		g_free (tmp);
 
 		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
@@ -229,7 +280,7 @@ li_runtime_link_software (const gchar* sw_dir, const gchar* frmw_destination, GE
 				}
 			}
 
-			li_runtime_link_software (path, dest_path, &tmp_error);
+			li_runtime_link_data_path (path, dest_path, &tmp_error);
 			/* if there was an error, exit */
 			if (tmp_error != NULL) {
 				g_free (path);
@@ -275,9 +326,51 @@ out:
 	return TRUE;
 }
 
+gboolean
+li_runtime_link_software (LiRuntime *rt, LiPkgInfo *pki, GError **error)
+{
+	gchar *data_path;
+	gchar *rt_path;
+	const gchar *pkid;
+	GError *tmp_error = NULL;
+	gboolean ret = FALSE;
+
+	pkid = li_pkg_info_get_id (pki);
+	if (pkid == NULL)
+		return FALSE;
+
+	rt_path = li_runtime_get_data_path (rt);
+	li_touch_dir (rt_path, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	data_path = g_build_filename (LI_SOFTWARE_ROOT, pkid, "data", NULL);
+	li_runtime_link_data_path (data_path, rt_path, &tmp_error);
+	g_free (data_path);
+
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	/* register the added member with the runtime */
+	li_runtime_add_member (rt, pkid);
+
+	/* store metadata on disk */
+	ret = li_runtime_save (rt, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+	}
+out:
+	g_free (rt_path);
+	return ret;
+}
+
 /**
  * li_runtime_create_with_members:
- * @sw: A list of software as #LiPkgInfo
+ * @members: A list of software as #LiPkgInfo
  *
  * Generate a new runtime environment consisting of the given
  * members.
@@ -287,24 +380,11 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 {
 	guint i;
 	LiRuntime *rt;
-	const gchar *uuid;
-	gchar *rt_path;
 	gboolean ret = TRUE;
 	GError *tmp_error = NULL;
 
 	rt = li_runtime_new ();
-
-	uuid = li_runtime_get_uuid (rt);
-	rt_path = g_build_filename (LI_SOFTWARE_ROOT, "tmp", uuid, "data", NULL);
-
-	li_touch_dir (rt_path, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		goto out;
-	}
-
 	for (i = 0; i < members->len; i++) {
-		gchar *data_path;
 		const gchar *pkid;
 		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (members, i));
 
@@ -314,10 +394,7 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 			continue;
 		}
 
-		data_path = g_build_filename (LI_SOFTWARE_ROOT, pkid, "data", NULL);
-		li_runtime_link_software (data_path, rt_path, &tmp_error);
-		g_free (data_path);
-
+		li_runtime_link_software (rt, pki, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			goto out;
@@ -325,7 +402,6 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 	}
 
 out:
-	g_free (rt_path);
 	if (ret) {
 		return rt;
 	} else {

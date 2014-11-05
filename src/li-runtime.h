@@ -26,7 +26,7 @@
 #define __LI_RUNTIME_H
 
 #include <glib-object.h>
-#include <gio/gio.h>
+#include "li-pkg-info.h"
 
 #define LI_TYPE_RUNTIME			(li_runtime_get_type())
 #define LI_RUNTIME(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_RUNTIME, LiRuntime))
@@ -65,11 +65,20 @@ LiRuntime		*li_runtime_new		(void);
 gboolean		li_runtime_load_directory (LiRuntime *rt,
 											const gchar *dir,
 											GError **error);
+gboolean		li_runtime_save (LiRuntime *rt,
+								GError **error);
 
 const gchar		*li_runtime_get_uuid (LiRuntime *rt);
+gchar			*li_runtime_get_data_path (LiRuntime *rt);
 
 LiRuntime		*li_runtime_create_with_members (GPtrArray *members,
 												GError **error);
+gboolean		li_runtime_link_software (LiRuntime *rt,
+										LiPkgInfo *pki,
+										GError **error);
+
+void			li_runtime_add_member (LiRuntime *rt,
+									   const gchar *pkg_id);
 
 
 G_END_DECLS

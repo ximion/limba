@@ -79,7 +79,8 @@ gboolean		li_config_data_set_value (LiConfigData *cdata,
 
 gchar			*li_config_data_get_data (LiConfigData *cdata);
 gboolean		li_config_data_save_to_file (LiConfigData *cdata,
-											const gchar *filename);
+											const gchar *filename,
+											GError **error);
 
 G_END_DECLS
 

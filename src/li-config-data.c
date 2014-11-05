@@ -390,29 +390,29 @@ li_config_data_get_data (LiConfigData *cdata)
  * li_config_data_save_to_file:
  */
 gboolean
-li_config_data_save_to_file (LiConfigData *cdata, const gchar *filename)
+li_config_data_save_to_file (LiConfigData *cdata, const gchar *filename, GError **error)
 {
 	GFile *file;
 	GDataOutputStream *dos = NULL;
 	GFileOutputStream *fos;
-	GError *error = NULL;
+	GError *tmp_error = NULL;
 	gboolean ret = FALSE;
 	gchar *data = NULL;
 
 	file = g_file_new_for_path (filename);
 
-	fos = g_file_create (file, G_FILE_CREATE_REPLACE_DESTINATION, NULL, &error);
-	dos = g_data_output_stream_new ((GOutputStream*) fos);
-	g_object_unref (fos);
-	if (error != NULL) {
-		g_error_free (error);
+	fos = g_file_create (file, G_FILE_CREATE_REPLACE_DESTINATION, NULL, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
 		goto out;
 	}
+	dos = g_data_output_stream_new (G_OUTPUT_STREAM (fos));
+	g_object_unref (fos);
 
 	data = li_config_data_get_data (cdata);
-	g_data_output_stream_put_string (dos, data, NULL, &error);
-	if (error != NULL) {
-		g_error_free (error);
+	g_data_output_stream_put_string (dos, data, NULL, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
 		goto out;
 	}
 

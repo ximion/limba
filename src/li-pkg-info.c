@@ -156,7 +156,7 @@ li_pkg_info_save_to_file (LiPkgInfo *pki, const gchar *filename)
 
 	cdata = li_config_data_new ();
 	li_pkg_info_update_cdata_values (pki, cdata);
-	ret = li_config_data_save_to_file (cdata, filename);
+	ret = li_config_data_save_to_file (cdata, filename, NULL);
 	g_object_unref (cdata);
 
 	return ret;
