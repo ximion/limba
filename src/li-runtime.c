@@ -58,7 +58,8 @@ li_runtime_fetch_values_from_cdata (LiRuntime *rt, LiConfigData *cdata)
 	gchar *tmp;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
-	g_ptr_array_remove_range (priv->members, 0, priv->members->len);
+	if (priv->members->len > 0)
+		g_ptr_array_remove_range (priv->members, 0, priv->members->len);
 	tmp = li_config_data_get_value (cdata, "Members");
 	if (tmp != NULL) {
 		guint i;
@@ -67,7 +68,7 @@ li_runtime_fetch_values_from_cdata (LiRuntime *rt, LiConfigData *cdata)
 
 		for (i = 0; strv[i] != NULL; i++) {
 			g_strstrip (strv[i]);
-			g_ptr_array_add (priv->members, g_strdup (strv[1]));
+			g_ptr_array_add (priv->members, g_strdup (strv[i]));
 		}
 	}
 	g_free (tmp);
@@ -139,7 +140,7 @@ li_runtime_load_directory (LiRuntime *rt, const gchar *dir, GError **error)
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
 	uuid = g_path_get_basename (dir);
-	if (strlen (uuid) != 37) {
+	if (strlen (uuid) != 36) {
 		g_warning ("Loading runtime with uuid '%s', which doesn't look valid.", uuid);
 	}
 
@@ -188,6 +189,16 @@ li_runtime_get_data_path (LiRuntime *rt)
 {
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 	return g_build_filename (LI_SOFTWARE_ROOT, "tmp", priv->uuid, "data", NULL);
+}
+
+/**
+ * li_runtime_get_members:
+ */
+GPtrArray*
+li_runtime_get_members (LiRuntime *rt)
+{
+	LiRuntimePrivate *priv = GET_PRIVATE (rt);
+	return priv->members;
 }
 
 /**

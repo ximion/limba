@@ -77,9 +77,9 @@ gboolean		li_runtime_link_software (LiRuntime *rt,
 										LiPkgInfo *pki,
 										GError **error);
 
+GPtrArray		*li_runtime_get_members (LiRuntime *rt);
 void			li_runtime_add_member (LiRuntime *rt,
 									   const gchar *pkg_id);
-
 
 G_END_DECLS
 

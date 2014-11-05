@@ -26,6 +26,7 @@
 #define __LI_MANAGER_H
 
 #include <glib-object.h>
+#include "li-runtime.h"
 
 #define LI_TYPE_MANAGER			(li_manager_get_type())
 #define LI_MANAGER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_MANAGER, LiManager))
@@ -62,6 +63,9 @@ GType			li_manager_get_type	(void);
 LiManager		*li_manager_new		(void);
 
 GPtrArray		*li_manager_get_installed_software (LiManager *mgr);
+GPtrArray		*li_manager_get_installed_runtimes (LiManager *mgr);
+
+LiRuntime		*li_manager_find_runtime_with_members (LiManager *mgr, GPtrArray *members);
 
 G_END_DECLS
 

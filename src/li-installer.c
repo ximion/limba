@@ -159,7 +159,7 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 	guint i;
 	gboolean ret = FALSE;
 	LiRuntime *rt;
-	//! LiInstallerPrivate *priv = GET_PRIVATE (inst);
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	pkg = li_ipk_package_new ();
 	li_ipk_package_open_file (pkg, filename, &tmp_error);
@@ -171,11 +171,9 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 	info = li_ipk_package_get_info (pkg);
 	deps = li_installer_parse_dependency_string (li_pkg_info_get_dependencies (info));
 	if (deps != NULL) {
-		LiManager *mgr;
 		GPtrArray *installed_sw;
 
-		mgr = li_manager_new ();
-		installed_sw = li_manager_get_installed_software (mgr);
+		installed_sw = li_manager_get_installed_software (priv->mgr);
 
 		for (i = 0; i < deps->len; i++) {
 			LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, i));
@@ -185,19 +183,20 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 					LI_INSTALLER_ERROR,
 					LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND,
 					_("Could not find dependency: %s"), li_pkg_info_get_name (dep));
-				g_object_unref (mgr);
 				goto out;
 			}
 		}
-		g_object_unref (mgr);
 
-		/* now get the runtime-env id for the new application, or create the runtime */
-		rt = li_runtime_create_with_members (deps, &tmp_error);
-		if ((tmp_error != NULL) || (rt == NULL)) {
-			g_propagate_error (error, tmp_error);
-			goto out;
+		/* now get the runtime-env id for the new application */
+		rt = li_manager_find_runtime_with_members (priv->mgr, deps);
+		if (rt == NULL) {
+			/* no runtime was found, create a new one */
+			rt = li_runtime_create_with_members (deps, &tmp_error);
+			if ((tmp_error != NULL) || (rt == NULL)) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
 		}
-
 		li_pkg_info_set_runtime_dependency (info,
 										li_runtime_get_uuid (rt));
 		g_object_unref (rt);
