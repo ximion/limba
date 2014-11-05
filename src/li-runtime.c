@@ -32,9 +32,9 @@
 #include <errno.h>
 #include <string.h>
 
-#include "li-config.h"
-#include "li-config-data.h"
+#include "li-utils.h"
 #include "li-utils-private.h"
+#include "li-config-data.h"
 #include "li-pkg-info.h"
 
 typedef struct _LiRuntimePrivate	LiRuntimePrivate;
@@ -295,7 +295,7 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 	rt = li_runtime_new ();
 
 	uuid = li_runtime_get_uuid (rt);
-	rt_path = g_build_filename (LI_INSTALL_ROOT, "tmp", uuid, "data", NULL);
+	rt_path = g_build_filename (LI_SOFTWARE_ROOT, "tmp", uuid, "data", NULL);
 
 	li_touch_dir (rt_path, &tmp_error);
 	if (tmp_error != NULL) {
@@ -314,7 +314,7 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 			continue;
 		}
 
-		data_path = g_build_filename (LI_INSTALL_ROOT, pkid, "data", NULL);
+		data_path = g_build_filename (LI_SOFTWARE_ROOT, pkid, "data", NULL);
 		li_runtime_link_software (data_path, rt_path, &tmp_error);
 		g_free (data_path);
 

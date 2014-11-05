@@ -26,9 +26,9 @@
 #include "config.h"
 #include "li-manager.h"
 
+#include "li-utils.h"
 #include "li-utils-private.h"
 #include "li-pkg-info.h"
-#include "li-config.h"
 
 typedef struct _LiManagerPrivate	LiManagerPrivate;
 struct _LiManagerPrivate
@@ -78,7 +78,7 @@ li_manager_find_installed_software (LiManager *mgr)
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	/* get stuff in the software directory */
-	fdir =  g_file_new_for_path (LI_INSTALL_ROOT);
+	fdir =  g_file_new_for_path (LI_SOFTWARE_ROOT);
 	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
 	if (tmp_error != NULL)
 		goto out;
@@ -90,7 +90,7 @@ li_manager_find_installed_software (LiManager *mgr)
 
 		if (g_file_info_get_is_hidden (file_info))
 			continue;
-		path = g_build_filename (LI_INSTALL_ROOT,
+		path = g_build_filename (LI_SOFTWARE_ROOT,
 								 g_file_info_get_name (file_info),
 								 "control",
 								 NULL);

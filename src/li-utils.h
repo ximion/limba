@@ -26,8 +26,11 @@
 
 G_BEGIN_DECLS
 
+#define	LI_SOFTWARE_ROOT li_get_install_root ()
+
 gboolean		li_str_empty (const gchar* str);
 gchar**			li_ptr_array_to_strv (GPtrArray *array);
+const gchar		*li_get_install_root (void);
 
 G_END_DECLS
 

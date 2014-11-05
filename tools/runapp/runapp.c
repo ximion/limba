@@ -20,6 +20,7 @@
  */
 
 #define _GNU_SOURCE /* Required for CLONE_NEWNS */
+#include <config.h>
 #include <limba.h>
 #include <li-config-data.h>
 
@@ -99,8 +100,8 @@ mount_overlay (const gchar *bundle)
 	LiPkgInfo *pki = NULL;
 
 	/* check if the bundle exists */
-	main_data_path = g_build_filename (LI_INSTALL_ROOT, bundle, "data", NULL);
-	fname = g_build_filename (LI_INSTALL_ROOT, bundle, "control", NULL);
+	main_data_path = g_build_filename (LI_SOFTWARE_ROOT, bundle, "data", NULL);
+	fname = g_build_filename (LI_SOFTWARE_ROOT, bundle, "control", NULL);
 	file = g_file_new_for_path (fname);
 	g_free (fname);
 
@@ -126,7 +127,7 @@ mount_overlay (const gchar *bundle)
 		/* mount the desired runtime */
 		gchar *bundle_path;
 
-		bundle_path = g_build_filename (LI_INSTALL_ROOT, "tmp", runtime_uuid, "data", NULL);
+		bundle_path = g_build_filename (LI_SOFTWARE_ROOT, "tmp", runtime_uuid, "data", NULL);
 		if (!g_file_test (bundle_path, G_FILE_TEST_IS_DIR)) {
 			fprintf (stderr, "The runtime '%s' does not exist.\n", runtime_uuid);
 			res = 1;

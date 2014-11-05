@@ -106,6 +106,8 @@ gboolean		li_save_string_to_file (const gchar *fname,
 gchar			*li_utils_get_tmp_dir (const gchar *prefix);
 gchar			*li_get_uuid_string (void);
 
+void			li_set_unittestmode (gboolean testmode);
+
 G_END_DECLS
 
 #endif /* __LI_UTILS_PRIVATE_H */

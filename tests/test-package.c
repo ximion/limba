@@ -22,6 +22,7 @@
 #include "limba.h"
 
 #include "li-config-data.h"
+#include "li-utils-private.h"
 
 static gchar *datadir = NULL;
 
@@ -32,7 +33,7 @@ test_package_read ()
 	gchar *fname;
 	GError *error = NULL;
 
-	fname = g_build_filename (datadir, "foo.ipk", NULL);
+	fname = g_build_filename (datadir, "libfoo.ipk", NULL);
 	ipk = li_ipk_package_new ();
 
 	li_ipk_package_open_file (ipk, fname, &error);
@@ -58,6 +59,8 @@ main (int argc, char **argv)
 	g_assert (datadir != NULL);
 	datadir = g_build_filename (datadir, "data", NULL);
 	g_assert (g_file_test (datadir, G_FILE_TEST_EXISTS) != FALSE);
+
+	li_set_unittestmode (TRUE);
 
 	g_setenv ("G_MESSAGES_DEBUG", "all", TRUE);
 	g_test_init (&argc, &argv, NULL);

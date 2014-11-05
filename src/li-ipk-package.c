@@ -26,7 +26,7 @@
 #include "config.h"
 #include "li-ipk-package.h"
 
-#include "limba.h"
+#include "li-utils.h"
 #include "li-utils-private.h"
 
 #include <glib/gi18n-lib.h>
@@ -91,7 +91,7 @@ li_ipk_package_init (LiIPKPackage *ipk)
 	priv->info = li_pkg_info_new ();
 	priv->tmp_dir = NULL;
 	priv->archive_file = NULL;
-	priv->install_root = g_strdup (LI_INSTALL_ROOT);
+	priv->install_root = g_strdup (LI_SOFTWARE_ROOT);
 }
 
 /**

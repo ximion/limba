@@ -38,6 +38,9 @@
  * @include: listaller.h
  */
 
+/* set to TRUE in case we are running unit tests */
+static gboolean _unittestmode = FALSE;
+
 /**
  * li_str_empty:
  */
@@ -390,7 +393,7 @@ li_utils_get_tmp_dir (const gchar *prefix)
  * li_get_uuid_string:
  */
 gchar*
-li_get_uuid_string (void)
+li_get_uuid_string ()
 {
 	uuid_t uuid;
 	char uuid_str[37];
@@ -399,4 +402,28 @@ li_get_uuid_string (void)
 	uuid_unparse_lower(uuid, uuid_str);
 
 	return g_strndup (uuid_str, 36);
+}
+
+/**
+ * li_get_install_root:
+ */
+const gchar*
+li_get_install_root ()
+{
+	if (_unittestmode) {
+		const gchar *tmpdir = "/var/tmp/limba/test-instroot";
+		li_touch_dir (tmpdir, NULL);
+		return tmpdir;
+	} else {
+		return LI_INSTALL_ROOT;
+	}
+}
+
+/**
+ * li_set_unittestmode:
+ */
+void
+li_set_unittestmode (gboolean testmode)
+{
+	_unittestmode = testmode;
 }
