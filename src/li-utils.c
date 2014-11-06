@@ -76,7 +76,7 @@ li_touch_dir (const gchar* dirname, GError **error)
 }
 
 /**
- * li_utils_delete_dir_recursive:
+ * li_delete_dir_recursive:
  * @dirname: Directory to remove
  *
  * Remove folder like rm -r does
@@ -84,7 +84,7 @@ li_touch_dir (const gchar* dirname, GError **error)
  * Returns: TRUE if operation was successful
  */
 gboolean
-li_utils_delete_dir_recursive (const gchar* dirname)
+li_delete_dir_recursive (const gchar* dirname)
 {
 	GError *error = NULL;
 	gboolean ret = FALSE;
@@ -110,7 +110,7 @@ li_utils_delete_dir_recursive (const gchar* dirname)
 		gchar *path;
 		path = g_build_filename (dirname, g_file_info_get_name (info), NULL);
 		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
-			li_utils_delete_dir_recursive (path);
+			li_delete_dir_recursive (path);
 		} else {
 			g_remove (path);
 		}
@@ -228,21 +228,6 @@ li_utils_is_root (void)
 }
 
 /**
- * li_string_strip:
- */
-gchar*
-li_string_strip (const gchar* str)
-{
-	gchar* result = NULL;
-	gchar* _tmp0_ = NULL;
-	g_return_val_if_fail (str != NULL, NULL);
-	_tmp0_ = g_strdup (str);
-	result = _tmp0_;
-	g_strstrip (result);
-	return result;
-}
-
-/**
  * li_ptr_array_to_strv:
  * @array: (element-type utf8)
  *
@@ -337,30 +322,6 @@ li_compute_checksum_for_file (const gchar *fname)
 }
 
 /**
- * li_save_string_to_file:
- */
-gboolean
-li_save_string_to_file (const gchar *fname, const gchar *data, gboolean override, GError **error)
-{
-	_cleanup_object_unref_ GFile *file;
-	_cleanup_object_unref_ GFileOutputStream *file_stream = NULL;
-	_cleanup_object_unref_ GDataOutputStream *data_stream = NULL;
-
-	file = g_file_new_for_path (fname);
-	if ((!override) && (g_file_query_exists (file, NULL)))
-		return FALSE;
-
-	file_stream = g_file_create (file, G_FILE_CREATE_REPLACE_DESTINATION, NULL, error);
-	if (error != NULL)
-		return FALSE;
-	data_stream = g_data_output_stream_new (G_OUTPUT_STREAM (file_stream));
-	g_data_output_stream_put_string (data_stream, data, NULL, error);
-	if (error != NULL)
-		return FALSE;
-	return TRUE;
-}
-
-/**
  * li_utils_get_tmp_dir:
  */
 gchar*
@@ -408,7 +369,7 @@ li_get_uuid_string ()
  * li_get_install_root:
  */
 const gchar*
-li_get_install_root ()
+li_get_software_root ()
 {
 	if (_unittestmode) {
 		const gchar *tmpdir = "/var/tmp/limba/test-instroot";

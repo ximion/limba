@@ -39,6 +39,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <appstream.h>
+#include "li-exporter.h"
 
 #define DEFAULT_BLOCK_SIZE 65536
 
@@ -154,7 +155,7 @@ li_ipk_package_extract_entry_to (LiIPKPackage *ipk, struct archive* ar, struct a
 		return FALSE;
 	}
 
-	/* check if we are dealink with a symlink */
+	/* check if we are dealing with a symlink */
 	link_target = archive_entry_symlink (e);
 	if ((filetype == S_IFLNK) && (link_target != NULL)) {
 		res = symlink (link_target, fname);
@@ -452,9 +453,11 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	const gchar *pkg_id = NULL;
 	_cleanup_free_ gchar *pkg_root_dir = NULL;
 	gchar *tmp;
+	gchar *tmp2;
 	gint res;
 	gboolean ret;
 	const gchar *version;
+	_cleanup_object_unref_ LiExporter *exp = NULL;
 	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	/* test if we have all data we need for extraction */
@@ -486,11 +489,15 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 		return FALSE;
 	}
 
+	/* create a new exporter to integrate the new software into the system */
+	exp = li_exporter_new ();
+	li_exporter_set_pkgid (exp, pkg_id);
+
 	/* the directory where all package data is installed to */
 	pkg_root_dir = g_build_filename (priv->install_root, pkg_id, NULL);
 	if (g_file_test (pkg_root_dir, G_FILE_TEST_EXISTS)) {
 		g_debug ("Package '%s' is already installed, replacing with the new package contents.", pkg_id);
-		if (!li_utils_delete_dir_recursive (pkg_root_dir)) {
+		if (!li_delete_dir_recursive (pkg_root_dir)) {
 			g_set_error (error,
 				LI_PACKAGE_ERROR,
 				LI_PACKAGE_ERROR_EXTRACT,
@@ -500,6 +507,9 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 				archive_read_free (payload_ar);
 			return FALSE;
 		}
+
+		/* tell the exporter that it should not file if the to-be-exported files already exist */
+		li_exporter_set_override_allowed (exp, TRUE);
 	}
 
 	ar = li_ipk_package_open_base_ipk (ipk, &tmp_error);
@@ -559,7 +569,9 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	while (archive_read_next_header (payload_ar, &en) == ARCHIVE_OK) {
 		const gchar *filename;
 		gchar *path;
-		_cleanup_free_ gchar *dest_path;
+		_cleanup_free_ gchar *tmp_str = NULL;
+		_cleanup_free_ gchar *dest_path = NULL;
+		_cleanup_free_ gchar *dest_fname = NULL;
 
 		filename = archive_entry_pathname (en);
 		path = g_path_get_dirname (filename);
@@ -581,6 +593,16 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 			archive_read_free (ar);
 			return FALSE;
 		}
+
+		tmp_str = g_path_get_basename (archive_entry_pathname (en));
+		dest_fname = g_build_filename (dest_path, tmp_str, NULL);
+
+		li_exporter_process_file (exp, archive_entry_pathname (en), dest_fname, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			archive_read_free (ar);
+			return FALSE;
+		}
 	}
 
 	archive_read_free (payload_ar);
@@ -589,6 +611,16 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	tmp = g_build_filename (pkg_root_dir, "control", NULL);
 	ret = li_pkg_info_save_to_file (priv->info, tmp);
 	g_free (tmp);
+
+	/* install exported index */
+	tmp = g_build_filename (pkg_root_dir, "exported", NULL);
+	tmp2 = li_exporter_get_exported_files_index (exp);
+	g_file_set_contents (tmp, tmp2, -1, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+	}
+	g_free (tmp);
+	g_free (tmp2);
 
 	return ret;
 }

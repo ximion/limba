@@ -61,6 +61,21 @@ struct _LiExporterClass
 GType			li_exporter_get_type	(void);
 LiExporter		*li_exporter_new		(void);
 
+gboolean		li_exporter_process_file (LiExporter *exp,
+										const gchar *filename,
+										const gchar *disk_location,
+										GError **error);
+
+gboolean		li_exporter_get_override_allowed (LiExporter *exp);
+void			li_exporter_set_override_allowed (LiExporter *exp,
+										gboolean override);
+
+const gchar		*li_exporter_get_pkgid (LiExporter *exp);
+void			li_exporter_set_pkgid (LiExporter *exp,
+										const gchar *pkgid);
+
+gchar			*li_exporter_get_exported_files_index (LiExporter *exp);
+
 G_END_DECLS
 
 #endif /* __LI_EXPORTER_H */
