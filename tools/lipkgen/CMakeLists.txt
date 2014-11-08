@@ -2,8 +2,6 @@
 
 set(LIMBA_LIPKGEN_SRC
 	main.c
-	li-pkg-builder.h
-	li-pkg-builder.c
 )
 
 add_definitions("-DG_LOG_DOMAIN=\"Lipkgen\"")

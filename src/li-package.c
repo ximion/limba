@@ -19,12 +19,12 @@
  */
 
 /**
- * SECTION:li-ipk-package
+ * SECTION:li-package
  * @short_description: Representation of a complete Listaller package
  */
 
 #include "config.h"
-#include "li-ipk-package.h"
+#include "li-package.h"
 
 #include "li-utils.h"
 #include "li-utils-private.h"
@@ -43,8 +43,8 @@
 
 #define DEFAULT_BLOCK_SIZE 65536
 
-typedef struct _LiIPKPackagePrivate	LiIPKPackagePrivate;
-struct _LiIPKPackagePrivate
+typedef struct _LiPackagePrivate	LiPackagePrivate;
+struct _LiPackagePrivate
 {
 	FILE *archive_file;
 	gchar *tmp_dir;
@@ -55,18 +55,18 @@ struct _LiIPKPackagePrivate
 	gchar *id;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (LiIPKPackage, li_ipk_package, G_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_PRIVATE (LiPackage, li_package, G_TYPE_OBJECT)
 
-#define GET_PRIVATE(o) (li_ipk_package_get_instance_private (o))
+#define GET_PRIVATE(o) (li_package_get_instance_private (o))
 
 /**
- * li_ipk_package_finalize:
+ * li_package_finalize:
  **/
 static void
-li_ipk_package_finalize (GObject *object)
+li_package_finalize (GObject *object)
 {
-	LiIPKPackage *ipk = LI_IPK_PACKAGE (object);
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackage *ipk = LI_PACKAGE (object);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	g_object_unref (priv->info);
 	if (priv->tmp_dir != NULL)
@@ -78,16 +78,16 @@ li_ipk_package_finalize (GObject *object)
 	g_free (priv->install_root);
 	g_free (priv->id);
 
-	G_OBJECT_CLASS (li_ipk_package_parent_class)->finalize (object);
+	G_OBJECT_CLASS (li_package_parent_class)->finalize (object);
 }
 
 /**
- * li_ipk_package_init:
+ * li_package_init:
  **/
 static void
-li_ipk_package_init (LiIPKPackage *ipk)
+li_package_init (LiPackage *ipk)
 {
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	priv->info = li_pkg_info_new ();
 	priv->tmp_dir = NULL;
@@ -96,10 +96,10 @@ li_ipk_package_init (LiIPKPackage *ipk)
 }
 
 /**
- * li_ipk_package_read_entry:
+ * li_package_read_entry:
  */
 static gchar*
-li_ipk_package_read_entry (LiIPKPackage *ipk, struct archive* ar, GError **error)
+li_package_read_entry (LiPackage *ipk, struct archive* ar, GError **error)
 {
 	const void *buff = NULL;
 	gsize size = 0UL;
@@ -115,10 +115,10 @@ li_ipk_package_read_entry (LiIPKPackage *ipk, struct archive* ar, GError **error
 }
 
 /**
- * li_ipk_package_extract_entry_to:
+ * li_package_extract_entry_to:
  */
 static gboolean
-li_ipk_package_extract_entry_to (LiIPKPackage *ipk, struct archive* ar, struct archive_entry* e, const gchar* dest, GError **error)
+li_package_extract_entry_to (LiPackage *ipk, struct archive* ar, struct archive_entry* e, const gchar* dest, GError **error)
 {
 	_cleanup_free_ gchar *fname = NULL;
 	const gchar *cstr;
@@ -239,14 +239,14 @@ done:
 }
 
 /**
- * li_ipk_package_open_base_ipk:
+ * li_package_open_base_ipk:
  **/
 static struct archive*
-li_ipk_package_open_base_ipk (LiIPKPackage *ipk, GError **error)
+li_package_open_base_ipk (LiPackage *ipk, GError **error)
 {
 	struct archive *ar;
 	int res;
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	/* create new archive object for reading */
 	ar = archive_read_new ();
@@ -271,43 +271,16 @@ li_ipk_package_open_base_ipk (LiIPKPackage *ipk, GError **error)
 }
 
 /**
- * li_ipk_package_get_version_from_component:
- */
-static const gchar*
-li_ipk_package_get_version_from_component (AsComponent *cpt)
-{
-	GPtrArray *releases;
-	AsRelease *release = NULL;
-	guint64 timestamp = 0;
-	guint i;
-	const gchar *version = NULL;
-
-	releases = as_component_get_releases (cpt);
-	for (i = 0; i < releases->len; i++) {
-		AsRelease *r = AS_RELEASE (g_ptr_array_index (releases, i));
-		if (as_release_get_timestamp (r) >= timestamp) {
-				release = r;
-				timestamp = as_release_get_timestamp (r);
-		}
-	}
-	if (release != NULL) {
-		version = as_release_get_version (release);
-	}
-
-	return version;
-}
-
-/**
- * li_ipk_package_read_component_data:
+ * li_package_read_component_data:
  */
 static gboolean
-li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError **error)
+li_package_read_component_data (LiPackage *ipk, const gchar *data, GError **error)
 {
 	AsMetadata *mdata;
 	gchar *tmp;
 	const gchar *version;
 	GError *tmp_error = NULL;
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	/* ensure we don't leak memory, even if we are using this function wrong... */
 	if (priv->cpt != NULL)
@@ -342,7 +315,7 @@ li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError
 	/* the human-friendly application name */
 	li_pkg_info_set_appname (priv->info, as_component_get_name (priv->cpt));
 
-	version = li_ipk_package_get_version_from_component (priv->cpt);
+	version = li_get_last_version_from_component (priv->cpt);
 	if (version == NULL) {
 		/* no version? give up. */
 		g_set_error (error,
@@ -354,24 +327,24 @@ li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError
 	li_pkg_info_set_version (priv->info, version);
 
 	/* now get the package-id */
-	li_ipk_package_set_id (ipk,
-						   li_pkg_info_get_id (priv->info));
+	li_package_set_id (ipk,
+					li_pkg_info_get_id (priv->info));
 
 	return TRUE;
 }
 
 /**
- * li_ipk_package_open_file:
+ * li_package_open_file:
  */
 gboolean
-li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **error)
+li_package_open_file (LiPackage *ipk, const gchar *filename, GError **error)
 {
 	struct archive *ar;
 	struct archive_entry* e;
 	gchar *tmp_str;
 	GError *tmp_error = NULL;
 	gboolean ret = FALSE;
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	if (!g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
 		g_set_error (error,
@@ -390,7 +363,7 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 		return FALSE;
 	}
 
-	ar = li_ipk_package_open_base_ipk (ipk, &tmp_error);
+	ar = li_package_open_base_ipk (ipk, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
@@ -408,7 +381,7 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 		pathname = archive_entry_pathname (e);
 		if (g_strcmp0 (pathname, "control") == 0) {
 			gchar *info_data;
-			info_data = li_ipk_package_read_entry (ipk, ar, &tmp_error);
+			info_data = li_package_read_entry (ipk, ar, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
@@ -417,12 +390,12 @@ li_ipk_package_open_file (LiIPKPackage *ipk, const gchar *filename, GError **err
 			g_free (info_data);
 		} else if (g_strcmp0 (pathname, "metainfo.xml") == 0) {
 			gchar *as_data;
-			as_data = li_ipk_package_read_entry (ipk, ar, &tmp_error);
+			as_data = li_package_read_entry (ipk, ar, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
 			}
-			li_ipk_package_read_component_data (ipk, as_data, &tmp_error);
+			li_package_read_component_data (ipk, as_data, &tmp_error);
 			g_free (as_data);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
@@ -443,10 +416,10 @@ out:
 }
 
 /**
- * li_ipk_package_install:
+ * li_package_install:
  */
 gboolean
-li_ipk_package_install (LiIPKPackage *ipk, GError **error)
+li_package_install (LiPackage *ipk, GError **error)
 {
 	struct archive *ar;
 	struct archive_entry* e1;
@@ -461,7 +434,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	gboolean ret;
 	const gchar *version;
 	_cleanup_object_unref_ LiExporter *exp = NULL;
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 
 	/* test if we have all data we need for extraction */
 	if (priv->cpt == NULL) {
@@ -483,7 +456,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 	}
 
 	/* do we have a valid id? */
-	pkg_id = li_ipk_package_get_id (ipk);
+	pkg_id = li_package_get_id (ipk);
 	if (pkg_id == NULL) {
 		g_set_error (error,
 				LI_PACKAGE_ERROR,
@@ -515,7 +488,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 		li_exporter_set_override_allowed (exp, TRUE);
 	}
 
-	ar = li_ipk_package_open_base_ipk (ipk, &tmp_error);
+	ar = li_package_open_base_ipk (ipk, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
@@ -526,7 +499,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 
 		pathname = archive_entry_pathname (e1);
 		if (g_strcmp0 (pathname, "main-data.tar.xz") == 0) {
-			li_ipk_package_extract_entry_to (ipk, ar, e1, priv->tmp_dir, &tmp_error);
+			li_package_extract_entry_to (ipk, ar, e1, priv->tmp_dir, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				archive_read_free (ar);
@@ -590,7 +563,7 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 				return FALSE;
 		}
 
-		li_ipk_package_extract_entry_to (ipk, payload_ar, en, dest_path, &tmp_error);
+		li_package_extract_entry_to (ipk, payload_ar, en, dest_path, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			archive_read_free (ar);
@@ -629,68 +602,68 @@ li_ipk_package_install (LiIPKPackage *ipk, GError **error)
 }
 
 /**
- * li_ipk_package_get_install_root:
+ * li_package_get_install_root:
  *
  * Get the installation root directory
  */
 const gchar*
-li_ipk_package_get_install_root (LiIPKPackage *ipk)
+li_package_get_install_root (LiPackage *ipk)
 {
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 	return priv->install_root;
 }
 
 /**
- * li_ipk_package_set_install_root:
+ * li_package_set_install_root:
  * @dir: An absolute path to the installation root directory
  *
  * Set the directory where the software should be installed to.
  */
 void
-li_ipk_package_set_install_root (LiIPKPackage *ipk, const gchar *dir)
+li_package_set_install_root (LiPackage *ipk, const gchar *dir)
 {
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 	g_free (priv->install_root);
 	priv->install_root = g_strdup (dir);
 }
 
 /**
- * li_ipk_package_get_id:
+ * li_package_get_id:
  *
  * Get the unique name of this package
  */
 const gchar*
-li_ipk_package_get_id (LiIPKPackage *ipk)
+li_package_get_id (LiPackage *ipk)
 {
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 	return priv->id;
 }
 
 /**
- * li_ipk_package_set_id:
+ * li_package_set_id:
  * @unique_name: A unique name, build from the package name and version
  *
  * Se the unique name for this package.
  */
 void
-li_ipk_package_set_id (LiIPKPackage *ipk, const gchar *unique_name)
+li_package_set_id (LiPackage *ipk, const gchar *unique_name)
 {
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 	g_free (priv->id);
 	priv->id = g_strdup (unique_name);
 }
 
 /**
- * li_ipk_package_get_info:
+ * li_package_get_info:
  *
  * Get the archive control metadata object.
  *
  * Returns: An instance of #LiPkgInfo
  */
 LiPkgInfo*
-li_ipk_package_get_info (LiIPKPackage *ipk)
+li_package_get_info (LiPackage *ipk)
 {
-	LiIPKPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (ipk);
 	return priv->info;
 }
 
@@ -709,27 +682,27 @@ li_package_error_quark (void)
 }
 
 /**
- * li_ipk_package_class_init:
+ * li_package_class_init:
  **/
 static void
-li_ipk_package_class_init (LiIPKPackageClass *klass)
+li_package_class_init (LiPackageClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
-	object_class->finalize = li_ipk_package_finalize;
+	object_class->finalize = li_package_finalize;
 }
 
 /**
- * li_ipk_package_new:
+ * li_package_new:
  *
- * Creates a new #LiIPKPackage.
+ * Creates a new #LiPackage.
  *
- * Returns: (transfer full): a #LiIPKPackage
+ * Returns: (transfer full): a #LiPackage
  *
  **/
-LiIPKPackage *
-li_ipk_package_new (void)
+LiPackage *
+li_package_new (void)
 {
-	LiIPKPackage *ipk;
-	ipk = g_object_new (LI_TYPE_IPK_PACKAGE, NULL);
-	return LI_IPK_PACKAGE (ipk);
+	LiPackage *ipk;
+	ipk = g_object_new (LI_TYPE_PACKAGE, NULL);
+	return LI_PACKAGE (ipk);
 }

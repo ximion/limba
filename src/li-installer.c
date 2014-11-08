@@ -29,7 +29,7 @@
 #include <glib/gi18n-lib.h>
 
 #include "li-pkg-info.h"
-#include "li-ipk-package.h"
+#include "li-package.h"
 #include "li-manager.h"
 #include "li-runtime.h"
 
@@ -152,7 +152,7 @@ li_installer_dep_is_installed (GPtrArray *installed_sw, LiPkgInfo *dep)
 gboolean
 li_installer_install_package (LiInstaller *inst, const gchar *filename, GError **error)
 {
-	LiIPKPackage *pkg;
+	LiPackage *pkg;
 	LiPkgInfo *info;
 	GError *tmp_error = NULL;
 	GPtrArray *deps = NULL;
@@ -161,14 +161,14 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 	LiRuntime *rt;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	pkg = li_ipk_package_new ();
-	li_ipk_package_open_file (pkg, filename, &tmp_error);
+	pkg = li_package_new ();
+	li_package_open_file (pkg, filename, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;
 	}
 
-	info = li_ipk_package_get_info (pkg);
+	info = li_package_get_info (pkg);
 	deps = li_installer_parse_dependency_string (li_pkg_info_get_dependencies (info));
 	if (deps != NULL) {
 		GPtrArray *installed_sw;
@@ -205,7 +205,7 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 		li_pkg_info_set_runtime_dependency (info, "None");
 	}
 
-	li_ipk_package_install (pkg, &tmp_error);
+	li_package_install (pkg, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;

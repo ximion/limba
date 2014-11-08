@@ -9,20 +9,22 @@ set(LIBLIMBA_SRC
 	li-utils.c
 	li-config-data.c
 	li-pkg-info.c
-	li-ipk-package.c
+	li-package.c
 	li-runtime.c
 	li-exporter.c
 	li-installer.c
 	li-manager.c
+	li-pkg-builder.c
 )
 
 set(LIBLIMBA_PUBLIC_HEADERS
 	limba.h
 	li-utils.h
 	li-pkg-info.h
-	li-ipk-package.h
+	li-package.h
 	li-installer.h
 	li-manager.h
+	li-pkg-builder.h
 )
 
 set(LIBLIMBA_PRIVATE_HEADERS

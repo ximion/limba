@@ -22,18 +22,18 @@
 #error "Only <limba.h> can be included directly."
 #endif
 
-#ifndef __LI_IPK_PACKAGE_H
-#define __LI_IPK_PACKAGE_H
+#ifndef __LI_PACKAGE_H
+#define __LI_PACKAGE_H
 
 #include <glib-object.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_IPK_PACKAGE			(li_ipk_package_get_type())
-#define LI_IPK_PACKAGE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_IPK_PACKAGE, LiIPKPackage))
-#define LI_IPK_PACKAGE_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_IPK_PACKAGE, LiIPKPackageClass))
-#define LI_IS_IPK_PACKAGE(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_IPK_PACKAGE))
-#define LI_IS_IPK_PACKAGE_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_IPK_PACKAGE))
-#define LI_IPK_PACKAGE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_IPK_PACKAGE, LiIPKPackageClass))
+#define LI_TYPE_PACKAGE			(li_package_get_type())
+#define LI_PACKAGE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PACKAGE, LiPackage))
+#define LI_PACKAGE_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PACKAGE, LiPackageClass))
+#define LI_IS_PACKAGE(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PACKAGE))
+#define LI_IS_PACKAGE_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PACKAGE))
+#define LI_PACKAGE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PACKAGE, LiPackageClass))
 
 G_BEGIN_DECLS
 
@@ -62,15 +62,15 @@ typedef enum {
 #define	LI_PACKAGE_ERROR li_package_error_quark ()
 GQuark li_package_error_quark (void);
 
-typedef struct _LiIPKPackage		LiIPKPackage;
-typedef struct _LiIPKPackageClass	LiIPKPackageClass;
+typedef struct _LiPackage		LiPackage;
+typedef struct _LiPackageClass	LiPackageClass;
 
-struct _LiIPKPackage
+struct _LiPackage
 {
 	GObject			parent;
 };
 
-struct _LiIPKPackageClass
+struct _LiPackageClass
 {
 	GObjectClass		parent_class;
 	/*< private >*/
@@ -84,25 +84,25 @@ struct _LiIPKPackageClass
 	void (*_as_reserved8)	(void);
 };
 
-GType			li_ipk_package_get_type	(void);
-LiIPKPackage	*li_ipk_package_new		(void);
+GType			li_package_get_type	(void);
+LiPackage		*li_package_new		(void);
 
-gboolean		li_ipk_package_open_file (LiIPKPackage *ipk,
+gboolean		li_package_open_file (LiPackage *ipk,
 										const gchar *filename,
 										GError **error);
-gboolean		li_ipk_package_install (LiIPKPackage *ipk,
+gboolean		li_package_install (LiPackage *ipk,
 										GError **error);
 
-const gchar		*li_ipk_package_get_install_root (LiIPKPackage *ipk);
-void			li_ipk_package_set_install_root (LiIPKPackage *ipk,
+const gchar		*li_package_get_install_root (LiPackage *ipk);
+void			li_package_set_install_root (LiPackage *ipk,
 												const gchar *dir);
 
-const gchar		*li_ipk_package_get_id (LiIPKPackage *ipk);
-void			li_ipk_package_set_id (LiIPKPackage *ipk,
+const gchar		*li_package_get_id (LiPackage *ipk);
+void			li_package_set_id (LiPackage *ipk,
 										const gchar *unique_name);
 
-LiPkgInfo		*li_ipk_package_get_info (LiIPKPackage *ipk);
+LiPkgInfo		*li_package_get_info (LiPackage *ipk);
 
 G_END_DECLS
 
-#endif /* __LI_IPK_PACKAGE_H */
+#endif /* __LI_PACKAGE_H */

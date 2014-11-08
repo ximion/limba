@@ -25,8 +25,6 @@
 #include <glib/gi18n-lib.h>
 #include <limba.h>
 
-#include "li-pkg-builder.h"
-
 static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
@@ -73,12 +71,25 @@ li_print_stdout (const gchar *format, ...)
 static gint
 pkgen_build_package (const gchar *dir, const gchar *out_fname)
 {
+	gint res = 0;
+	GError *error = NULL;
+	LiPkgBuilder *builder;
+
 	if (dir == NULL) {
 		li_print_stderr (_("You need to specify a directory with build-metadata."));
 		return 1;
 	}
 
-	return 0;
+	builder = li_pkg_builder_new ();
+	li_pkg_builder_create_package_from_dir (builder, dir, out_fname, &error);
+	if (error != NULL) {
+		li_print_stderr ("Failed to create package: %s", error->message);
+		g_error_free (error);
+		res = 1;
+	}
+	g_object_unref (builder);
+
+	return res;
 }
 
 /**

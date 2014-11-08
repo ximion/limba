@@ -18,6 +18,10 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#if !defined (__LIMBA_H) && !defined (LI_COMPILATION)
+#error "Only <limba.h> can be included directly."
+#endif
+
 #ifndef __LI_PKGBUILDER_H
 #define __LI_PKGBUILDER_H
 
@@ -73,7 +77,8 @@ GType			li_pkg_builder_get_type	(void);
 LiPkgBuilder	*li_pkg_builder_new		(void);
 
 gboolean		li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder,
-													const gchar *metadata_dir,
+													const gchar *data_dir,
+													const gchar *out_fname,
 													GError **error);
 
 G_END_DECLS

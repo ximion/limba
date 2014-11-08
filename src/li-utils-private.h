@@ -87,6 +87,8 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 #define _cleanup_ptrarray_unref_ __attribute__ ((cleanup(gs_local_ptrarray_unref)))
 #define _cleanup_variant_unref_ __attribute__ ((cleanup(gs_local_variant_unref)))
 
+typedef struct _AsComponent AsComponent;
+
 gboolean		li_touch_dir (const gchar* dirname,
 							  GError **error);
 gboolean		li_delete_dir_recursive (const gchar* dirname);
@@ -102,6 +104,7 @@ gchar			*li_str_replace (const gchar* str,
 gchar			*li_compute_checksum_for_file (const gchar *fname);
 gchar			*li_utils_get_tmp_dir (const gchar *prefix);
 gchar			*li_get_uuid_string (void);
+const gchar		*li_get_last_version_from_component (AsComponent *cpt);
 
 void			li_set_unittestmode (gboolean testmode);
 

@@ -78,7 +78,7 @@ lipa_install_package (const gchar *fname)
 	vuid = getuid ();
 
 	if (vuid != ((uid_t) 0)) {
-		li_print_stderr ("This action need superuser permissions.");
+		li_print_stderr ("This action needs superuser permissions.");
 		return 2;
 	}
 

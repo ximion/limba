@@ -28,9 +28,10 @@ extern "C" {
 
 #include <li-utils.h>
 #include <li-pkg-info.h>
-#include <li-ipk-package.h>
+#include <li-package.h>
 #include <li-installer.h>
 #include <li-manager.h>
+#include <li-pkg-builder.h>
 
 #ifdef __cplusplus
 };

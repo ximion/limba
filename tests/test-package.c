@@ -29,17 +29,17 @@ static gchar *datadir = NULL;
 void
 test_package_read ()
 {
-	LiIPKPackage *ipk;
+	LiPackage *ipk;
 	gchar *fname;
 	GError *error = NULL;
 
 	fname = g_build_filename (datadir, "libfoo.ipk", NULL);
-	ipk = li_ipk_package_new ();
+	ipk = li_package_new ();
 
-	li_ipk_package_open_file (ipk, fname, &error);
+	li_package_open_file (ipk, fname, &error);
 	g_assert_no_error (error);
 
-	li_ipk_package_install (ipk, &error);
+	li_package_install (ipk, &error);
 	g_assert_no_error (error);
 
 	g_object_unref (ipk);

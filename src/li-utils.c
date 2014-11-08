@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <uuid/uuid.h>
+#include <appstream.h>
 
 /**
  * SECTION:li-utils
@@ -319,6 +320,33 @@ li_compute_checksum_for_file (const gchar *fname)
 	sum = g_checksum_get_string (cs);
 
 	return g_strdup (sum);
+}
+
+/**
+ * li_get_last_version_from_component:
+ */
+const gchar*
+li_get_last_version_from_component (AsComponent *cpt)
+{
+	GPtrArray *releases;
+	AsRelease *release = NULL;
+	guint64 timestamp = 0;
+	guint i;
+	const gchar *version = NULL;
+
+	releases = as_component_get_releases (cpt);
+	for (i = 0; i < releases->len; i++) {
+		AsRelease *r = AS_RELEASE (g_ptr_array_index (releases, i));
+		if (as_release_get_timestamp (r) >= timestamp) {
+				release = r;
+				timestamp = as_release_get_timestamp (r);
+		}
+	}
+	if (release != NULL) {
+		version = as_release_get_version (release);
+	}
+
+	return version;
 }
 
 /**
