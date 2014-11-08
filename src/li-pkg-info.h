@@ -77,6 +77,10 @@ const gchar		*li_pkg_info_get_name (LiPkgInfo *pki);
 void			li_pkg_info_set_name (LiPkgInfo *pki,
 										const gchar *name);
 
+const gchar		*li_pkg_info_get_appname (LiPkgInfo *pki);
+void			li_pkg_info_set_appname (LiPkgInfo *pki,
+										const gchar *app_name);
+
 const gchar		*li_pkg_info_get_runtime_dependency (LiPkgInfo *pki);
 void			li_pkg_info_set_runtime_dependency (LiPkgInfo *pki,
 										const gchar *uuid);

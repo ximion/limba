@@ -1,0 +1,25 @@
+# CMakeLists for the Limba lipa tool
+
+set(LIMBA_LIPA_SRC
+	main.c
+)
+
+add_definitions("-DLI_COMPILATION"
+	"-DG_LOG_DOMAIN=\"Lipa\""
+)
+
+add_executable(lipa ${LIMBA_LIPA_SRC})
+
+include_directories(${CMAKE_BINARY_DIR}
+			${CMAKE_BINARY_DIR}/src
+			${CMAKE_SOURCE_DIR}/src
+			${CMAKE_CURRENT_SOURCE_DIR}
+			${GLIB_INCLUDE_DIRS}
+)
+
+target_link_libraries(lipa
+		${GLIB_LIBRARIES}
+		limba
+)
+
+install(TARGETS lipa RUNTIME DESTINATION bin)

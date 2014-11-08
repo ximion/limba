@@ -339,6 +339,9 @@ li_ipk_package_read_component_data (LiIPKPackage *ipk, const gchar *data, GError
 	li_pkg_info_set_name (priv->info, tmp);
 	g_free (tmp);
 
+	/* the human-friendly application name */
+	li_pkg_info_set_appname (priv->info, as_component_get_name (priv->cpt));
+
 	version = li_ipk_package_get_version_from_component (priv->cpt);
 	if (version == NULL) {
 		/* no version? give up. */

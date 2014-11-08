@@ -34,6 +34,7 @@ struct _LiPkgInfoPrivate
 	gchar *id; /* auto-generated */
 	gchar *version;
 	gchar *name;
+	gchar *app_name;
 	gchar *runtime_uuid;
 	gchar *dependencies;
 };
@@ -54,7 +55,10 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 	priv->id = NULL;
 
 	g_free (priv->name);
-	priv->name = li_config_data_get_value (cdata, "Name");
+	priv->name = li_config_data_get_value (cdata, "PkgName");
+
+	g_free (priv->app_name);
+	priv->app_name = li_config_data_get_value (cdata, "Name");
 
 	g_free (priv->version);
 	priv->version = li_config_data_get_value (cdata, "Version");
@@ -75,7 +79,10 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 
 	if (priv->name != NULL)
-		li_config_data_set_value (cdata, "Name", priv->name);
+		li_config_data_set_value (cdata, "PkgName", priv->name);
+
+	if (priv->app_name != NULL)
+		li_config_data_set_value (cdata, "Name", priv->app_name);
 
 	if (priv->version != NULL)
 		li_config_data_set_value (cdata, "Version", priv->version);
@@ -98,6 +105,7 @@ li_pkg_info_finalize (GObject *object)
 
 	g_free (priv->id);
 	g_free (priv->name);
+	g_free (priv->app_name);
 	g_free (priv->version);
 	g_free (priv->dependencies);
 	g_free (priv->runtime_uuid);
@@ -217,6 +225,31 @@ li_pkg_info_set_name (LiPkgInfo *pki, const gchar *name)
 	/* we need to re-generate the id */
 	g_free (priv->id);
 	priv->id = NULL;
+}
+
+/**
+ * li_pkg_info_get_appname:
+ *
+ * Get a human-friendly full name of this software.
+ */
+const gchar*
+li_pkg_info_get_appname (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	if (priv->app_name == NULL)
+		return priv->name;
+	return priv->app_name;
+}
+
+/**
+ * li_pkg_info_set_appname:
+ */
+void
+li_pkg_info_set_appname (LiPkgInfo *pki, const gchar *app_name)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	g_free (priv->app_name);
+	priv->app_name = g_strdup (app_name);
 }
 
 /**
