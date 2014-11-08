@@ -23,6 +23,7 @@
 #define __LI_UTILS_PRIVATE_H
 
 #include <glib-object.h>
+#include <appstream.h>
 
 G_BEGIN_DECLS
 
@@ -86,8 +87,6 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 #define _cleanup_object_unref_ __attribute__ ((cleanup(gs_local_obj_unref)))
 #define _cleanup_ptrarray_unref_ __attribute__ ((cleanup(gs_local_ptrarray_unref)))
 #define _cleanup_variant_unref_ __attribute__ ((cleanup(gs_local_variant_unref)))
-
-typedef struct _AsComponent AsComponent;
 
 gboolean		li_touch_dir (const gchar* dirname,
 							  GError **error);
