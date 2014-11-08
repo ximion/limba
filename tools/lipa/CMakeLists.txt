@@ -4,9 +4,7 @@ set(LIMBA_LIPA_SRC
 	main.c
 )
 
-add_definitions("-DLI_COMPILATION"
-	"-DG_LOG_DOMAIN=\"Lipa\""
-)
+add_definitions("-DG_LOG_DOMAIN=\"Lipa\"")
 
 add_executable(lipa ${LIMBA_LIPA_SRC})
 

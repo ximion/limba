@@ -65,7 +65,8 @@ LiManager		*li_manager_new		(void);
 GPtrArray		*li_manager_get_installed_software (LiManager *mgr);
 GPtrArray		*li_manager_get_installed_runtimes (LiManager *mgr);
 
-LiRuntime		*li_manager_find_runtime_with_members (LiManager *mgr, GPtrArray *members);
+LiRuntime		*li_manager_find_runtime_with_members (LiManager *mgr,
+													GPtrArray *members);
 
 G_END_DECLS
 
