@@ -658,7 +658,7 @@ li_package_set_id (LiPackage *ipk, const gchar *unique_name)
  *
  * Get the archive control metadata object.
  *
- * Returns: An instance of #LiPkgInfo
+ * Returns: (transfer none): An instance of #LiPkgInfo
  */
 LiPkgInfo*
 li_package_get_info (LiPackage *ipk)

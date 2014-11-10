@@ -33,8 +33,8 @@
 typedef struct _LiManagerPrivate	LiManagerPrivate;
 struct _LiManagerPrivate
 {
-	GPtrArray *installed_sw;
-	GPtrArray *installed_rt;
+	GPtrArray *installed_sw; /* of LiPkgInfo */
+	GPtrArray *installed_rt; /* of LiRuntime */
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiManager, li_manager, G_TYPE_OBJECT)
@@ -131,6 +131,8 @@ out:
 
 /**
  * li_manager_get_installed_software:
+ *
+ * Returns: (transfer none) (element-type LiPkgInfo): A list of installed software
  **/
 GPtrArray*
 li_manager_get_installed_software (LiManager *mgr)
@@ -216,6 +218,8 @@ out:
 
 /**
  * li_manager_get_installed_runtimes:
+ *
+ * Returns: (transfer none) (element-type LiRuntime): A list of registered runtimes
  **/
 GPtrArray*
 li_manager_get_installed_runtimes (LiManager *mgr)
@@ -234,6 +238,8 @@ li_manager_get_installed_runtimes (LiManager *mgr)
 
 /**
  * li_manager_find_runtime_with_members:
+ * @mgr: An instance of #LiManager
+ * @members: (element-type LiPkgInfo): Software components which should be present in the runtime
  *
  * Get an installed runtime which contains the specified members.
  * If none is available, %NULL is returned.
