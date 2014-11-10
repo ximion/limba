@@ -35,7 +35,7 @@
 
 /**
  * SECTION:li-utils
- * @short_description: General-purpose helper functions for Listaller
+ * @short_description: General-purpose helper functions for Limba
  * @include: listaller.h
  */
 

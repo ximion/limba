@@ -62,7 +62,7 @@ endif(${CMAKE_INSTALL_PREFIX} STREQUAL "/usr")
 include(GNUInstallDirs)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/data/cmake/)
 
-message(STATUS "Compiling Listaller version ${LIMBA_VERSION}")
+message(STATUS "Compiling Limba version ${LIMBA_VERSION}")
 
 configure_file("${CMAKE_SOURCE_DIR}/data/cmake/cmake_uninstall.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"

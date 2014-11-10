@@ -20,7 +20,7 @@
 
 /**
  * SECTION:li-config-file
- * @short_description: Data format used by Listaller to store package options
+ * @short_description: Data format used by Limba to store package options
  */
 
 #include "li-config-data.h"

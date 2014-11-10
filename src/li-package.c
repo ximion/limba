@@ -20,7 +20,7 @@
 
 /**
  * SECTION:li-package
- * @short_description: Representation of a complete Listaller package
+ * @short_description: Representation of a complete package
  */
 
 #include "config.h"

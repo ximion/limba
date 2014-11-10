@@ -1,4 +1,4 @@
-# CMakeLists for Listaller localisation
+# CMakeLists for Limba localisation
 
 find_program (LC_INTLTOOL_UPDATE intltool-update)
 mark_as_advanced (LC_INTLTOOL_UPDATE)
