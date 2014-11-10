@@ -73,6 +73,29 @@ target_link_libraries(limba
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/limba.pc.in ${CMAKE_CURRENT_BINARY_DIR}/limba.pc @ONLY)
 
+####
+# GObject Introspection
+macro(_list_prefix _outvar _listvar _prefix)
+  set(${_outvar})
+  foreach(_item IN LISTS ${_listvar})
+    list(APPEND ${_outvar} ${_prefix}${_item})
+  endforeach()
+endmacro(_list_prefix)
+
+set(introspection_files ${LIBLIMBA_SRC} ${LIBLIMBA_PUBLIC_HEADERS})
+set(Limba_1_0_gir "limba")
+set(Limba_1_0_gir_INCLUDES GObject-2.0 Gio-2.0)
+set(Limba_1_0_gir_CFLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/" "-DLI_COMPILATION")
+set(Limba_1_0_gir_LIBS limba)
+
+_list_prefix(Limba_1_0_gir_FILES introspection_files "${CMAKE_CURRENT_SOURCE_DIR}/")
+set(Limba_1_0_gir_SCANNERFLAGS --c-include limba.h)
+set(Limba_1_0_gir_EXPORT_PACKAGES limba)
+
+list(APPEND INTROSPECTION_GIRS Limba-1.0.gir)
+gir_add_introspections(INTROSPECTION_GIRS)
+####
+
 install(TARGETS limba DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${LIBLIMBA_PUBLIC_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Limba)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/limba.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig/)
