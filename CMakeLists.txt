@@ -91,6 +91,7 @@ find_library(M_LIB m)
 set (GETTEXT_PACKAGE "limba")
 set (VERSION "${LIMBA_VERSION}")
 set (BUILDDIR "${CMAKE_BINARY_DIR}")
+set (SOFTWARE_ROOT_PREFIX "/opt/swroot")
 configure_file(config.h.in ${CMAKE_BINARY_DIR}/config.h)
 
 #

@@ -43,7 +43,7 @@
 /* Version number of package */
 #define VERSION "@VERSION@"
 
-#define APP_ROOT_PREFIX "/opt/approot/"
+#define LI_SW_ROOT_PREFIX "@SOFTWARE_ROOT_PREFIX@"
 
 #define LI_SU_SOFTWARE_ROOT "/opt/software/"
 

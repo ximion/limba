@@ -51,22 +51,22 @@ create_mount_namespace (void)
 		return 1;
 	}
 
-	g_debug ("mount bundle (private)");
+	g_debug ("mount (private)");
 	mount_count = 0;
-	res = mount (APP_ROOT_PREFIX, APP_ROOT_PREFIX,
+	res = mount (LI_SW_ROOT_PREFIX, LI_SW_ROOT_PREFIX,
 				 NULL, MS_PRIVATE, NULL);
 	if (res != 0 && errno == EINVAL) {
 		/* Maybe if failed because there is no mount
 		 * to be made private at that point, lets
 		 * add a bind mount there. */
-		g_debug (("mount bundle (bind)\n"));
-		res = mount (APP_ROOT_PREFIX, APP_ROOT_PREFIX,
+		g_debug (("mount (bind)\n"));
+		res = mount (LI_SW_ROOT_PREFIX, LI_SW_ROOT_PREFIX,
 					 NULL, MS_BIND, NULL);
 		/* And try again */
 		if (res == 0) {
 			mount_count++; /* Bind mount succeeded */
-			g_debug ("mount bundle (private)");
-			res = mount (APP_ROOT_PREFIX, APP_ROOT_PREFIX,
+			g_debug ("mount (private)");
+			res = mount (LI_SW_ROOT_PREFIX, LI_SW_ROOT_PREFIX,
 						 NULL, MS_PRIVATE, NULL);
 		}
 	}
@@ -80,16 +80,16 @@ create_mount_namespace (void)
 
 error_out:
 	while (mount_count-- > 0)
-		umount (APP_ROOT_PREFIX);
+		umount (LI_SW_ROOT_PREFIX);
 	return 1;
 }
 
 /**
  * mount_overlay:
- * @bundle: An application bundle identifier
+ * @pkgid: A software identifier (name-version)
  */
 static int
-mount_overlay (const gchar *bundle)
+mount_overlay (const gchar *pkgid)
 {
 	int res = 0;
 	gchar *main_data_path = NULL;
@@ -99,14 +99,14 @@ mount_overlay (const gchar *bundle)
 	gchar *tmp;
 	LiPkgInfo *pki = NULL;
 
-	/* check if the bundle exists */
-	main_data_path = g_build_filename (LI_SOFTWARE_ROOT, bundle, "data", NULL);
-	fname = g_build_filename (LI_SOFTWARE_ROOT, bundle, "control", NULL);
+	/* check if the software exists */
+	main_data_path = g_build_filename (LI_SOFTWARE_ROOT, pkgid, "data", NULL);
+	fname = g_build_filename (LI_SOFTWARE_ROOT, pkgid, "control", NULL);
 	file = g_file_new_for_path (fname);
 	g_free (fname);
 
 	if (!g_file_query_exists (file, NULL)) {
-		fprintf (stderr, "The bundle '%s' does not exist.\n", bundle);
+		fprintf (stderr, "The software '%s' does not exist.\n", pkgid);
 		res = 1;
 		g_object_unref (file);
 		goto out;
@@ -125,29 +125,29 @@ mount_overlay (const gchar *bundle)
 
 	if (g_strcmp0 (runtime_uuid, "None") != 0) {
 		/* mount the desired runtime */
-		gchar *bundle_path;
+		gchar *rt_path;
 
-		bundle_path = g_build_filename (LI_SOFTWARE_ROOT, "tmp", runtime_uuid, "data", NULL);
-		if (!g_file_test (bundle_path, G_FILE_TEST_IS_DIR)) {
+		rt_path = g_build_filename (LI_SOFTWARE_ROOT, "tmp", runtime_uuid, "data", NULL);
+		if (!g_file_test (rt_path, G_FILE_TEST_IS_DIR)) {
 			fprintf (stderr, "The runtime '%s' does not exist.\n", runtime_uuid);
 			res = 1;
-			g_free (bundle_path);
+			g_free (rt_path);
 			goto out;
 		}
 
-		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", APP_ROOT_PREFIX, bundle_path);
-		res = mount ("", APP_ROOT_PREFIX,
+		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, rt_path);
+		res = mount ("", LI_SW_ROOT_PREFIX,
 					"overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
 		g_free (tmp);
-		g_free (bundle_path);
+		g_free (rt_path);
 		if (res != 0) {
 			fprintf (stderr, "Unable to mount runtime directory.\n");
 			res = 1;
 			goto out;
 		}
 	}
-	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", APP_ROOT_PREFIX, main_data_path);
-	res = mount ("", APP_ROOT_PREFIX,
+	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, main_data_path);
+	res = mount ("", LI_SW_ROOT_PREFIX,
 				 "overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
 	g_free (tmp);
 	if (res != 0) {
@@ -192,7 +192,7 @@ main (gint argc, gchar *argv[])
 {
 	int ret;
 	gchar *ar[3];
-	gchar *bundle = NULL;
+	gchar *swname = NULL;
 	gchar *executable = NULL;
 	gchar **strv;
 	uid_t uid=getuid(), euid=geteuid();
@@ -210,27 +210,27 @@ main (gint argc, gchar *argv[])
 	strv = g_strsplit (argv[1], ":", 2);
 	if (g_strv_length (strv) != 2) {
 		g_strfreev (strv);
-		fprintf (stderr, "No valid application-bundle / executable found.\n");
+		fprintf (stderr, "No installed software with that name or executable found.\n");
 		ret = 1;
 		goto out;
 	}
 
-	bundle = g_strdup (strv[0]);
-	executable = g_build_filename (APP_ROOT_PREFIX, strv[1], NULL);
+	swname = g_strdup (strv[0]);
+	executable = g_build_filename (LI_SW_ROOT_PREFIX, strv[1], NULL);
 
 	ret = create_mount_namespace ();
 	if (ret > 0)
 		goto out;
 
-	ret = mount_overlay (bundle);
+	ret = mount_overlay (swname);
 	if (ret > 0)
 		goto out;
 
 	/* Now we have everything we need CAP_SYS_ADMIN for, so drop setuid */
 	setuid (getuid ());
 
-	update_env_var_list ("LD_LIBRARY_PATH", APP_ROOT_PREFIX "/lib");
-	update_env_var_list ("LD_LIBRARY_PATH", APP_ROOT_PREFIX "/usr/lib");
+	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/lib");
+	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/usr/lib");
 
 	ar[0] = argv[2];
 	ar[1] = argv[2];
@@ -239,8 +239,8 @@ main (gint argc, gchar *argv[])
 	ret = execv (executable, ar);
 
 out:
-	if (bundle)
-		g_free (bundle);
+	if (swname)
+		g_free (swname);
 	if (executable)
 		g_free (executable);
 	return ret;
