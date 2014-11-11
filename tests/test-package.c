@@ -20,11 +20,100 @@
 
 #include <glib.h>
 #include "limba.h"
+#include <stdlib.h>
 
-#include "li-config-data.h"
 #include "li-utils-private.h"
 
 static gchar *datadir = NULL;
+
+void
+test_compile_foobar ()
+{
+	_cleanup_free_ gchar *dirname = NULL;
+	_cleanup_free_ gchar *inst_dir_all = NULL;
+	_cleanup_free_ gchar *inst_dir_app = NULL;
+	_cleanup_free_ gchar *inst_dir_lib = NULL;
+	gchar *cmd;
+	gint ret;
+
+	/* TODO: This is duty for the appcompile helper... */
+
+	dirname = g_build_filename (datadir, "..", "foobar", NULL);
+	inst_dir_all = g_build_filename (dirname, "pkginstall", "inst_target", NULL);
+	inst_dir_app = g_build_filename (dirname, "foo", "pkginstall", "inst_target", NULL);
+	inst_dir_lib = g_build_filename (dirname, "libfoo", "pkginstall", "inst_target", NULL);
+	chdir (dirname);
+
+	ret = system ("./autogen.sh --prefix=/opt/swroot");
+	g_assert (ret == 0);
+
+	ret = system ("make");
+	g_assert (ret == 0);
+
+	cmd = g_strdup_printf ("make install DESTDIR=%s", inst_dir_all);
+	ret = system (cmd);
+	g_free (cmd);
+	g_assert (ret == 0);
+
+	/* no install the individual components of this software */
+
+	/* app */
+	cmd = g_build_filename (dirname, "foo", NULL);
+	chdir (cmd);
+	g_free (cmd);
+
+	cmd = g_strdup_printf ("make install DESTDIR=%s", inst_dir_app);
+	ret = system (cmd);
+	g_free (cmd);
+	g_assert (ret == 0);
+
+	/* lib */
+	cmd = g_build_filename (dirname, "libfoo", NULL);
+	chdir (cmd);
+	g_free (cmd);
+
+	cmd = g_strdup_printf ("make install DESTDIR=%s", inst_dir_lib);
+	ret = system (cmd);
+	g_free (cmd);
+	g_assert (ret == 0);
+
+	chdir ("/tmp");
+}
+
+void
+test_package_build ()
+{
+	LiPkgBuilder *builder;
+	gchar *dirname;
+	gchar *pkgname;
+	GError *error = NULL;
+
+	test_compile_foobar ();
+
+	builder = li_pkg_builder_new ();
+
+	/* build application package */
+	dirname = g_build_filename (datadir, "..", "foobar", "foo", "pkginstall", NULL);
+	pkgname = g_build_filename (datadir, "FooBar-1.0.ipk", NULL);
+
+	li_pkg_builder_create_package_from_dir (builder, dirname, pkgname, &error);
+	g_assert_no_error (error);
+
+	g_free (dirname);
+	g_free (pkgname);
+
+	/* build library package */
+	dirname = g_build_filename (datadir, "..", "foobar", "libfoo", "pkginstall", NULL);
+	pkgname = g_build_filename (datadir, "libfoo-1.0.ipk", NULL);
+
+	li_pkg_builder_create_package_from_dir (builder, dirname, pkgname, &error);
+	g_assert_no_error (error);
+
+	g_free (dirname);
+	g_free (pkgname);
+
+	g_object_unref (builder);
+}
 
 void
 test_package_read ()
@@ -33,14 +122,15 @@ test_package_read ()
 	gchar *fname;
 	GError *error = NULL;
 
-	fname = g_build_filename (datadir, "libfoo.ipk", NULL);
+	fname = g_build_filename (datadir, "libfoo-1.0.ipk", NULL);
 	ipk = li_package_new ();
+
+	g_assert (li_package_get_id (ipk) == NULL);
 
 	li_package_open_file (ipk, fname, &error);
 	g_assert_no_error (error);
 
-	li_package_install (ipk, &error);
-	g_assert_no_error (error);
+	g_assert (g_strcmp0 (li_package_get_id (ipk), "libfoo-1.0") == 0);
 
 	g_object_unref (ipk);
 }
@@ -68,6 +158,7 @@ main (int argc, char **argv)
 	/* critical, error and warnings are fatal */
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);
 
+	g_test_add_func ("/Limba/IPKBuild", test_package_build);
 	g_test_add_func ("/Limba/IPKRead", test_package_read);
 
 	ret = g_test_run ();

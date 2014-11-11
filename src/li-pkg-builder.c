@@ -78,16 +78,15 @@ li_get_package_fname (const gchar *root_dir, const gchar *disk_fname)
 {
 	gchar *tmp;
 	gchar *fname = NULL;
-	const gchar *approot = "/opt/approot";
 
 	if (g_str_has_prefix (disk_fname, root_dir)) {
 		fname = g_strdup (disk_fname + strlen (root_dir));
 	}
 	if (fname != NULL) {
-		if (g_str_has_prefix (fname, approot)) {
+		if (g_str_has_prefix (fname, LI_SU_SOFTWARE_ROOT)) {
 			tmp = g_strdup (fname);
 			g_free (fname);
-			fname = g_strdup (tmp + strlen (approot));
+			fname = g_strdup (tmp + strlen (LI_SU_SOFTWARE_ROOT));
 			g_free (tmp);
 		}
 	}

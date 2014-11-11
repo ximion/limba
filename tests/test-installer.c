@@ -28,13 +28,27 @@ void
 test_installer ()
 {
 	LiInstaller *inst;
-	gchar *fname;
+	_cleanup_free_ gchar *fname_app = NULL;
+	_cleanup_free_ gchar *fname_lib = NULL;
 	GError *error = NULL;
 
-	fname = g_build_filename (datadir, "foo.ipk", NULL);
+	fname_app = g_build_filename (datadir, "FooBar-1.0.ipk", NULL);
+	fname_lib = g_build_filename (datadir, "libfoo-1.0.ipk", NULL);
+
 	inst = li_installer_new ();
 
-	li_installer_install_package (inst, fname, &error);
+	li_installer_install_package (inst, fname_app, &error);
+	/* this has to fail, we don't have libfoo yet */
+	g_assert_error (error, LI_INSTALLER_ERROR, LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND);
+	g_error_free (error);
+	error = NULL;
+
+	/* install library */
+	li_installer_install_package (inst, fname_lib, &error);
+	g_assert_no_error (error);
+
+	/* now we should be able to install the app */
+	li_installer_install_package (inst, fname_app, &error);
 	g_assert_no_error (error);
 
 	g_object_unref (inst);
