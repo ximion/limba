@@ -9,4 +9,7 @@ foo_LDADD = -L../libfoo -lfoo -lpthread
 
 sysconf_DATA = foo-config
 
-EXTRA_DIST = $(sysconf_DATA)
+desktopdir=$(datadir)/applications
+desktop_DATA=foobar.desktop
+
+EXTRA_DIST = $(sysconf_DATA) foobar.desktop
