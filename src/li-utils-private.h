@@ -88,6 +88,8 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 #define _cleanup_ptrarray_unref_ __attribute__ ((cleanup(gs_local_ptrarray_unref)))
 #define _cleanup_variant_unref_ __attribute__ ((cleanup(gs_local_variant_unref)))
 
+#define	LI_PREFIXDIR li_get_prefixdir ()
+
 gboolean		li_touch_dir (const gchar* dirname,
 							  GError **error);
 gboolean		li_delete_dir_recursive (const gchar* dirname);
@@ -105,6 +107,7 @@ gchar			*li_utils_get_tmp_dir (const gchar *prefix);
 gchar			*li_get_uuid_string (void);
 const gchar		*li_get_last_version_from_component (AsComponent *cpt);
 
+const gchar		*li_get_prefixdir (void);
 void			li_set_unittestmode (gboolean testmode);
 
 G_END_DECLS

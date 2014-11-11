@@ -27,11 +27,11 @@
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <glib/gi18n-lib.h>
+#include <uuid/uuid.h>
+#include <appstream.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <errno.h>
-#include <uuid/uuid.h>
-#include <appstream.h>
 
 /**
  * SECTION:li-utils
@@ -395,16 +395,36 @@ li_get_uuid_string ()
 
 /**
  * li_get_install_root:
+ *
+ * A hack to support unit-tests running as non-root.
  */
 const gchar*
 li_get_software_root ()
 {
 	if (_unittestmode) {
-		const gchar *tmpdir = "/var/tmp/limba/test-instroot";
+		const gchar *tmpdir = "/var/tmp/limba/test-root/opt/software";
 		li_touch_dir (tmpdir, NULL);
 		return tmpdir;
 	} else {
-		return LI_INSTALL_ROOT;
+		return LI_SU_SOFTWARE_ROOT;
+	}
+}
+
+/**
+ * li_get_prefixdir:
+ *
+ * A hack to support unit-tests running as non-root.
+ */
+const gchar*
+li_get_prefixdir ()
+{
+	if (_unittestmode) {
+		const gchar *tmpdir = "/var/tmp/limba/test-root/usr";
+		const gchar *appdir = "/var/tmp/limba/test-root/usr/share/applications";
+		li_touch_dir (appdir, NULL);
+		return tmpdir;
+	} else {
+		return PREFIXDIR;
 	}
 }
 

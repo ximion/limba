@@ -1,4 +1,4 @@
-# Travis CI config for Listaller
+# Travis CI config for Limba
 # unattended full upgrade: sudo apt-get -o Dpkg::Options::="--force-confold" --force-yes -fuy dist-upgrade
 
 language: c
@@ -16,4 +16,4 @@ before_script:
 script:
   - mkdir build && cd build
   - cmake -DMAINTAINER=ON -DLIBUILD=ON ..
-  - make && make install DESTDIR=./install_root/ # we currently skip the tests (&& make test ARGS=-V)
+  - make && make install DESTDIR=./install_root/ && make test ARGS=-V

@@ -45,6 +45,6 @@
 
 #define APP_ROOT_PREFIX "/opt/approot/"
 
-#define LI_INSTALL_ROOT "/opt/software/"
+#define LI_SU_SOFTWARE_ROOT "/opt/software/"
 
 #endif /*CONFIG_H*/
