@@ -83,10 +83,11 @@ li_get_package_fname (const gchar *root_dir, const gchar *disk_fname)
 		fname = g_strdup (disk_fname + strlen (root_dir));
 	}
 	if (fname != NULL) {
-		if (g_str_has_prefix (fname, LI_SU_SOFTWARE_ROOT)) {
+		if (g_str_has_prefix (fname, LI_SW_ROOT_PREFIX)) {
+			g_debug ("Check!");
 			tmp = g_strdup (fname);
 			g_free (fname);
-			fname = g_strdup (tmp + strlen (LI_SU_SOFTWARE_ROOT));
+			fname = g_strdup (tmp + strlen (LI_SW_ROOT_PREFIX));
 			g_free (tmp);
 		}
 	}
