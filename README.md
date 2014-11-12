@@ -30,6 +30,33 @@ but don't expect it to work, or work as expected.
  * libuuid
 
 ### Compilation instructions
- TODO
+Ensure all build dependencies are installed.
+Then run the following commands to compile (and install) Limba:
+```bash
+mkdir build && cd build
+cmake ..
+make
+sudo make install
+```
 
+### Testing Limba
+Run "make test" first, This will produce two packages (file extension .ipk) in the tests/data directory.
+You can install these packages using
+```bash
+sudo lipa install file.ipk
+```
+One package depends on the other (so runtime generation and dependencies can be tested in the testsuite),
+this means you will have to install the library first.
+You can list all installed software using the "lipa list" command.
+The FooBar demo application can be run by executing
+```bash
+runapp foobar-1.0:/bin/foo
+```
+or simply by using the link which should have been installed into the GUI application menu of your desktop
+environment.
+If you want to remove the software again, just remove the files in /opt/software,
+and the file /usr/share/applications/foobar.desktop, in case it was installed.
 
+### Contributing
+TODO
+Just drop me a note / pull request.
