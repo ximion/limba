@@ -26,6 +26,9 @@
 #include "config.h"
 #include "li-manager.h"
 
+#include <glib/gi18n-lib.h>
+#include <glib/gstdio.h>
+
 #include "li-utils.h"
 #include "li-utils-private.h"
 #include "li-pkg-info.h"
@@ -283,6 +286,117 @@ li_manager_find_runtime_with_members (LiManager *mgr, GPtrArray *members)
 	}
 
 	return NULL;
+}
+
+/**
+ * li_manager_remove_exported_files:
+ */
+static void
+li_manager_remove_exported_files (GFile *file, GError **error)
+{
+	gchar *line = NULL;
+	GFileInputStream* ir;
+	GDataInputStream* dis;
+	gint res;
+
+	ir = g_file_read (file, NULL, NULL);
+	dis = g_data_input_stream_new ((GInputStream*) ir);
+	g_object_unref (ir);
+
+	while (TRUE) {
+		gchar **parts;
+		line = g_data_input_stream_read_line (dis, NULL, NULL, NULL);
+		if (line == NULL) {
+			break;
+		}
+
+		parts = g_strsplit (line, "\t", 2);
+		if (parts[1] == NULL) {
+			g_strfreev (parts);
+			continue;
+		}
+
+		if (g_str_has_prefix (parts[1], "/")) {
+			/* delete file */
+			res = g_remove (parts[1]);
+			if (res != 0) {
+				g_set_error (error,
+					LI_MANAGER_ERROR,
+					LI_MANAGER_ERROR_REMOVE_FAILED,
+					_("Could not delete file '%s'"), parts[1]);
+				g_strfreev (parts);
+				goto out;
+			}
+		}
+		g_strfreev (parts);
+	}
+
+out:
+	g_object_unref (dis);
+}
+
+/**
+ * li_manager_remove_software:
+ **/
+gboolean
+li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
+{
+	_cleanup_free_ gchar *swpath = NULL;
+	GFile *expfile;
+	gchar *tmp;
+	GError *tmp_error = NULL;
+
+	swpath = g_build_filename (LI_SOFTWARE_ROOT, pkgid, NULL);
+
+	tmp = g_build_filename (swpath, "control", NULL);
+	if (!g_file_test (tmp, G_FILE_TEST_EXISTS)) {
+		g_free (tmp);
+		g_set_error (error,
+					LI_MANAGER_ERROR,
+					LI_MANAGER_ERROR_NOT_FOUND,
+					_("Could not find software: %s"), pkgid);
+		return FALSE;
+	}
+
+	// TODO: Perform dependency-check
+
+	/* remove exported files */
+	tmp = g_build_filename (swpath, "exported", NULL);
+	expfile = g_file_new_for_path (tmp);
+	g_free (tmp);
+	if (g_file_query_exists (expfile, NULL)) {
+		li_manager_remove_exported_files (expfile, &tmp_error);
+	}
+	g_object_unref (expfile);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	/* now delete the directory */
+	if (!li_delete_dir_recursive (swpath)) {
+		g_set_error (error,
+					LI_MANAGER_ERROR,
+					LI_MANAGER_ERROR_REMOVE_FAILED,
+					_("Could not remove software directory."));
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/**
+ * li_manager_error_quark:
+ *
+ * Return value: An error quark.
+ **/
+GQuark
+li_manager_error_quark (void)
+{
+	static GQuark quark = 0;
+	if (!quark)
+		quark = g_quark_from_static_string ("LiManagerError");
+	return quark;
 }
 
 /**

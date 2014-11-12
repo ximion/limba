@@ -66,37 +66,6 @@ li_print_stdout (const gchar *format, ...)
 }
 
 /**
- * lipa_install_package:
- */
-static gint
-lipa_install_package (const gchar *fname)
-{
-	LiInstaller *inst;
-	GError *error = NULL;
-	gint res = 0;
-	uid_t vuid;
-	vuid = getuid ();
-
-	if (vuid != ((uid_t) 0)) {
-		li_print_stderr ("This action needs superuser permissions.");
-		return 2;
-	}
-
-	inst = li_installer_new ();
-	li_installer_install_package (inst, fname, &error);
-	if (error != NULL) {
-		li_print_stderr ("Could not install software: %s", error->message);
-		g_error_free (error);
-		res = 1;
-	}
-	if (res == 0)
-		g_print ("%s\n", _("Software was installed successfully."));
-
-	g_object_unref (inst);
-	return res;
-}
-
-/**
  * lipa_list_software:
  */
 static gint
@@ -128,6 +97,60 @@ lipa_list_software (void)
 }
 
 /**
+ * lipa_install_package:
+ */
+static gint
+lipa_install_package (const gchar *fname)
+{
+	LiInstaller *inst;
+	GError *error = NULL;
+	gint res = 0;
+	uid_t vuid;
+	vuid = getuid ();
+
+	if (vuid != ((uid_t) 0)) {
+		li_print_stderr ("This action needs superuser permissions.");
+		return 2;
+	}
+
+	inst = li_installer_new ();
+	li_installer_install_package (inst, fname, &error);
+	if (error != NULL) {
+		li_print_stderr ("Could not install software: %s", error->message);
+		g_error_free (error);
+		res = 1;
+	}
+	if (res == 0)
+		g_print ("%s\n", _("Software was installed successfully."));
+
+	g_object_unref (inst);
+	return res;
+}
+
+/**
+ * lipa_remove_software:
+ */
+static gint
+lipa_remove_software (const gchar *pkgid)
+{
+	LiManager *mgr;
+	gint res = 0;
+	GError *error = NULL;
+
+	mgr = li_manager_new ();
+
+	li_manager_remove_software (mgr, pkgid, &error);
+	if (error != NULL) {
+		li_print_stderr ("Could not remove software: %s", error->message);
+		g_error_free (error);
+		res = 1;
+	}
+
+	g_object_unref (mgr);
+	return res;
+}
+
+/**
  * lipa_get_summary:
  **/
 static gchar *
@@ -141,8 +164,9 @@ lipa_get_summary ()
 				/* these are commands we can use with lipa */
 				_("Subcommands:"));
 
-	g_string_append_printf (string, "  %s - %s\n", "install [FILENAME]", _("Install a local software package"));
 	g_string_append_printf (string, "  %s - %s\n", "list", _("List installed software"));
+	g_string_append_printf (string, "  %s - %s\n", "install [FILENAME]", _("Install a local software package"));
+	g_string_append_printf (string, "  %s - %s\n", "remove  [PKGID]", _("Remove an installed software package"));
 
 	return g_string_free (string, FALSE);
 }
@@ -212,10 +236,12 @@ main (int argc, char *argv[])
 	if (argc > 2)
 		value1 = argv[2];
 
-	if ((g_strcmp0 (command, "install") == 0) || (g_strcmp0 (command, "i") == 0)) {
-		exit_code = lipa_install_package (value1);
-	} else if (g_strcmp0 (command, "list") == 0) {
+	if (g_strcmp0 (command, "list") == 0) {
 		exit_code = lipa_list_software ();
+	} else if ((g_strcmp0 (command, "install") == 0) || (g_strcmp0 (command, "i") == 0)) {
+		exit_code = lipa_install_package (value1);
+	} else if ((g_strcmp0 (command, "remove") == 0) || (g_strcmp0 (command, "r") == 0)) {
+		exit_code = lipa_remove_software (value1);
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;

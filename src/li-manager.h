@@ -37,6 +37,27 @@
 
 G_BEGIN_DECLS
 
+/**
+ * LiManagerError:
+ * @LI_MANAGER_ERROR_FAILED:		Generic failure
+ * @LI_MANAGER_ERROR_NOT_FOUND:		The software / item was not found
+ * @LI_MANAGER_ERROR_DEPENDENCY:	Completing this action would break a dependent package
+ * @LI_MANAGER_ERROR_REMOVE_FAILED:	Failed to remove a file
+ *
+ * The error type.
+ **/
+typedef enum {
+	LI_MANAGER_ERROR_FAILED,
+	LI_MANAGER_ERROR_NOT_FOUND,
+	LI_MANAGER_ERROR_DEPENDENCY,
+	LI_MANAGER_ERROR_REMOVE_FAILED,
+	/*< private >*/
+	LI_MANAGER_ERROR_LAST
+} LiManagerError;
+
+#define	LI_MANAGER_ERROR li_manager_error_quark ()
+GQuark li_manager_error_quark (void);
+
 typedef struct _LiManager		LiManager;
 typedef struct _LiManagerClass	LiManagerClass;
 
@@ -67,6 +88,10 @@ GPtrArray		*li_manager_get_installed_runtimes (LiManager *mgr);
 
 LiRuntime		*li_manager_find_runtime_with_members (LiManager *mgr,
 													GPtrArray *members);
+
+gboolean		li_manager_remove_software (LiManager *mgr,
+											const gchar *pkgid,
+											GError **error);
 
 G_END_DECLS
 
