@@ -3,23 +3,23 @@
 #include <limits.h>
 #include "libfoo.h"
 
-#define ENABLE_BINRELOC
-#include "prefix.h"
-
-
 int main ()
 {
 	const char *configfile;
 	FILE *f;
 
-	configfile = BR_SYSCONFDIR( "/foo-config" );
+	configfile = SYSCONFDIR "/foo-config";
+	f = fopen (configfile, "r");
+	if (!f) {
+		configfile = PREFIX "/etc/foo-config";
+		f = fopen (configfile, "r");
+	}
 
 	printf ("foobar version " FOOBAR_VERSION "\n");
 
 	libfoo ();
 	printf ("\n");
 	printf ("'Configuration' file %s:\n", configfile);
-	f = fopen (configfile, "r");
 	if (!f)
 	{
 		fprintf (stderr, "cannot open file!\n");
