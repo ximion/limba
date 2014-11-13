@@ -31,8 +31,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <linux/version.h>
 
 #include <gio/gio.h>
+
+#define GS_DEFINE_CLEANUP_FUNCTION(Type, name, func) \
+  static inline void name (void *v) \
+  { \
+    func (*(Type*)v); \
+  }
+GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
+#define _cleanup_free_ __attribute__ ((cleanup(gs_local_free)))
 
 /**
  * create_mount_namespace:
@@ -94,6 +103,7 @@ mount_overlay (const gchar *pkgid)
 	int res = 0;
 	gchar *main_data_path = NULL;
 	gchar *fname = NULL;
+	gchar *wdir = NULL;
 	GFile *file;
 	const gchar *runtime_uuid;
 	gchar *tmp;
@@ -123,6 +133,18 @@ mount_overlay (const gchar *pkgid)
 		goto out;
 	}
 
+	wdir = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", "ofs_work", NULL);
+	res = g_mkdir_with_parents (wdir, 0775);
+	if (res != 0) {
+		fprintf (stderr, "Unable to create OverlayFS workdir. %s\n", strerror (errno));
+		res = 1;
+		goto out;
+	}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION (3,18,0)
+	g_warning ("Compiled for an old Linux kernel (<< 3.18). This tool might not work as expected.");
+#endif
+
 	if (g_strcmp0 (runtime_uuid, "None") != 0) {
 		/* mount the desired runtime */
 		gchar *rt_path;
@@ -135,23 +157,35 @@ mount_overlay (const gchar *pkgid)
 			goto out;
 		}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION (3,18,0)
+		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", LI_SW_ROOT_PREFIX, rt_path, wdir);
+#else
 		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, rt_path);
+#endif
+
 		res = mount ("", LI_SW_ROOT_PREFIX,
 					"overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
+
 		g_free (tmp);
 		g_free (rt_path);
 		if (res != 0) {
-			fprintf (stderr, "Unable to mount runtime directory.\n");
+			fprintf (stderr, "Unable to mount runtime directory. %s\n", strerror (errno));
 			res = 1;
 			goto out;
 		}
 	}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION (3,18,0)
+	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", LI_SW_ROOT_PREFIX, main_data_path, wdir);
+#else
 	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, main_data_path);
+#endif
+
 	res = mount ("", LI_SW_ROOT_PREFIX,
 				 "overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
 	g_free (tmp);
 	if (res != 0) {
-		fprintf (stderr, "Unable to mount directory.\n");
+		fprintf (stderr, "Unable to mount directory. %s\n", strerror (errno));
 		res = 1;
 		goto out;
 	}
@@ -161,6 +195,8 @@ out:
 		g_free (main_data_path);
 	if (pki != NULL)
 		g_object_unref (pki);
+	if (wdir != NULL)
+		g_free (wdir);
 
 	return res;
 }
@@ -191,9 +227,8 @@ int
 main (gint argc, gchar *argv[])
 {
 	int ret;
-	gchar *ar[3];
-	gchar *swname = NULL;
-	gchar *executable = NULL;
+	_cleanup_free_ gchar *swname = NULL;
+	_cleanup_free_ gchar *executable = NULL;
 	gchar **strv;
 	uid_t uid=getuid(), euid=geteuid();
 
@@ -232,16 +267,8 @@ main (gint argc, gchar *argv[])
 	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/lib");
 	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/usr/lib");
 
-	ar[0] = argv[2];
-	ar[1] = argv[2];
-	ar[2] = NULL;
-
-	ret = execv (executable, ar);
+	return execv (executable, argv);
 
 out:
-	if (swname)
-		g_free (swname);
-	if (executable)
-		g_free (executable);
 	return ret;
 }
