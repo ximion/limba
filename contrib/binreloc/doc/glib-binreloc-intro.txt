@@ -1,3 +1,0 @@
-/** @file glib-binreloc
- * @brief Binary relocation support (with glib-style API).
- */
