@@ -165,7 +165,7 @@ li_manager_find_installed_runtimes (LiManager *mgr)
 	_cleanup_free_ gchar *runtime_root;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
-	runtime_root = g_build_filename (LI_SOFTWARE_ROOT, "tmp", NULL);
+	runtime_root = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", NULL);
 	if (!g_file_test (runtime_root, G_FILE_TEST_IS_DIR)) {
 		/* directory not found, no software to be searched for */
 		return TRUE;

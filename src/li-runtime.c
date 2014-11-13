@@ -188,7 +188,7 @@ gchar*
 li_runtime_get_data_path (LiRuntime *rt)
 {
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
-	return g_build_filename (LI_SOFTWARE_ROOT, "tmp", priv->uuid, "data", NULL);
+	return g_build_filename (LI_SOFTWARE_ROOT, "runtimes", priv->uuid, "data", NULL);
 }
 
 /**
@@ -225,7 +225,7 @@ li_runtime_save (LiRuntime *rt, GError **error)
 	GError *tmp_error = NULL;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
-	control_fname = g_build_filename (LI_SOFTWARE_ROOT, "tmp", priv->uuid, "control", NULL);
+	control_fname = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", priv->uuid, "control", NULL);
 
 	cdata = li_config_data_new ();
 	li_runtime_update_cdata_values (rt, cdata);

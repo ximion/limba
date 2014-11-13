@@ -127,7 +127,7 @@ mount_overlay (const gchar *pkgid)
 		/* mount the desired runtime */
 		gchar *rt_path;
 
-		rt_path = g_build_filename (LI_SOFTWARE_ROOT, "tmp", runtime_uuid, "data", NULL);
+		rt_path = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", runtime_uuid, "data", NULL);
 		if (!g_file_test (rt_path, G_FILE_TEST_IS_DIR)) {
 			fprintf (stderr, "The runtime '%s' does not exist.\n", runtime_uuid);
 			res = 1;
