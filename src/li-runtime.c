@@ -422,6 +422,29 @@ out:
 }
 
 /**
+ * li_runtime_remove:
+ *
+ * Uninstall this runtime.
+ */
+gboolean
+li_runtime_remove (LiRuntime *rt)
+{
+	gboolean ret;
+	LiRuntimePrivate *priv = GET_PRIVATE (rt);
+
+	if (priv->dir == NULL)
+		return FALSE;
+
+	ret = li_delete_dir_recursive (priv->dir);
+	if (ret) {
+		g_free (priv->dir);
+		priv->dir = NULL;
+	}
+
+	return ret;
+}
+
+/**
  * li_runtime_class_init:
  **/
 static void

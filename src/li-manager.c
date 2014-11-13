@@ -345,20 +345,60 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	GFile *expfile;
 	gchar *tmp;
 	GError *tmp_error = NULL;
+	_cleanup_ptrarray_unref_ GPtrArray *pkg_array = NULL;
+	GFile *ctlfile;
+	LiPkgInfo *pki;
+	LiRuntime *rt;
 
 	swpath = g_build_filename (LI_SOFTWARE_ROOT, pkgid, NULL);
 
 	tmp = g_build_filename (swpath, "control", NULL);
-	if (!g_file_test (tmp, G_FILE_TEST_EXISTS)) {
-		g_free (tmp);
+	ctlfile = g_file_new_for_path (tmp);
+	g_free (tmp);
+	if (!g_file_query_exists (ctlfile, NULL)) {
+		g_object_unref (ctlfile);
 		g_set_error (error,
 					LI_MANAGER_ERROR,
 					LI_MANAGER_ERROR_NOT_FOUND,
 					_("Could not find software: %s"), pkgid);
 		return FALSE;
 	}
+	pki = li_pkg_info_new ();
+	li_pkg_info_load_file (pki, ctlfile);
+	g_object_unref (ctlfile);
 
-	// TODO: Perform dependency-check
+	/* test if a runtime uses this software */
+	pkg_array = g_ptr_array_new_with_free_func (g_object_unref);
+	g_ptr_array_add (pkg_array, pki);
+	rt = li_manager_find_runtime_with_members (mgr, pkg_array);
+	if (rt != NULL) {
+		GPtrArray *sw;
+		guint i;
+		gboolean dependency_found = FALSE;
+		/* this software is in use somewhere */
+		sw = li_manager_get_installed_software (mgr);
+		for (i = 0; i < sw->len; i++) {
+			LiPkgInfo *pki2 = LI_PKG_INFO (g_ptr_array_index (sw, i));
+
+			if (g_strcmp0 (li_pkg_info_get_runtime_dependency (pki2), li_runtime_get_uuid (rt)) == 0) {
+				/* TODO: Emit broken packages here, don't misuse GError */
+				g_set_error (error,
+					LI_MANAGER_ERROR,
+					LI_MANAGER_ERROR_DEPENDENCY,
+						_("Removing  '%s' would break at least '%s' as well."), pkgid, li_pkg_info_get_name (pki2));
+				dependency_found = TRUE;
+				break;
+			}
+		}
+		if (dependency_found) {
+			g_object_unref (rt);
+			return FALSE;
+		} else {
+			/* apparently nothing uses this runtime anymore - remove it */
+			li_runtime_remove (rt);
+		}
+		g_object_unref (rt);
+	}
 
 	/* remove exported files */
 	tmp = g_build_filename (swpath, "exported", NULL);

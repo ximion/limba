@@ -66,6 +66,23 @@ li_print_stdout (const gchar *format, ...)
 }
 
 /**
+ * lipa_check_su:
+ */
+gboolean
+lipa_check_su (void)
+{
+	uid_t vuid;
+	vuid = getuid ();
+
+	if (vuid != ((uid_t) 0)) {
+		li_print_stderr ("This action needs superuser permissions.");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/**
  * lipa_list_software:
  */
 static gint
@@ -105,13 +122,9 @@ lipa_install_package (const gchar *fname)
 	LiInstaller *inst;
 	GError *error = NULL;
 	gint res = 0;
-	uid_t vuid;
-	vuid = getuid ();
 
-	if (vuid != ((uid_t) 0)) {
-		li_print_stderr ("This action needs superuser permissions.");
+	if (!lipa_check_su ())
 		return 2;
-	}
 
 	inst = li_installer_new ();
 	li_installer_install_package (inst, fname, &error);
@@ -136,6 +149,9 @@ lipa_remove_software (const gchar *pkgid)
 	LiManager *mgr;
 	gint res = 0;
 	GError *error = NULL;
+
+	if (!lipa_check_su ())
+		return 2;
 
 	mgr = li_manager_new ();
 

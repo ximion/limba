@@ -81,6 +81,8 @@ GPtrArray		*li_runtime_get_members (LiRuntime *rt);
 void			li_runtime_add_member (LiRuntime *rt,
 									   const gchar *pkg_id);
 
+gboolean		li_runtime_remove (LiRuntime *rt);
+
 G_END_DECLS
 
 #endif /* __LI_RUNTIME_H */
