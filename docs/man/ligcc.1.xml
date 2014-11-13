@@ -1,0 +1,101 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+
+  <!-- Please adjust the date whenever revising the manpage. -->
+  <!ENTITY date        "<date>20 April,2012</date>">
+  <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
+       allowed: see man(7), man(1). -->
+  <!ENTITY package     "ligcc">
+  <!ENTITY gnu         "<acronym>GNU</acronym>">
+  <!ENTITY gpl         "&gnu; <acronym>GPL</acronym>">
+]>
+
+<refentry>
+	<refentryinfo>
+	<title>Limba Project</title>
+	<copyright>
+		<year>2010-2014</year>
+		<holder>Matthias Klumpp</holder>
+	</copyright>
+	<productname>Limba Project</productname>
+	&date;
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>&package;</refentrytitle>
+		<manvolnum>1</manvolnum>
+	</refmeta>
+	<refnamediv>
+		<refname>&package;</refname>
+		<refpurpose>Wrapper around gcc to create more portable apps</refpurpose>
+	</refnamediv>
+
+       <refsynopsisdiv>
+	       <cmdsynopsis>
+		       <command>&package;</command>
+		       <group choice="opt">
+			       <option>OPTION ...</option>
+		       </group>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+		<para>
+			This manual page documents briefly the <command>&package;</command> command.
+		</para>
+		<para>
+			<command>&package;</command> is a wrapper around gcc.
+			It allows you to create more portable executables by doing three things:
+			<itemizedlist>
+				<title></title>
+				<listitem><para>
+					Forces the linker to link against older glibc symbols.
+					Users who are using an older version of glibc will no longer get
+					"undefined symbol GLIBC_2.4 in /lib/libc.so"-style error messages.
+				</para></listitem>
+
+				<listitem><para>Allows you to easily statically link to any other library.</para></listitem>
+
+				<listitem><para>
+					Automatically removes bogus dependencies. For example, your program uses libfoo.
+					libfoo uses libpng internally, but your app does not. Yet the pkg-config file for
+					libfoo specifies "-lfoo -lpng" is linker parameters.
+					And tadaa - you now have a bogus dependency on libpng!
+					LiGCC automatically removes the -lpng for you if your app doesn't use libpng directly.
+				</para></listitem>
+
+				<listitem><para>
+					Add $ORIGIN/../lib to the binary's library search path. $ORIGIN is the directory in which the binary exists.
+					This ensures that your binary can find library dependencies which are placed in the 'lib' folder under the
+					same prefix. You might want to install custom libraries into /lib.
+					If you set $APBUILD_PROJECTNAME, ligcc will also add $ORIGIN/../lib/$APBUILD_PROJECTNAME to the library search path.
+				</para></listitem>
+			</itemizedlist>
+
+		</para>
+	</refsect1>
+
+       <refsect1>
+	       <title>Options</title>
+	       <para>See the manpage of gcc(1) for more information about possible options.</para>
+	       <para>
+		       There are also several environment variables available to modify ligcc's behavior check the documentation for
+		       more information.
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para>lig++ (1), gcc(1).</para>
+		<para>
+			Additional documentation can be found on http://people.freedesktop.org/~mak/limba.
+		</para>
+	</refsect1>
+<refsect1>
+<title>AUTHOR</title>
+<para>This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
+</para>
+</refsect1>
+</refentry>

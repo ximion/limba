@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+
+  <!-- Please adjust the date whenever revising the manpage. -->
+  <!ENTITY date        "<date>12 November,2014</date>">
+  <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
+       allowed: see man(7), man(1). -->
+  <!ENTITY package     "runapp">
+  <!ENTITY gnu         "<acronym>GNU</acronym>">
+  <!ENTITY gpl         "&gnu; <acronym>GPL</acronym>">
+]>
+
+<refentry>
+	<refentryinfo>
+	<title>Limba Project</title>
+	<copyright>
+		<year>2014</year>
+		<holder>Matthias Klumpp</holder>
+	</copyright>
+	<productname>Limba Project</productname>
+	&date;
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>runapp</refentrytitle>
+		<manvolnum>1</manvolnum>
+	</refmeta>
+	<refnamediv>
+		<refname>&package;</refname>
+		<refpurpose>Run an application</refpurpose>
+	</refnamediv>
+
+       <refsynopsisdiv>
+	       <cmdsynopsis>
+		       <command>&package;</command>
+		       <group choice="req">
+			       <option>SOFTWARE</option>
+		       </group>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+		<para>
+			This manual page documents briefly the <command>&package;</command> command.
+		</para>
+		<para>
+			<command>&package;</command> runs applications installed using Limba. It will set
+			the application environment, make it find its dependencies, initiate a sandbox and
+			do everything else needed to run the application.
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para>lipa (1).</para>
+		<para>
+			Additional documentation can be found on http://people.freedesktop.org/~mak/limba.
+		</para>
+	</refsect1>
+<refsect1>
+<title>AUTHOR</title>
+<para>This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
+</para>
+</refsect1>
+</refentry>

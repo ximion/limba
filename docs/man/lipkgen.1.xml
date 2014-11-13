@@ -1,0 +1,98 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+
+  <!-- Please adjust the date whenever revising the manpage. -->
+  <!ENTITY date        "<date>12 November,2014</date>">
+  <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
+       allowed: see man(7), man(1). -->
+  <!ENTITY package     "lipkgen">
+  <!ENTITY gnu         "<acronym>GNU</acronym>">
+  <!ENTITY gpl         "&gnu; <acronym>GPL</acronym>">
+]>
+
+<refentry>
+	<refentryinfo>
+	<title>Limba Project</title>
+	<copyright>
+		<year>2014</year>
+		<holder>Matthias Klumpp</holder>
+	</copyright>
+	<productname>Limba Project</productname>
+	&date;
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>lipkgen</refentrytitle>
+		<manvolnum>1</manvolnum>
+	</refmeta>
+	<refnamediv>
+		<refname>&package;</refname>
+		<refpurpose>Limba package builder</refpurpose>
+	</refnamediv>
+
+       <refsynopsisdiv>
+	       <cmdsynopsis>
+		       <command>&package;</command>
+		       <group choice="req">
+			       <option>COMMAND</option>
+		       </group>
+		       <group choice="opt">
+			       <option>OPTION ...</option>
+		       </group>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+		<para>
+			This manual page documents briefly the <command>&package;</command> command.
+		</para>
+		<para>
+			<command>&package;</command> is a simple tool to build IPK application packages directly
+			from software sources or binary files using a package recipe.
+		</para>
+	</refsect1>
+
+       <refsect1>
+	       <title>Options</title>
+	       <variablelist>
+
+		<varlistentry>
+			<term><option>b</option></term>
+			<term><option>build <replaceable>DIRECTORY</replaceable></option></term>
+			<listitem>
+				<para>Build IPK package using package metadata in <replaceable>DIRECTORY</replaceable>.</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>--version</option></term>
+			<listitem>
+				<para>Display version number of &package;</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>--verbose</option></term>
+			<listitem>
+				<para>Turn on verbose mode (this can be used for debugging).</para>
+			</listitem>
+		</varlistentry>
+
+		</variablelist>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para>runapp (1), lipa(1).</para>
+		<para>
+			Additional documentation can be found on http://people.freedesktop.org/~mak/limba.
+		</para>
+	</refsect1>
+<refsect1>
+<title>AUTHOR</title>
+<para>This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
+</para>
+</refsect1>
+</refentry>

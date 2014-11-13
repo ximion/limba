@@ -1,0 +1,211 @@
+<?xml version='1.0' encoding='ISO-8859-1'?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+
+  <!-- Please adjust the date whenever revising the manpage. -->
+  <!ENTITY date        "<date>14 May,2012</date>">
+  <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
+       allowed: see man(7), man(1). -->
+  <!ENTITY package     "relaytool">
+  <!ENTITY gnu         "<acronym>GNU</acronym>">
+  <!ENTITY gpl         "&gnu; <acronym>GPL</acronym>">
+]>
+
+<refentry>
+	<refentryinfo>
+	<title>Limba Project</title>
+	<copyright>
+		<year>2010-2014</year>
+		<holder>Matthias Klumpp</holder>
+	</copyright>
+	<productname>Limba Project</productname>
+	&date;
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>&package;</refentrytitle>
+		<manvolnum>1</manvolnum>
+	</refmeta>
+	<refnamediv>
+		<refname>&package;</refname>
+		<refpurpose>Generate a file that can be used instead of linking directly against a library</refpurpose>
+	</refnamediv>
+
+       <refsynopsisdiv>
+	       <cmdsynopsis>
+		       <command>&package;</command>
+		       <group choice="opt">
+			       <option>OPTION ...</option>
+		       </group>
+		       <group choice="opt">
+			       <option>LINKER COMMAND ...</option>
+		       </group>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+		<para>
+			This manual page documents briefly the <command>&package;</command> command.
+		</para>
+		<para>
+			<command>&package;</command> is a program to provide a more convenient interface to dlopen/dlsym.
+			It lets you write the same style of code you would when using a normal hard link (-lwhatever),
+			but the symbols are actually lazy-linked at runtime. You can use the symbols libwhatever_is_present
+			and libwhatever_symbol_is_present() to find out what APIs are actually available at runtime.
+		</para>
+		<para>
+			In other words, the need to use function pointers and lots of manual calls to dlsym() is eliminated,
+			and it becomes much simpler to soft link to things as a result.
+			If a symbol is missing at runtime and you call it anyway, your application will abort and an error
+			message is printed that states which function was called.
+			If a variable is missing at runtime, the value is always -1.
+		</para>
+	</refsect1>
+
+        <refsect1>
+	       <title>Options</title>
+	       <variablelist>
+
+		<varlistentry>
+			<term><option>--relay <replaceable>LIB</replaceable></option></term>
+			<listitem>
+				<para>
+					If a matching -lLIB is found, generate a file
+					that can be used instead of linking directly to
+					LIB. The name of the file is echoed on stdout.
+					Multiple --relay can be used together, a file will
+					be generated for each matching ones.
+				</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>--replace-all-libs</option></term>
+			<listitem>
+				<para>Generate a file for every -lLIB parameter.</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>--minimal-list <replaceable>OBJ_LIST</replaceable></option></term>
+			<listitem>
+				<para>
+					Will look in OBJ_LIST for undefined symbols, and
+					generate a file creating only the needed symbols
+					for each LIB.
+				</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>--partial-map <replaceable>MAP_FILE</replaceable></option></term>
+			<listitem>
+				<para>
+					Generate a file creating only the symbols contained
+					in MAP_FILE. Will apply to all further -lLIB
+					parameters, so in general is not suitable to
+					multiple libs in the same invocation of &package;.
+				</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>--no-replace</option></term>
+			<listitem>
+				<para>
+					Echo -lLIB on stdout even if a --relay LIB is
+					found, so it'll be linked in normally.
+				</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>--multilink <replaceable>[SONAMES...]</replaceable></option></term>
+			<listitem>
+				<para>
+					If a library has different SONAMES on different
+					Linux distributions you can specify the various
+					SONAMES that it's known by here. Relaytool will
+					attempt to load them (in the order provided) until
+					one if found. This cannot be used with multiple
+					--relay options. The first SONAME in the list will
+					be used as the name in the _is_present variable and
+					_symbol_is_present function.
+				</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>--out-dir <replaceable>DIRECTORY</replaceable></option></term>
+			<listitem>
+				<para>Write stub file to DIRECTORY instead of CWD.</para>
+			</listitem>
+		</varlistentry>
+
+		</variablelist>
+	</refsect1>
+
+	<refsect1>
+	       <title>Linker commands</title>
+	       <variablelist>
+
+		<varlistentry>
+			<term><option>-LPATH</option></term>
+			<listitem>
+				<para>Add PATH to the list of paths to search for LIBs.</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>-lLIB</option></term>
+			<listitem>
+				<para>
+					If a matching --relay LIB is found (or if
+					--replace-all-libs is specified), generate a file
+					that can be used instead of linking directly to
+					LIB. If there's no --relay LIB, echo -lLIB to stdout.
+				</para>
+			</listitem>
+		</varlistentry>
+
+		</variablelist>
+
+		<para>All other linker commands are passed as is to stdout.</para>
+	</refsect1>
+
+	<refsect1>
+	       <title>Other commands</title>
+	       <variablelist>
+
+		<varlistentry>
+			<term><option>-h</option></term>
+			<term><option>--help</option></term>
+			<listitem>
+				<para>Show some help.</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>--version</option></term>
+			<listitem>
+				<para>Display version information of &package;</para>
+			</listitem>
+		</varlistentry>
+
+		</variablelist>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para>lipkgen (1), ligcc(1), gcc(1).</para>
+		<para>
+			Additional documentation can be found on http://people.freedesktop.org/~mak/limba.
+		</para>
+	</refsect1>
+<refsect1>
+<title>AUTHOR</title>
+<para>This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
+</para>
+</refsect1>
+</refentry>
