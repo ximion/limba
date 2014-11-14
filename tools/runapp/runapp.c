@@ -230,9 +230,11 @@ main (gint argc, gchar *argv[])
 	_cleanup_free_ gchar *swname = NULL;
 	_cleanup_free_ gchar *executable = NULL;
 	gchar **strv;
-	uid_t uid=getuid(), euid=geteuid();
+	gchar **child_argv = NULL;
+	guint i;
+	uid_t uid = getuid(), euid = geteuid();
 
-	if (uid>0 && uid==euid) {
+	if ((uid > 0) && (uid == euid)) {
 		g_error ("This program needs the suid bit to be set to function correpkiy.");
 		return 3;
 	}
@@ -252,6 +254,7 @@ main (gint argc, gchar *argv[])
 
 	swname = g_strdup (strv[0]);
 	executable = g_build_filename (LI_SW_ROOT_PREFIX, strv[1], NULL);
+	g_strfreev (strv);
 
 	ret = create_mount_namespace ();
 	if (ret > 0)
@@ -267,7 +270,20 @@ main (gint argc, gchar *argv[])
 	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/lib");
 	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/usr/lib");
 
-	return execv (executable, argv);
+	child_argv = malloc ((1 + argc - 1) * sizeof (char *));
+	if (child_argv == NULL) {
+		ret = FALSE;
+		fprintf (stderr, "Out of memory!\n");
+		goto out;
+	}
+
+	i = 0;
+	for (i = 0; i < argc; i++) {
+		child_argv[i] = argv[i+1];
+	}
+	child_argv[i++] = NULL;
+
+	return execv (executable, child_argv);
 
 out:
 	return ret;
