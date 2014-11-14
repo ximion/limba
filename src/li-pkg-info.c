@@ -37,6 +37,7 @@ struct _LiPkgInfoPrivate
 	gchar *app_name;
 	gchar *runtime_uuid;
 	gchar *dependencies;
+	gchar *hash_sha256;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPkgInfo, li_pkg_info, G_TYPE_OBJECT)
@@ -312,6 +313,31 @@ li_pkg_info_set_dependencies (LiPkgInfo *pki, const gchar *deps_string)
 
 	g_free (priv->dependencies);
 	priv->dependencies = g_strdup (deps_string);
+}
+
+/**
+ * li_pkg_info_get_checksum_sha256:
+ *
+ * The SHA256 checksum of the package referenced by this package-info.
+ * This is usually used in package-indices.
+ */
+const gchar*
+li_pkg_info_get_checksum_sha256 (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->hash_sha256;
+}
+
+/**
+ * li_pkg_info_set_checksum_sha256:
+ */
+void
+li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki, const gchar *hash)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+
+	g_free (priv->hash_sha256);
+	priv->hash_sha256 = g_strdup (hash);
 }
 
 /**

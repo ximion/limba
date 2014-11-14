@@ -9,6 +9,7 @@ set(LIBLIMBA_SRC
 	li-utils.c
 	li-config-data.c
 	li-pkg-info.c
+	li-pkg-index.c
 	li-package.c
 	li-runtime.c
 	li-exporter.c
@@ -21,6 +22,7 @@ set(LIBLIMBA_PUBLIC_HEADERS
 	limba.h
 	li-utils.h
 	li-pkg-info.h
+	li-pkg-index.h
 	li-package.h
 	li-installer.h
 	li-manager.h

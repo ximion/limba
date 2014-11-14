@@ -387,6 +387,42 @@ li_config_data_get_data (LiConfigData *cdata)
 }
 
 /**
+ * li_config_data_next:
+ * @cdata: A valid #LiConfigData instance
+ *
+ * Jump to the next block.
+ *
+ * Returns: %TRUE if successful, %FALSE if there is no new block to be found.
+ */
+gboolean
+li_config_data_next (LiConfigData *cdata)
+{
+	guint i;
+	GList *l;
+	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
+
+	if (priv->content == NULL) {
+		li_config_data_reset (cdata);
+		return FALSE;
+	}
+
+	for (l = priv->content; l != NULL; l = l->next) {
+		gchar *line;
+		i = g_list_position (priv->content, l);
+		if (((gint) i) < priv->current_block_id)
+			continue;
+		line = (gchar*) l->data;
+
+		if (li_line_empty (line)) {
+			priv->current_block_id = i + 1;
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+/**
  * li_config_data_save_to_file:
  */
 gboolean

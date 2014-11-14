@@ -28,6 +28,7 @@ extern "C" {
 
 #include <li-utils.h>
 #include <li-pkg-info.h>
+#include <li-pkg-index.h>
 #include <li-package.h>
 #include <li-installer.h>
 #include <li-manager.h>

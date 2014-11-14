@@ -91,6 +91,10 @@ void			li_pkg_info_set_dependencies (LiPkgInfo *pki,
 
 const gchar		*li_pkg_info_get_id (LiPkgInfo *pki);
 
+const gchar		*li_pkg_info_get_checksum_sha256 (LiPkgInfo *pki);
+void			li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki,
+										const gchar *hash);
+
 
 G_END_DECLS
 

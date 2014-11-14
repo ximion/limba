@@ -74,6 +74,36 @@ test_configdata ()
 	g_object_unref (cdata);
 }
 
+void
+test_pkgindex ()
+{
+	LiPkgIndex *idx;
+	gchar *fname;
+	GFile *file;
+	GPtrArray *pkgs;
+	LiPkgInfo *pki;
+
+	fname = g_build_filename (datadir, "pkg-index", NULL);
+	file = g_file_new_for_path (fname);
+	g_free (fname);
+	g_assert (g_file_query_exists (file, NULL));
+
+	idx = li_pkg_index_new ();
+	li_pkg_index_load_file (idx, file);
+	g_object_unref (file);
+
+	pkgs = li_pkg_index_get_packages (idx);
+	g_assert (pkgs->len == 3);
+
+	pki = g_ptr_array_index (pkgs, 1);
+	g_assert_cmpstr (li_pkg_info_get_name (pki), ==, "testB-1.1");
+	g_assert_cmpstr (li_pkg_info_get_appname (pki), ==, "Test B");
+	g_assert_cmpstr (li_pkg_info_get_version (pki), ==, "1.1");
+	g_assert_cmpstr (li_pkg_info_get_checksum_sha256 (pki), ==, "31415");
+
+	g_object_unref (idx);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -101,6 +131,7 @@ main (int argc, char **argv)
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);
 
 	g_test_add_func ("/Limba/ConfigData", test_configdata);
+	g_test_add_func ("/Limba/PackageIndex", test_pkgindex);
 
 	ret = g_test_run ();
 	g_free (datadir);

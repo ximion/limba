@@ -82,6 +82,9 @@ gboolean		li_config_data_save_to_file (LiConfigData *cdata,
 											const gchar *filename,
 											GError **error);
 
+void			li_config_data_reset (LiConfigData *cdata);
+gboolean		li_config_data_next (LiConfigData *cdata);
+
 G_END_DECLS
 
 #endif /* __LI_CONFIG_DATA_H */

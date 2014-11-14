@@ -1,0 +1,16 @@
+Format-Version: 1.0
+
+PkgName: testA-1.0
+Version: 1.0
+Name: Test A
+SHA256: 1234
+
+PkgName: testB-1.1
+Version: 1.1
+Name: Test B
+SHA256: 31415
+
+PkgName: testC-1.2
+Version: 1.2
+Name: Test A
+SHA256: 24546
