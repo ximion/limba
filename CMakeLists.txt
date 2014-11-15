@@ -43,7 +43,6 @@ endif(${CMAKE_SOURCE_DIR} MATCHES ${CMAKE_BINARY_DIR})
 #
 option(MAINTAINER "Enable maintainer mode" OFF)
 option(LIBUILD "Build and install the LIBuild facilities" OFF)
-option(VISUAL_LDD "Build the Visual-LDD utility" OFF)
 option(L10N "Enable localization" ON)
 
 #
