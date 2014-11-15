@@ -8,7 +8,7 @@ use strict;
 use FindBin qw($RealBin);
 use File::Spec;
 use lib $RealBin;
-use lib "$RealBin/../share/listaller";
+use lib "$RealBin/../share/libuild";
 use IPC::Open2;
 use POSIX;
 use Cwd;
@@ -74,7 +74,7 @@ if (!defined $appath) {
 	$appath = $FindBin::Bin;
 	$appath =~ s/\/*$//g;
 	$appath =~ s/^(.*)\/.*?$/$1/;
-	$appath .= '/lib/listaller';
+	$appath .= '/lib/libuild';
 	if (! -f "$appath/buildlist" && -f "$FindBin::Bin/buildlist") {
 		$appath = $FindBin::Bin;
 	}

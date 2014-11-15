@@ -36,7 +36,7 @@
 /**
  * SECTION:li-utils
  * @short_description: General-purpose helper functions for Limba
- * @include: listaller.h
+ * @include: limba.h
  */
 
 /* set to TRUE in case we are running unit tests */

@@ -19,7 +19,7 @@ add_definitions(${GEE_CFLAGS} ${GEE_CFLAGS_OTHER})
 #				PACKAGES posix glib-2.0 gio-2.0 gee-0.8
 #)
 
-#install(TARGETS buildlist DESTINATION lib/limba COMPONENT buildtools)
+#install(TARGETS buildlist DESTINATION lib/libuild COMPONENT buildtools)
 install(PROGRAMS ligcc
 		 lig++
 		 relaytool
@@ -28,7 +28,7 @@ install(PROGRAMS ligcc
 )
 install(FILES LiBuild/GCC.pm
 	      LiBuild/Utils.pm
-	DESTINATION share/limba/LiBuild
+	DESTINATION share/libuild/LiBuild
 	COMPONENT buildtools
 )
 install(FILES ctype.h DESTINATION include/libuild COMPONENT headers)

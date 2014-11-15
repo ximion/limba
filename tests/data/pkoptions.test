@@ -2,7 +2,7 @@ Version: 2.0
 
 AutoFindDeps: true
 FilesRoot: %INSTDIR%
-Requires: dummy-module-dep-listallertest (>= 1.2)
+Requires: libfoo (>= 1.0)
 
 Test: A
 Example: yes
