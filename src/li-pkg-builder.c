@@ -231,7 +231,7 @@ li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname)
 	guint i;
 
 	a = archive_write_new ();
-	archive_write_add_filter_none (a);
+	archive_write_add_filter_gzip (a);
 	archive_write_set_format_pax_restricted (a);
 	archive_write_open_filename (a, out_fname);
 

@@ -256,9 +256,9 @@ li_package_open_base_ipk (LiPackage *pkg, GError **error)
 
 	/* create new archive object for reading */
 	ar = archive_read_new ();
-	/* disable compression, as the main tarball is not compressed */
-	archive_read_support_filter_none (ar);
-	/* ipk bundles are GNU Tarballs */
+	/* Limba packages are always GZip compressed... */
+	archive_read_support_filter_gzip (ar);
+	/* ...and are tarballs */
 	archive_read_support_format_tar (ar);
 
 	/* open the file, exit on error */
@@ -541,6 +541,7 @@ li_package_install (LiPackage *pkg, GError **error)
 
 	/* open the payload archive */
 	payload_ar = archive_read_new ();
+	/* the payload is an xz compressed tar archive */
 	archive_read_support_filter_xz (payload_ar);
 	archive_read_support_format_tar (payload_ar);
 

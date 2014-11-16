@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-  <mime-type type="application/x-limba-package">
-    <sub-class-of type="application/x-tar"/>
+  <mime-type type="application/x-ipk">
+    <sub-class-of type="application/gzip"/>
     <_comment>Software package</_comment>
-    <generic-icon name="package-x-ipk"/>
-    <alias type="application/x-ipk"/>
+    <generic-icon name="package-x-generic"/>
+    <alias type="application/x-limba-package"/>
     <glob pattern="*.ipk"/>
     <glob pattern="*.lpk"/>
   </mime-type>

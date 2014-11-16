@@ -17,5 +17,5 @@ src/li-utils.c
 tools/runapp/runapp.c
 tools/lipa/main.c
 tools/lipkgen/main.c
-# Mimetypes
-data/mime/limba-ipk.xml.in
+# Mimetype
+data/mime/x-ipk.xml.in
