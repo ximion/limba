@@ -18,6 +18,11 @@ but don't expect it to work, or work as expected.
 
 [1]: http://lwn.net/Articles/618140/
 
+### Releases
+You can find official release tarballs here: http://people.freedesktop.org/~mak/limba/releases/
+At the current state of development, it makes more sense to clone the Git repository instead, to
+get the latest changes.
+
 ## Developers
 
 ### Dependencies
