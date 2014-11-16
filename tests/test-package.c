@@ -94,7 +94,7 @@ test_package_build ()
 
 	/* build application package */
 	dirname = g_build_filename (datadir, "..", "foobar", "foo", "pkginstall", NULL);
-	pkgname = g_build_filename (datadir, "FooBar-1.0.ipk", NULL);
+	pkgname = g_build_filename (datadir, "foobar.ipk", NULL);
 
 	li_pkg_builder_create_package_from_dir (builder, dirname, pkgname, &error);
 	g_assert_no_error (error);
@@ -104,7 +104,7 @@ test_package_build ()
 
 	/* build library package */
 	dirname = g_build_filename (datadir, "..", "foobar", "libfoo", "pkginstall", NULL);
-	pkgname = g_build_filename (datadir, "libfoo-1.0.ipk", NULL);
+	pkgname = g_build_filename (datadir, "libfoo.ipk", NULL);
 
 	li_pkg_builder_create_package_from_dir (builder, dirname, pkgname, &error);
 	g_assert_no_error (error);
@@ -122,7 +122,7 @@ test_package_read ()
 	gchar *fname;
 	GError *error = NULL;
 
-	fname = g_build_filename (datadir, "libfoo-1.0.ipk", NULL);
+	fname = g_build_filename (datadir, "libfoo.ipk", NULL);
 	ipk = li_package_new ();
 
 	g_assert (li_package_get_id (ipk) == NULL);

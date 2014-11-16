@@ -124,8 +124,10 @@ li_installer_find_satisfying_pkg (GPtrArray *pkglist, LiPkgInfo *dep)
 	guint i;
 	const gchar *dep_name;
 
-	dep_name = li_pkg_info_get_name (dep);
+	if (pkglist == NULL)
+		return NULL;
 
+	dep_name = li_pkg_info_get_name (dep);
 	for (i = 0; i < pkglist->len; i++) {
 		const gchar *str;
 		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (pkglist, i));

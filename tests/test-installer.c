@@ -32,8 +32,8 @@ test_installer ()
 	_cleanup_free_ gchar *fname_lib = NULL;
 	GError *error = NULL;
 
-	fname_app = g_build_filename (datadir, "FooBar-1.0.ipk", NULL);
-	fname_lib = g_build_filename (datadir, "libfoo-1.0.ipk", NULL);
+	fname_app = g_build_filename (datadir, "foobar.ipk", NULL);
+	fname_lib = g_build_filename (datadir, "libfoo.ipk", NULL);
 
 	inst = li_installer_new ();
 
