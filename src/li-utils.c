@@ -77,6 +77,47 @@ li_touch_dir (const gchar* dirname, GError **error)
 }
 
 /**
+ * li_copy_file:
+ */
+gboolean
+li_copy_file (const gchar *source, const gchar *destination, GError **error)
+{
+	FILE *fsrc, *fdest;
+	int a;
+
+	fsrc = fopen (source, "rb");
+	if (fsrc == NULL) {
+		g_set_error (error,
+				G_FILE_ERROR,
+				G_FILE_ERROR_FAILED,
+				"Could not copy file: %s", g_strerror (errno));
+		return FALSE;
+	}
+
+	fdest = fopen (destination, "wb");
+	if (fdest == NULL) {
+		g_set_error (error,
+				G_FILE_ERROR,
+				G_FILE_ERROR_FAILED,
+				"Could not copy file: %s", g_strerror (errno));
+		return FALSE;
+	}
+
+	while (TRUE) {
+		a = fgetc (fsrc);
+
+		if (!feof (fsrc))
+			fputc (a, fdest);
+		else
+			break;
+	}
+
+	fclose (fdest);
+	fclose (fsrc);
+	return TRUE;
+}
+
+/**
  * li_delete_dir_recursive:
  * @dirname: Directory to remove
  *

@@ -92,6 +92,9 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 
 gboolean		li_touch_dir (const gchar* dirname,
 							  GError **error);
+gboolean		li_copy_file (const gchar *source,
+								const gchar *destination,
+								GError **error);
 gboolean		li_delete_dir_recursive (const gchar* dirname);
 GPtrArray		*li_utils_find_files_matching (const gchar* dir,
 												const gchar* pattern,

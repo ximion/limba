@@ -72,6 +72,20 @@ li_manager_init (LiManager *mgr)
 }
 
 /**
+ * li_manager_reset_cached_data:
+ */
+static void
+li_manager_reset_cached_data (LiManager *mgr)
+{
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	g_ptr_array_unref (priv->installed_sw);
+	g_ptr_array_unref (priv->installed_rt);
+	priv->installed_sw = g_ptr_array_new_with_free_func (g_object_unref);
+	priv->installed_rt = g_ptr_array_new_with_free_func (g_object_unref);
+}
+
+/**
  * li_manager_find_installed_software:
  **/
 static gboolean
@@ -421,6 +435,9 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 					_("Could not remove software directory."));
 		return FALSE;
 	}
+
+	/* we need to recreate the caches, now that the installed software has changed */
+	li_manager_reset_cached_data (mgr);
 
 	return TRUE;
 }

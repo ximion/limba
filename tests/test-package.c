@@ -84,35 +84,58 @@ void
 test_package_build ()
 {
 	LiPkgBuilder *builder;
-	gchar *dirname;
+	_cleanup_free_ gchar *foo_dirname = NULL;
+	_cleanup_free_ gchar *libfoo_dirname;
 	gchar *pkgname;
+	_cleanup_free_ gchar *repo_path;
+	gchar *tmp;
 	GError *error = NULL;
 
 	test_compile_foobar ();
 
 	builder = li_pkg_builder_new ();
 
+	/* ****** */
 	/* build application package */
-	dirname = g_build_filename (datadir, "..", "foobar", "foo", "pkginstall", NULL);
+	foo_dirname = g_build_filename (datadir, "..", "foobar", "foo", "pkginstall", NULL);
+	repo_path = g_build_filename (foo_dirname, "repo", NULL);
+	/* ensure we don't accidentially embed a package */
+	li_delete_dir_recursive (repo_path);
+
 	pkgname = g_build_filename (datadir, "foobar.ipk", NULL);
 
-	li_pkg_builder_create_package_from_dir (builder, dirname, pkgname, &error);
+	li_pkg_builder_create_package_from_dir (builder, foo_dirname, pkgname, &error);
 	g_assert_no_error (error);
 
-	g_free (dirname);
 	g_free (pkgname);
 
+	/* ****** */
 	/* build library package */
-	dirname = g_build_filename (datadir, "..", "foobar", "libfoo", "pkginstall", NULL);
+	libfoo_dirname = g_build_filename (datadir, "..", "foobar", "libfoo", "pkginstall", NULL);
 	pkgname = g_build_filename (datadir, "libfoo.ipk", NULL);
 
-	li_pkg_builder_create_package_from_dir (builder, dirname, pkgname, &error);
+	li_pkg_builder_create_package_from_dir (builder, libfoo_dirname, pkgname, &error);
 	g_assert_no_error (error);
 
-	g_free (dirname);
+	/* ****** */
+	/* test embedded packages, by copying libfoo */
+	g_mkdir_with_parents (repo_path, 0775);
+	tmp = g_build_filename (repo_path, "libfoo.ipk", NULL);
+	li_copy_file (pkgname, tmp, &error);
+	g_assert_no_error (error);
+	g_free (pkgname);
+
+	pkgname = g_build_filename (datadir, "FooBar-1.0_full.ipk", NULL);
+
+	li_pkg_builder_create_package_from_dir (builder, foo_dirname, pkgname, &error);
+	g_assert_no_error (error);
+
 	g_free (pkgname);
 
 	g_object_unref (builder);
+
+	/* cleanup */
+	li_delete_dir_recursive (repo_path);
 }
 
 void

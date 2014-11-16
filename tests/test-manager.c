@@ -25,6 +25,69 @@
 static gchar *datadir = NULL;
 
 void
+test_remove_software ()
+{
+	LiManager *mgr;
+	GError *error = NULL;
+
+	mgr = li_manager_new ();
+
+	li_manager_remove_software (mgr, "libfoo-1.0", &error);
+	g_assert_error (error, LI_MANAGER_ERROR, LI_MANAGER_ERROR_DEPENDENCY);
+	g_error_free (error);
+	error = NULL;
+
+	li_manager_remove_software (mgr, "foobar-1.0", &error);
+	g_assert_no_error (error);
+
+	li_manager_remove_software (mgr, "libfoo-1.0", &error);
+	g_assert_no_error (error);
+
+	g_object_unref (mgr);
+}
+
+void
+test_installer ()
+{
+	LiInstaller *inst;
+	_cleanup_free_ gchar *fname_app = NULL;
+	_cleanup_free_ gchar *fname_lib = NULL;
+	_cleanup_free_ gchar *fname_full = NULL;
+	GError *error = NULL;
+
+	fname_app = g_build_filename (datadir, "foobar.ipk", NULL);
+	fname_lib = g_build_filename (datadir, "libfoo.ipk", NULL);
+	fname_full = g_build_filename (datadir, "FooBar-1.0_full.ipk", NULL);
+
+	inst = li_installer_new ();
+
+	li_installer_install_package_file (inst, fname_app, &error);
+	/* this has to fail, we don't have libfoo yet */
+	g_assert_error (error, LI_INSTALLER_ERROR, LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND);
+	g_error_free (error);
+	error = NULL;
+
+	/* install library */
+	li_installer_install_package_file (inst, fname_lib, &error);
+	g_assert_no_error (error);
+
+	/* now we should be able to install the app */
+	li_installer_install_package_file (inst, fname_app, &error);
+	g_assert_no_error (error);
+
+	g_object_unref (inst);
+
+	/* now remove all software again */
+	test_remove_software ();
+
+	/* test the installation of a package with embedded dependencies */
+	inst = li_installer_new ();
+	li_installer_install_package_file (inst, fname_full, &error);
+	g_assert_no_error (error);
+	g_object_unref (inst);
+}
+
+void
 test_manager ()
 {
 	LiManager *mgr;
@@ -59,6 +122,7 @@ main (int argc, char **argv)
 	/* critical, error and warnings are fatal */
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);
 
+	g_test_add_func ("/Limba/InstallRemove", test_installer);
 	g_test_add_func ("/Limba/Manager", test_manager);
 
 	ret = g_test_run ();

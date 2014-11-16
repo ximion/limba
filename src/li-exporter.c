@@ -69,7 +69,7 @@ li_exporter_init (LiExporter *exp)
 }
 
 /**
- * li_copy_file:
+ * li_exporter_copy_file:
  */
 static void
 li_exporter_copy_file (LiExporter *exp, const gchar *source, const gchar *destination, GError **error)

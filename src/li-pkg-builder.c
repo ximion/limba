@@ -37,6 +37,8 @@
 
 #include "li-utils.h"
 #include "li-utils-private.h"
+#include "li-package.h"
+#include "li-pkg-index.h"
 
 typedef struct _LiPkgBuilderPrivate	LiPkgBuilderPrivate;
 struct _LiPkgBuilderPrivate
@@ -155,6 +157,66 @@ li_pkg_builder_write_payload (const gchar *input_dir, const gchar *out_fname)
 }
 
 /**
+ * li_pkg_builder_add_embedded_packages:
+ */
+static void
+li_pkg_builder_add_embedded_packages (const gchar *tmp_dir, const gchar *repo_source, GPtrArray *files, GError **error)
+{
+	guint i;
+	_cleanup_free_ gchar *pkgs_tmpdir = NULL;
+	gchar *tmp;
+	GPtrArray *packages;
+	LiPkgIndex *idx;
+	GError *tmp_error = NULL;
+
+	pkgs_tmpdir = g_build_filename (tmp_dir, "pkgs", NULL);
+	g_mkdir_with_parents (pkgs_tmpdir, 0775);
+
+	packages = li_utils_find_files_matching (repo_source, "*.ipk", FALSE);
+	if (packages == NULL)
+		return;
+
+	idx = li_pkg_index_new ();
+	for (i = 0; i < packages->len; i++) {
+		LiPackage *pkg;
+		LiPkgInfo *pki;
+		gchar *hash;
+		const gchar *fname = (const gchar *) g_ptr_array_index (packages, i);
+
+		pkg = li_package_new ();
+		li_package_open_file (pkg, fname, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_prefixed_error (error, tmp_error, "Unable to process external package '%s'.", fname);
+			g_object_unref (pkg);
+			return;
+		}
+
+		pki = li_package_get_info (pkg);
+		hash = li_compute_checksum_for_file (fname);
+		li_pkg_info_set_checksum_sha256 (pki, hash);
+		g_free (hash);
+
+		li_pkg_index_add_package (idx, pki);
+
+		/* create target filename */
+		tmp = g_strdup_printf ("%s/%s-%s.ipk", pkgs_tmpdir, li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
+		li_copy_file (fname, tmp, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_prefixed_error (error, tmp_error, "Unable to process external package '%s'.", li_pkg_info_get_name (pki));
+			g_object_unref (pkg);
+			g_free (tmp);
+			return;
+		}
+
+		g_ptr_array_add (files, tmp);
+	}
+
+	tmp = g_build_filename (tmp_dir, "repo-index", NULL);
+	li_pkg_index_save_to_file (idx, tmp);
+	g_ptr_array_add (files, tmp);
+}
+
+/**
  * li_pkg_builder_write_package:
  */
 static void
@@ -178,6 +240,16 @@ li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname)
 		const gchar *fname = (const gchar *) g_ptr_array_index (files, i);
 
 		ar_fname = g_path_get_basename (fname);
+
+		/* sort the repository files into their subdirectory */
+		if (g_strcmp0 (ar_fname, "repo-index") == 0) {
+			g_free (ar_fname);
+			ar_fname = g_strdup ("repo/index");
+		} else if (g_str_has_suffix (ar_fname, ".ipk")) {
+			gchar *tmp = ar_fname;
+			ar_fname = g_strdup_printf ("repo/%s", tmp);
+			g_free (tmp);
+		}
 
 		stat(fname, &st);
 		entry = archive_entry_new ();
@@ -211,11 +283,13 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 {
 	_cleanup_free_ gchar *ctl_fname = NULL;
 	_cleanup_free_ gchar *payload_root = NULL;
+	_cleanup_free_ gchar *repo_root = NULL;
 	_cleanup_free_ gchar *as_metadata = NULL;
 	_cleanup_free_ gchar *tmp_dir = NULL;
 	_cleanup_free_ gchar *payload_file = NULL;
 	_cleanup_free_ gchar *pkg_fname = NULL;
 	GPtrArray *files;
+	GError *tmp_error = NULL;
 
 	ctl_fname = g_build_filename (dir, "control", NULL);
 	if (!g_file_test (ctl_fname, G_FILE_TEST_IS_REGULAR)) {
@@ -244,11 +318,17 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		return FALSE;
 	}
 
+	repo_root = g_build_filename (dir, "repo", NULL);
+	if (!g_file_test (payload_root, G_FILE_TEST_IS_DIR)) {
+		/* we have no dependency repository */
+		g_free (repo_root);
+		repo_root = NULL;
+	}
+
 	if (out_fname == NULL) {
 		AsMetadata *mdata;
 		AsComponent *cpt;
 		GFile *asfile;
-		GError *tmp_error = NULL;
 		gchar *tmp;
 		const gchar *version;
 
@@ -292,6 +372,16 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 
 	/* construct package contents */
 	files = g_ptr_array_new ();
+
+	if (repo_root != NULL) {
+		/* we have extra packages to embed */
+		li_pkg_builder_add_embedded_packages (tmp_dir, repo_root, files, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			g_ptr_array_unref (files);
+			return FALSE;
+		}
+	}
 
 	g_ptr_array_add (files, ctl_fname);
 	g_ptr_array_add (files, as_metadata);
