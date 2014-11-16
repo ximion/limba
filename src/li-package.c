@@ -789,15 +789,17 @@ li_package_get_embedded_packages (LiPackage *pkg)
 }
 
 /**
- * li_package_get_appstream_component:
+ * li_package_get_appstream_data:
  *
- * Returns an AppStream component
+ * Returns AppStream XML data
  */
-AsComponent*
-li_package_get_appstream_component (LiPackage *pkg)
+gchar*
+li_package_get_appstream_data (LiPackage *pkg)
 {
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
-	return priv->cpt;
+	if (priv->cpt == NULL)
+		return NULL;
+	return as_component_to_xml (priv->cpt);
 }
 
 /**

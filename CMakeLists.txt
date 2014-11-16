@@ -111,9 +111,6 @@ add_definitions(${MAINTAINER_CFLAGS})
 # Required if GPGme was compiled with _FILE_OFFSET_BITS=64
 add_definitions("-D_FILE_OFFSET_BITS=64")
 
-# We want C11
-add_definitions("-std=gnu11")
-
 #
 find_package(PkgConfig REQUIRED)
 

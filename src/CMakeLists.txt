@@ -23,6 +23,7 @@ set(LIBLIMBA_PUBLIC_HEADERS
 	li-utils.h
 	li-pkg-info.h
 	li-pkg-index.h
+	li-runtime.h
 	li-package.h
 	li-installer.h
 	li-manager.h
@@ -33,7 +34,6 @@ set(LIBLIMBA_PRIVATE_HEADERS
 	li-utils-private.h
 	li-config-data.h
 	li-exporter.h
-	li-runtime.h
 )
 
 add_definitions("-DLI_COMPILATION"
