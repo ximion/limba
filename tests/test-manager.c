@@ -61,18 +61,24 @@ test_installer ()
 
 	inst = li_installer_new ();
 
-	li_installer_install_package_file (inst, fname_app, &error);
+	li_installer_open_file (inst, fname_app, &error);
+	g_assert_no_error (error);
+	li_installer_install (inst, &error);
 	/* this has to fail, we don't have libfoo yet */
 	g_assert_error (error, LI_INSTALLER_ERROR, LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND);
 	g_error_free (error);
 	error = NULL;
 
 	/* install library */
-	li_installer_install_package_file (inst, fname_lib, &error);
+	li_installer_open_file (inst, fname_lib, &error);
+	g_assert_no_error (error);
+	li_installer_install (inst, &error);
 	g_assert_no_error (error);
 
 	/* now we should be able to install the app */
-	li_installer_install_package_file (inst, fname_app, &error);
+	li_installer_open_file (inst, fname_app, &error);
+	g_assert_no_error (error);
+	li_installer_install (inst, &error);
 	g_assert_no_error (error);
 
 	g_object_unref (inst);
@@ -82,7 +88,9 @@ test_installer ()
 
 	/* test the installation of a package with embedded dependencies */
 	inst = li_installer_new ();
-	li_installer_install_package_file (inst, fname_full, &error);
+	li_installer_open_file (inst, fname_full, &error);
+	g_assert_no_error (error);
+	li_installer_install (inst, &error);
 	g_assert_no_error (error);
 	g_object_unref (inst);
 }

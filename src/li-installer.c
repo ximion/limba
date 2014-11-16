@@ -36,6 +36,7 @@ typedef struct _LiInstallerPrivate	LiInstallerPrivate;
 struct _LiInstallerPrivate
 {
 	LiManager *mgr;
+	LiPackage *pkg;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
@@ -178,7 +179,9 @@ li_installer_install_dependency_from_embedded (LiInstaller *inst, LiPackage *pkg
 
 	/* install dependency */
 	einst = li_installer_new ();
-	li_installer_install_package (einst, epkg, &tmp_error);
+	li_installer_set_package (inst, epkg);
+	g_object_unref (epkg);
+	li_installer_install (einst, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
@@ -188,10 +191,10 @@ li_installer_install_dependency_from_embedded (LiInstaller *inst, LiPackage *pkg
 }
 
 /**
- * li_installer_install_package:
+ * li_installer_install:
  */
 gboolean
-li_installer_install_package (LiInstaller *inst, LiPackage *pkg, GError **error)
+li_installer_install (LiInstaller *inst, GError **error)
 {
 	LiPkgInfo *info;
 	GError *tmp_error = NULL;
@@ -201,7 +204,15 @@ li_installer_install_package (LiInstaller *inst, LiPackage *pkg, GError **error)
 	LiRuntime *rt;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	info = li_package_get_info (pkg);
+	if (priv->pkg == NULL) {
+		g_set_error (error,
+			LI_INSTALLER_ERROR,
+			LI_INSTALLER_ERROR_FAILED,
+			_("No package is set."));
+		return FALSE;
+	}
+
+	info = li_package_get_info (priv->pkg);
 	deps = li_installer_parse_dependency_string (li_pkg_info_get_dependencies (info));
 	if (deps != NULL) {
 		GPtrArray *installed_sw;
@@ -213,7 +224,7 @@ li_installer_install_package (LiInstaller *inst, LiPackage *pkg, GError **error)
 
 			if (li_installer_find_satisfying_pkg (installed_sw, dep) == NULL) {
 				/* maybe we find this dependency as embedded copy? */
-				li_installer_install_dependency_from_embedded (inst, pkg, dep, &tmp_error);
+				li_installer_install_dependency_from_embedded (inst, priv->pkg, dep, &tmp_error);
 				if (tmp_error != NULL) {
 					g_propagate_error (error, tmp_error);
 					goto out;
@@ -239,7 +250,7 @@ li_installer_install_package (LiInstaller *inst, LiPackage *pkg, GError **error)
 		li_pkg_info_set_runtime_dependency (info, "None");
 	}
 
-	li_package_install (pkg, &tmp_error);
+	li_package_install (priv->pkg, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;
@@ -254,14 +265,15 @@ out:
 }
 
 /**
- * li_installer_install_package_file:
+ * li_installer_open_file:
+ *
+ * Open a package file
  */
 gboolean
-li_installer_install_package_file (LiInstaller *inst, const gchar *filename, GError **error)
+li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error)
 {
 	LiPackage *pkg;
 	GError *tmp_error = NULL;
-	gboolean ret;
 
 	pkg = li_package_new ();
 	li_package_open_file (pkg, filename, &tmp_error);
@@ -270,15 +282,32 @@ li_installer_install_package_file (LiInstaller *inst, const gchar *filename, GEr
 		g_object_unref (pkg);
 		return FALSE;
 	}
-
-	ret = li_installer_install_package (inst, pkg, &tmp_error);
+	li_installer_set_package (inst, pkg);
 	g_object_unref (pkg);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
-	}
 
-	return ret;
+	return TRUE;
+}
+
+/**
+ * li_installer_get_package:
+ */
+LiPackage*
+li_installer_get_package (LiInstaller *inst)
+{
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+	return priv->pkg;
+}
+
+/**
+ * li_installer_set_package:
+ */
+void
+li_installer_set_package (LiInstaller *inst, LiPackage *pkg)
+{
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+	if (priv->pkg != NULL)
+		g_object_unref (priv->pkg);
+	priv->pkg = g_object_ref (pkg);
 }
 
 /**

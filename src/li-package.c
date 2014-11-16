@@ -789,6 +789,18 @@ li_package_get_embedded_packages (LiPackage *pkg)
 }
 
 /**
+ * li_package_get_appstream_component:
+ *
+ * Returns an AppStream component
+ */
+AsComponent*
+li_package_get_appstream_component (LiPackage *pkg)
+{
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+	return priv->cpt;
+}
+
+/**
  * li_package_error_quark:
  *
  * Return value: An error quark.

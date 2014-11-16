@@ -37,6 +37,8 @@
 
 G_BEGIN_DECLS
 
+typedef struct _AsComponent		AsComponent;
+
 /**
  * LiPackageError:
  * @LI_PACKAGE_ERROR_FAILED:			Generic failure
@@ -109,6 +111,7 @@ GPtrArray		*li_package_get_embedded_packages (LiPackage *pkg);
 LiPackage*		li_package_extract_embedded_package (LiPackage *pkg,
 													LiPkgInfo *pki,
 													GError **error);
+AsComponent		*li_package_get_appstream_component (LiPackage *pkg);
 
 G_END_DECLS
 

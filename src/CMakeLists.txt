@@ -86,7 +86,7 @@ endmacro(_list_prefix)
 
 set(introspection_files ${LIBLIMBA_SRC} ${LIBLIMBA_PUBLIC_HEADERS})
 set(Limba_1_0_gir "limba")
-set(Limba_1_0_gir_INCLUDES GObject-2.0 Gio-2.0)
+set(Limba_1_0_gir_INCLUDES GObject-2.0 Gio-2.0 AppStream-0.7)
 set(Limba_1_0_gir_CFLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/" "-DLI_COMPILATION")
 set(Limba_1_0_gir_LIBS limba)
 

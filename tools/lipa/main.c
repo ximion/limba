@@ -127,12 +127,22 @@ lipa_install_package (const gchar *fname)
 		return 2;
 
 	inst = li_installer_new ();
-	li_installer_install_package_file (inst, fname, &error);
+	li_installer_open_file (inst, fname, &error);
 	if (error != NULL) {
-		li_print_stderr ("Could not install software: %s", error->message);
+		li_print_stderr (_("Could not open package: %s"), error->message);
+		g_error_free (error);
+		res = 1;
+		goto out;
+	}
+
+	li_installer_install (inst, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Could not install software: %s"), error->message);
 		g_error_free (error);
 		res = 1;
 	}
+
+out:
 	if (res == 0)
 		g_print ("%s\n", _("Software was installed successfully."));
 

@@ -79,12 +79,15 @@ struct _LiInstallerClass
 GType			li_installer_get_type	(void);
 LiInstaller		*li_installer_new		(void);
 
-gboolean		li_installer_install_package_file (LiInstaller *inst,
-											const gchar *filename,
-											GError **error);
-gboolean		li_installer_install_package (LiInstaller *inst,
-											LiPackage *pkg,
-											GError **error);
+gboolean		li_installer_open_file (LiInstaller *inst,
+									const gchar *filename,
+									GError **error);
+gboolean		li_installer_install (LiInstaller *inst,
+										GError **error);
+
+LiPackage		*li_installer_get_package (LiInstaller *inst);
+void			li_installer_set_package (LiInstaller *inst,
+											LiPackage *pkg);
 
 G_END_DECLS
 
