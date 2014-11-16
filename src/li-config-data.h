@@ -71,6 +71,8 @@ gboolean		li_config_data_open_block (LiConfigData *cdata,
 											const gchar *value,
 											gboolean reset_index);
 
+void			li_config_data_new_block (LiConfigData *cdata);
+
 gchar			*li_config_data_get_value (LiConfigData *cdata,
 											const gchar *field);
 gboolean		li_config_data_set_value (LiConfigData *cdata,

@@ -82,6 +82,7 @@ test_pkgindex ()
 	GFile *file;
 	GPtrArray *pkgs;
 	LiPkgInfo *pki;
+	gchar *str;
 
 	fname = g_build_filename (datadir, "pkg-index", NULL);
 	file = g_file_new_for_path (fname);
@@ -100,6 +101,28 @@ test_pkgindex ()
 	g_assert_cmpstr (li_pkg_info_get_appname (pki), ==, "Test B");
 	g_assert_cmpstr (li_pkg_info_get_version (pki), ==, "1.1");
 	g_assert_cmpstr (li_pkg_info_get_checksum_sha256 (pki), ==, "31415");
+
+	g_object_unref (idx);
+
+	/* write */
+	idx = li_pkg_index_new ();
+
+	pki = li_pkg_info_new ();
+	li_pkg_info_set_name (pki, "Test");
+	li_pkg_info_set_version (pki, "1.4");
+	li_pkg_index_add_package (idx, pki);
+	g_object_unref (pki);
+
+	pki = li_pkg_info_new ();
+	li_pkg_info_set_name (pki, "Alpha");
+	li_pkg_info_set_appname (pki, "Test-Name");
+	li_pkg_info_set_version (pki, "1.8");
+	li_pkg_index_add_package (idx, pki);
+	g_object_unref (pki);
+
+	str = li_pkg_index_get_data (idx);
+	g_assert_cmpstr (str, ==, "Format-Version: 1.0\n\nPkgName: Test\nName: Test\nVersion: 1.4\n\nPkgName: Alpha\nName: Test-Name\nVersion: 1.8\n");
+	g_free (str);
 
 	g_object_unref (idx);
 }

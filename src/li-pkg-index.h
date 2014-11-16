@@ -71,6 +71,10 @@ gboolean		li_pkg_index_save_to_file (LiPkgIndex *pkidx,
 											const gchar *filename);
 
 GPtrArray		*li_pkg_index_get_packages (LiPkgIndex *pkidx);
+void			li_pkg_index_add_package (LiPkgIndex *pkidx,
+											LiPkgInfo *pki);
+
+gchar			*li_pkg_index_get_data (LiPkgIndex *pkidx);
 
 G_END_DECLS
 

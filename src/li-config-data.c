@@ -305,7 +305,7 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 	gchar *tmp;
 	gint i;
 	GList *l;
-	_cleanup_free_ gchar *field_str;
+	_cleanup_free_ gchar *field_str = NULL;
 	gchar *field_data;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
@@ -314,7 +314,7 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 	if (value == NULL)
 		return FALSE;
 
-	/* don't trost the current id pointer */
+	/* don't trust the current id pointer */
 	if (priv->content == NULL)
 		priv->current_block_id = -1;
 
@@ -384,6 +384,29 @@ li_config_data_get_data (LiConfigData *cdata)
 	}
 
 	return g_string_free (res, FALSE);
+}
+
+/**
+ * li_config_data_new_block:
+ *
+ * Create a new block at the end of the file and open it.
+ */
+void
+li_config_data_new_block (LiConfigData *cdata)
+{
+	GList *l;
+	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
+
+	if (priv->content == NULL) {
+		li_config_data_reset (cdata);
+		return;
+	}
+
+	l = g_list_last (priv->content);
+	if (!li_line_empty ((gchar*) l->data)) {
+		priv->content = g_list_append (priv->content, g_strdup (""));
+	}
+	priv->current_block_id = (gint) g_list_length (priv->content);
 }
 
 /**

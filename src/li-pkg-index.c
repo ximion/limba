@@ -81,7 +81,21 @@ li_pkg_index_fetch_values_from_cdata (LiPkgIndex *pkidx, LiConfigData *cdata)
 static void
 li_pkg_index_write_cdata_values (LiPkgIndex *pkidx, LiConfigData *cdata)
 {
-	// TODO
+	guint i;
+	LiPkgIndexPrivate *priv = GET_PRIVATE (pkidx);
+
+	/* write format info */
+	li_config_data_set_value (cdata, "Format-Version", "1.0");
+
+	for (i = 0; i < priv->packages->len; i++) {
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (priv->packages, i));
+
+		li_config_data_new_block (cdata);
+		li_config_data_set_value (cdata, "PkgName", li_pkg_info_get_name (pki));
+		li_config_data_set_value (cdata, "Name", li_pkg_info_get_appname (pki));
+		li_config_data_set_value (cdata, "Version", li_pkg_info_get_version (pki));
+		li_config_data_set_value (cdata, "SHA256", li_pkg_info_get_checksum_sha256 (pki));
+	}
 }
 
 /**
@@ -155,6 +169,23 @@ li_pkg_index_save_to_file (LiPkgIndex *pkidx, const gchar *filename)
 }
 
 /**
+ * li_pkg_index_get_data:
+ */
+gchar*
+li_pkg_index_get_data (LiPkgIndex *pkidx)
+{
+	LiConfigData *cdata;
+	gchar *res;
+
+	cdata = li_config_data_new ();
+	li_pkg_index_write_cdata_values (pkidx, cdata);
+	res = li_config_data_get_data (cdata);
+	g_object_unref (cdata);
+
+	return res;
+}
+
+/**
  * li_pkg_index_get_packages:
  */
 GPtrArray*
@@ -162,6 +193,16 @@ li_pkg_index_get_packages (LiPkgIndex *pkidx)
 {
 	LiPkgIndexPrivate *priv = GET_PRIVATE (pkidx);
 	return priv->packages;
+}
+
+/**
+ * li_pkg_index_add_package:
+ */
+void
+li_pkg_index_add_package (LiPkgIndex *pkidx, LiPkgInfo *pki)
+{
+	LiPkgIndexPrivate *priv = GET_PRIVATE (pkidx);
+	g_ptr_array_add (priv->packages, g_object_ref (pki));
 }
 
 /**
