@@ -26,6 +26,7 @@
 #define __LI_INSTALLER_H
 
 #include <glib-object.h>
+#include "li-package.h"
 
 #define LI_TYPE_INSTALLER			(li_installer_get_type())
 #define LI_INSTALLER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_INSTALLER, LiInstaller))
@@ -78,8 +79,11 @@ struct _LiInstallerClass
 GType			li_installer_get_type	(void);
 LiInstaller		*li_installer_new		(void);
 
-gboolean		li_installer_install_package (LiInstaller *inst,
+gboolean		li_installer_install_package_file (LiInstaller *inst,
 											const gchar *filename,
+											GError **error);
+gboolean		li_installer_install_package (LiInstaller *inst,
+											LiPackage *pkg,
 											GError **error);
 
 G_END_DECLS

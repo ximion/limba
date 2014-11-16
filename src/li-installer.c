@@ -29,7 +29,6 @@
 #include <glib/gi18n-lib.h>
 
 #include "li-pkg-info.h"
-#include "li-package.h"
 #include "li-manager.h"
 #include "li-runtime.h"
 
@@ -119,40 +118,79 @@ li_installer_parse_dependency_string (const gchar *depstr)
 /**
  * li_installed_dep_is_installed:
  */
-gboolean
-li_installer_dep_is_installed (GPtrArray *installed_sw, LiPkgInfo *dep)
+static LiPkgInfo*
+li_installer_find_satisfying_pkg (GPtrArray *pkglist, LiPkgInfo *dep)
 {
 	guint i;
 	const gchar *dep_name;
 
 	dep_name = li_pkg_info_get_name (dep);
 
-	for (i = 0; i < installed_sw->len; i++) {
+	for (i = 0; i < pkglist->len; i++) {
 		const gchar *str;
-		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (installed_sw, i));
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (pkglist, i));
 
 		str = li_pkg_info_get_name (pki);
 		if (g_strcmp0 (dep_name, str) == 0) {
 			/* update version of the dependency to match the one of the installed software */
 			str = li_pkg_info_get_version (pki);
 			li_pkg_info_set_version (dep, str);
-			return TRUE;
+			return pki;
 		}
 
 		// TODO: Check version as well
 
 	}
 
-	return FALSE;
+	return NULL;
+}
+
+/**
+ * li_installer_install_dependency_from_embedded:
+ */
+static gboolean
+li_installer_install_dependency_from_embedded (LiInstaller *inst, LiPackage *pkg, LiPkgInfo *dep_pki, GError **error)
+{
+	LiPkgInfo *epki;
+	LiPackage *epkg;
+	LiInstaller *einst;
+	GPtrArray *embedded;
+	GError *tmp_error = NULL;
+
+	embedded = li_package_get_embedded_packages (pkg);
+	epki = li_installer_find_satisfying_pkg (embedded, dep_pki);
+	if (epki == NULL) {
+		g_set_error (error,
+			LI_INSTALLER_ERROR,
+			LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND,
+			_("Could not find dependency: %s"), li_pkg_info_get_name (dep_pki));
+		return FALSE;
+	}
+
+	/* we have found a matching dependency! */
+	epkg = li_package_extract_embedded_package (pkg, epki, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	/* install dependency */
+	einst = li_installer_new ();
+	li_installer_install_package (einst, epkg, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
 /**
  * li_installer_install_package:
  */
 gboolean
-li_installer_install_package (LiInstaller *inst, const gchar *filename, GError **error)
+li_installer_install_package (LiInstaller *inst, LiPackage *pkg, GError **error)
 {
-	LiPackage *pkg;
 	LiPkgInfo *info;
 	GError *tmp_error = NULL;
 	GPtrArray *deps = NULL;
@@ -160,13 +198,6 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 	gboolean ret = FALSE;
 	LiRuntime *rt;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
-
-	pkg = li_package_new ();
-	li_package_open_file (pkg, filename, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		goto out;
-	}
 
 	info = li_package_get_info (pkg);
 	deps = li_installer_parse_dependency_string (li_pkg_info_get_dependencies (info));
@@ -178,12 +209,13 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 		for (i = 0; i < deps->len; i++) {
 			LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, i));
 
-			if (!li_installer_dep_is_installed (installed_sw, dep)) {
-				g_set_error (error,
-					LI_INSTALLER_ERROR,
-					LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND,
-					_("Could not find dependency: %s"), li_pkg_info_get_name (dep));
-				goto out;
+			if (li_installer_find_satisfying_pkg (installed_sw, dep) == NULL) {
+				/* maybe we find this dependency as embedded copy? */
+				li_installer_install_dependency_from_embedded (inst, pkg, dep, &tmp_error);
+				if (tmp_error != NULL) {
+					g_propagate_error (error, tmp_error);
+					goto out;
+				}
 			}
 		}
 
@@ -213,9 +245,36 @@ li_installer_install_package (LiInstaller *inst, const gchar *filename, GError *
 
 	ret = TRUE;
 out:
-	g_object_unref (pkg);
 	if (deps != NULL)
 		g_ptr_array_unref (deps);
+
+	return ret;
+}
+
+/**
+ * li_installer_install_package_file:
+ */
+gboolean
+li_installer_install_package_file (LiInstaller *inst, const gchar *filename, GError **error)
+{
+	LiPackage *pkg;
+	GError *tmp_error = NULL;
+	gboolean ret;
+
+	pkg = li_package_new ();
+	li_package_open_file (pkg, filename, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		g_object_unref (pkg);
+		return FALSE;
+	}
+
+	ret = li_installer_install_package (inst, pkg, &tmp_error);
+	g_object_unref (pkg);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
 
 	return ret;
 }

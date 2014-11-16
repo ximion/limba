@@ -26,9 +26,6 @@
 #include "config.h"
 #include "li-package.h"
 
-#include "li-utils.h"
-#include "li-utils-private.h"
-
 #include <glib/gi18n-lib.h>
 #include <archive_entry.h>
 #include <archive.h>
@@ -39,7 +36,11 @@
 #include <errno.h>
 #include <unistd.h>
 #include <appstream.h>
+
+#include "li-utils.h"
+#include "li-utils-private.h"
 #include "li-exporter.h"
+#include "li-pkg-index.h"
 
 #define DEFAULT_BLOCK_SIZE 65536
 
@@ -53,6 +54,7 @@ struct _LiPackagePrivate
 
 	gchar *install_root;
 	gchar *id;
+	GPtrArray *embedded_packages;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPackage, li_package, G_TYPE_OBJECT)
@@ -65,16 +67,20 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiPackage, li_package, G_TYPE_OBJECT)
 static void
 li_package_finalize (GObject *object)
 {
-	LiPackage *ipk = LI_PACKAGE (object);
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackage *pkg = LI_PACKAGE (object);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
 	g_object_unref (priv->info);
-	if (priv->tmp_dir != NULL)
-		g_free (priv->tmp_dir);
 	if (priv->archive_file != NULL)
 		fclose (priv->archive_file);
 	if (priv->cpt != NULL)
 		g_object_unref (priv->cpt);
+	if (priv->embedded_packages != NULL)
+		g_ptr_array_unref (priv->embedded_packages);
+	if (priv->tmp_dir != NULL) {
+		li_delete_dir_recursive (priv->tmp_dir);
+		g_free (priv->tmp_dir);
+	}
 	g_free (priv->install_root);
 	g_free (priv->id);
 
@@ -85,9 +91,9 @@ li_package_finalize (GObject *object)
  * li_package_init:
  **/
 static void
-li_package_init (LiPackage *ipk)
+li_package_init (LiPackage *pkg)
 {
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
 	priv->info = li_pkg_info_new ();
 	priv->tmp_dir = NULL;
@@ -99,7 +105,7 @@ li_package_init (LiPackage *ipk)
  * li_package_read_entry:
  */
 static gchar*
-li_package_read_entry (LiPackage *ipk, struct archive* ar, GError **error)
+li_package_read_entry (LiPackage *pkg, struct archive* ar, GError **error)
 {
 	const void *buff = NULL;
 	gsize size = 0UL;
@@ -118,7 +124,7 @@ li_package_read_entry (LiPackage *ipk, struct archive* ar, GError **error)
  * li_package_extract_entry_to:
  */
 static gboolean
-li_package_extract_entry_to (LiPackage *ipk, struct archive* ar, struct archive_entry* e, const gchar* dest, GError **error)
+li_package_extract_entry_to (LiPackage *pkg, struct archive* ar, struct archive_entry* e, const gchar* dest, GError **error)
 {
 	_cleanup_free_ gchar *fname = NULL;
 	const gchar *cstr;
@@ -242,11 +248,11 @@ done:
  * li_package_open_base_ipk:
  **/
 static struct archive*
-li_package_open_base_ipk (LiPackage *ipk, GError **error)
+li_package_open_base_ipk (LiPackage *pkg, GError **error)
 {
 	struct archive *ar;
 	int res;
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
 	/* create new archive object for reading */
 	ar = archive_read_new ();
@@ -274,13 +280,13 @@ li_package_open_base_ipk (LiPackage *ipk, GError **error)
  * li_package_read_component_data:
  */
 static gboolean
-li_package_read_component_data (LiPackage *ipk, const gchar *data, GError **error)
+li_package_read_component_data (LiPackage *pkg, const gchar *data, GError **error)
 {
 	AsMetadata *mdata;
 	gchar *tmp;
 	const gchar *version;
 	GError *tmp_error = NULL;
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
 	/* ensure we don't leak memory, even if we are using this function wrong... */
 	if (priv->cpt != NULL)
@@ -327,7 +333,7 @@ li_package_read_component_data (LiPackage *ipk, const gchar *data, GError **erro
 	li_pkg_info_set_version (priv->info, version);
 
 	/* now get the package-id */
-	li_package_set_id (ipk,
+	li_package_set_id (pkg,
 					li_pkg_info_get_id (priv->info));
 
 	return TRUE;
@@ -337,14 +343,14 @@ li_package_read_component_data (LiPackage *ipk, const gchar *data, GError **erro
  * li_package_open_file:
  */
 gboolean
-li_package_open_file (LiPackage *ipk, const gchar *filename, GError **error)
+li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 {
 	struct archive *ar;
 	struct archive_entry* e;
 	gchar *tmp_str;
 	GError *tmp_error = NULL;
 	gboolean ret = FALSE;
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
 	if (!g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
 		g_set_error (error,
@@ -363,7 +369,7 @@ li_package_open_file (LiPackage *ipk, const gchar *filename, GError **error)
 		return FALSE;
 	}
 
-	ar = li_package_open_base_ipk (ipk, &tmp_error);
+	ar = li_package_open_base_ipk (pkg, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
@@ -381,7 +387,7 @@ li_package_open_file (LiPackage *ipk, const gchar *filename, GError **error)
 		pathname = archive_entry_pathname (e);
 		if (g_strcmp0 (pathname, "control") == 0) {
 			gchar *info_data;
-			info_data = li_package_read_entry (ipk, ar, &tmp_error);
+			info_data = li_package_read_entry (pkg, ar, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
@@ -390,17 +396,37 @@ li_package_open_file (LiPackage *ipk, const gchar *filename, GError **error)
 			g_free (info_data);
 		} else if (g_strcmp0 (pathname, "metainfo.xml") == 0) {
 			gchar *as_data;
-			as_data = li_package_read_entry (ipk, ar, &tmp_error);
+			as_data = li_package_read_entry (pkg, ar, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
 			}
-			li_package_read_component_data (ipk, as_data, &tmp_error);
+			li_package_read_component_data (pkg, as_data, &tmp_error);
 			g_free (as_data);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
 			}
+		} else if (g_strcmp0 (pathname, "repo/index") == 0) {
+			LiPkgIndex *idx;
+			gchar *index_data;
+			index_data = li_package_read_entry (pkg, ar, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
+			idx = li_pkg_index_new ();
+			li_pkg_index_load_data (idx, index_data);
+			g_free (index_data);
+
+			/* clean up a possible previous list of packages */
+			if (priv->embedded_packages != NULL)
+				g_ptr_array_unref (priv->embedded_packages);
+			priv->embedded_packages = li_pkg_index_get_packages (idx);
+
+			/* we need to refcount here, otherwise the array will be removed with the index instance in the next step */
+			g_ptr_array_ref (priv->embedded_packages);
+			g_object_unref (idx);
 		} else {
 			archive_read_data_skip (ar);
 		}
@@ -419,7 +445,7 @@ out:
  * li_package_install:
  */
 gboolean
-li_package_install (LiPackage *ipk, GError **error)
+li_package_install (LiPackage *pkg, GError **error)
 {
 	struct archive *ar;
 	struct archive_entry* e1;
@@ -434,7 +460,7 @@ li_package_install (LiPackage *ipk, GError **error)
 	gboolean ret;
 	const gchar *version;
 	_cleanup_object_unref_ LiExporter *exp = NULL;
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
 	/* test if we have all data we need for extraction */
 	if (priv->cpt == NULL) {
@@ -456,7 +482,7 @@ li_package_install (LiPackage *ipk, GError **error)
 	}
 
 	/* do we have a valid id? */
-	pkg_id = li_package_get_id (ipk);
+	pkg_id = li_package_get_id (pkg);
 	if (pkg_id == NULL) {
 		g_set_error (error,
 				LI_PACKAGE_ERROR,
@@ -488,7 +514,7 @@ li_package_install (LiPackage *ipk, GError **error)
 		li_exporter_set_override_allowed (exp, TRUE);
 	}
 
-	ar = li_package_open_base_ipk (ipk, &tmp_error);
+	ar = li_package_open_base_ipk (pkg, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
@@ -499,7 +525,7 @@ li_package_install (LiPackage *ipk, GError **error)
 
 		pathname = archive_entry_pathname (e1);
 		if (g_strcmp0 (pathname, "main-data.tar.xz") == 0) {
-			li_package_extract_entry_to (ipk, ar, e1, priv->tmp_dir, &tmp_error);
+			li_package_extract_entry_to (pkg, ar, e1, priv->tmp_dir, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				archive_read_free (ar);
@@ -563,7 +589,7 @@ li_package_install (LiPackage *ipk, GError **error)
 				return FALSE;
 		}
 
-		li_package_extract_entry_to (ipk, payload_ar, en, dest_path, &tmp_error);
+		li_package_extract_entry_to (pkg, payload_ar, en, dest_path, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			archive_read_free (ar);
@@ -602,14 +628,96 @@ li_package_install (LiPackage *ipk, GError **error)
 }
 
 /**
+ * li_package_extract_embedded_package:
+ *
+ * Return: (transfer full): A new package
+ */
+LiPackage*
+li_package_extract_embedded_package (LiPackage *pkg, LiPkgInfo *pki, GError **error)
+{
+	struct archive *ar;
+	struct archive_entry* en;
+	gchar *fname;
+	gchar *hash;
+	_cleanup_free_ gchar *pkg_basename = NULL;
+	LiPackage *subpkg;
+	GError *tmp_error = NULL;
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+
+	ar = li_package_open_base_ipk (pkg, &tmp_error);
+	if ((ar == NULL) || (tmp_error != NULL)) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+
+	/* create expected filename */
+	pkg_basename = g_strdup_printf ("%s-%s.ipk", li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
+	fname = g_build_filename ("repo", pkg_basename, NULL);
+
+	while (archive_read_next_header (ar, &en) == ARCHIVE_OK) {
+		const gchar *pathname;
+
+		pathname = archive_entry_pathname (en);
+		if (g_strcmp0 (pathname, fname) == 0) {
+			li_package_extract_entry_to (pkg, ar, en, priv->tmp_dir, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				archive_read_free (ar);
+				g_free (fname);
+				return NULL;
+			}
+		} else {
+			archive_read_data_skip (ar);
+		}
+	}
+
+	g_free (fname);
+	archive_read_close (ar);
+	archive_read_free (ar);
+
+	fname = g_build_filename (priv->tmp_dir, pkg_basename, NULL);
+	if (!g_file_test (fname, G_FILE_TEST_IS_REGULAR)) {
+		g_set_error (error,
+			LI_PACKAGE_ERROR,
+			LI_PACKAGE_ERROR_NOT_FOUND,
+				_("Embedded package '%s' was not found."), li_pkg_info_get_name (pki));
+		g_free (fname);
+		return NULL;
+	}
+
+	hash = li_compute_checksum_for_file (fname);
+	if (g_strcmp0 (hash, li_pkg_info_get_checksum_sha256 (pki)) != 0) {
+		g_set_error (error,
+			LI_PACKAGE_ERROR,
+			LI_PACKAGE_ERROR_CHECKSUM_MISMATCH,
+				_("Checksum for embedded package '%s' did not match."), li_pkg_info_get_name (pki));
+				g_free (fname);
+				g_free (hash);
+				return NULL;
+	}
+	g_free (hash);
+
+	subpkg = li_package_new ();
+	li_package_open_file (subpkg, fname, &tmp_error);
+	g_free (fname);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		g_object_unref (subpkg);
+		return NULL;
+	}
+
+	return subpkg;
+}
+
+/**
  * li_package_get_install_root:
  *
  * Get the installation root directory
  */
 const gchar*
-li_package_get_install_root (LiPackage *ipk)
+li_package_get_install_root (LiPackage *pkg)
 {
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 	return priv->install_root;
 }
 
@@ -620,9 +728,9 @@ li_package_get_install_root (LiPackage *ipk)
  * Set the directory where the software should be installed to.
  */
 void
-li_package_set_install_root (LiPackage *ipk, const gchar *dir)
+li_package_set_install_root (LiPackage *pkg, const gchar *dir)
 {
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 	g_free (priv->install_root);
 	priv->install_root = g_strdup (dir);
 }
@@ -633,9 +741,9 @@ li_package_set_install_root (LiPackage *ipk, const gchar *dir)
  * Get the unique name of this package
  */
 const gchar*
-li_package_get_id (LiPackage *ipk)
+li_package_get_id (LiPackage *pkg)
 {
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 	return priv->id;
 }
 
@@ -646,9 +754,9 @@ li_package_get_id (LiPackage *ipk)
  * Se the unique name for this package.
  */
 void
-li_package_set_id (LiPackage *ipk, const gchar *unique_name)
+li_package_set_id (LiPackage *pkg, const gchar *unique_name)
 {
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 	g_free (priv->id);
 	priv->id = g_strdup (unique_name);
 }
@@ -661,10 +769,22 @@ li_package_set_id (LiPackage *ipk, const gchar *unique_name)
  * Returns: (transfer none): An instance of #LiPkgInfo
  */
 LiPkgInfo*
-li_package_get_info (LiPackage *ipk)
+li_package_get_info (LiPackage *pkg)
 {
-	LiPackagePrivate *priv = GET_PRIVATE (ipk);
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 	return priv->info;
+}
+
+/**
+ * li_package_get_embedded_packages:
+ *
+ * Returns: (transfer none) (element-type LiPkgInfo): Array of available embedded packages
+ */
+GPtrArray*
+li_package_get_embedded_packages (LiPackage *pkg)
+{
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+	return priv->embedded_packages;
 }
 
 /**
@@ -702,7 +822,7 @@ li_package_class_init (LiPackageClass *klass)
 LiPackage *
 li_package_new (void)
 {
-	LiPackage *ipk;
-	ipk = g_object_new (LI_TYPE_PACKAGE, NULL);
-	return LI_PACKAGE (ipk);
+	LiPackage *pkg;
+	pkg = g_object_new (LI_TYPE_PACKAGE, NULL);
+	return LI_PACKAGE (pkg);
 }

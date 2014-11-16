@@ -127,7 +127,7 @@ lipa_install_package (const gchar *fname)
 		return 2;
 
 	inst = li_installer_new ();
-	li_installer_install_package (inst, fname, &error);
+	li_installer_install_package_file (inst, fname, &error);
 	if (error != NULL) {
 		li_print_stderr ("Could not install software: %s", error->message);
 		g_error_free (error);

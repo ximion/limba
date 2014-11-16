@@ -39,12 +39,13 @@ G_BEGIN_DECLS
 
 /**
  * LiPackageError:
- * @LI_PACKAGE_ERROR_FAILED:		Generic failure
- * @LI_PACKAGE_ERROR_NOT_FOUND:		A required file or entity was not found
- * @LI_PACKAGE_ERROR_ARCHIVE:		Error in the archive structure
- * @LI_PACKAGE_ERROR_DATA_MISSING:	Some data is missing in the archive
- * @LI_PACKAGE_ERROR_OVERRIDE:		Could not override file
- * @LI_PACKAGE_ERROR_EXTRACT:		Could not extract data
+ * @LI_PACKAGE_ERROR_FAILED:			Generic failure
+ * @LI_PACKAGE_ERROR_NOT_FOUND:			A required file or entity was not found
+ * @LI_PACKAGE_ERROR_ARCHIVE:			Error in the archive structure
+ * @LI_PACKAGE_ERROR_DATA_MISSING:		Some data is missing in the archive
+ * @LI_PACKAGE_ERROR_OVERRIDE:			Could not override file
+ * @LI_PACKAGE_ERROR_EXTRACT:			Could not extract data
+ * @LI_PACKAGE_ERROR_CHECKSUM_MISMATCH:	A checksum did not match
  *
  * The error type.
  **/
@@ -55,6 +56,7 @@ typedef enum {
 	LI_PACKAGE_ERROR_DATA_MISSING,
 	LI_PACKAGE_ERROR_OVERRIDE,
 	LI_PACKAGE_ERROR_EXTRACT,
+	LI_PACKAGE_ERROR_CHECKSUM_MISMATCH,
 	/*< private >*/
 	LI_PACKAGE_ERROR_LAST
 } LiPackageError;
@@ -87,21 +89,26 @@ struct _LiPackageClass
 GType			li_package_get_type	(void);
 LiPackage		*li_package_new		(void);
 
-gboolean		li_package_open_file (LiPackage *ipk,
+gboolean		li_package_open_file (LiPackage *pkg,
 										const gchar *filename,
 										GError **error);
-gboolean		li_package_install (LiPackage *ipk,
+gboolean		li_package_install (LiPackage *pkg,
 										GError **error);
 
-const gchar		*li_package_get_install_root (LiPackage *ipk);
-void			li_package_set_install_root (LiPackage *ipk,
+const gchar		*li_package_get_install_root (LiPackage *pkg);
+void			li_package_set_install_root (LiPackage *pkg,
 												const gchar *dir);
 
-const gchar		*li_package_get_id (LiPackage *ipk);
-void			li_package_set_id (LiPackage *ipk,
+const gchar		*li_package_get_id (LiPackage *pkg);
+void			li_package_set_id (LiPackage *pkg,
 										const gchar *unique_name);
 
-LiPkgInfo		*li_package_get_info (LiPackage *ipk);
+LiPkgInfo		*li_package_get_info (LiPackage *pkg);
+
+GPtrArray		*li_package_get_embedded_packages (LiPackage *pkg);
+LiPackage*		li_package_extract_embedded_package (LiPackage *pkg,
+													LiPkgInfo *pki,
+													GError **error);
 
 G_END_DECLS
 
