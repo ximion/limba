@@ -351,9 +351,11 @@ li_runtime_link_software (LiRuntime *rt, LiPkgInfo *pki, GError **error)
 		return FALSE;
 
 	rt_path = li_runtime_get_data_path (rt);
-	li_touch_dir (rt_path, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	if (g_mkdir_with_parents (rt_path, 0755) != 0) {
+		g_set_error (error,
+			G_FILE_ERROR,
+			G_FILE_ERROR_FAILED,
+			_("Could not create directory structure for runtime. %s"), g_strerror (errno));
 		goto out;
 	}
 

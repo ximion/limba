@@ -54,29 +54,6 @@ li_str_empty (const gchar* str)
 }
 
 /**
- * li_touch_dir:
- */
-gboolean
-li_touch_dir (const gchar* dirname, GError **error)
-{
-	GFile *d = NULL;
-	GError *tmp_error = NULL;
-	g_return_val_if_fail (dirname != NULL, FALSE);
-
-	d = g_file_new_for_path (dirname);
-	if (!g_file_query_exists (d, NULL)) {
-		g_file_make_directory_with_parents (d, NULL, &tmp_error);
-	}
-
-	g_object_unref (d);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
-	}
-	return TRUE;
-}
-
-/**
  * li_copy_file:
  */
 gboolean
@@ -401,7 +378,7 @@ li_utils_get_tmp_dir (const gchar *prefix)
 	gchar *tmp_dir = NULL;
 	const gchar *tmp_root_path = "/var/tmp/limba";
 
-	li_touch_dir (tmp_root_path, NULL);
+	g_mkdir_with_parents (tmp_root_path, 0755);
 
 	template = g_strdup_printf ("%s-XXXXXX", prefix);
 	/* create temporary directory */
@@ -444,7 +421,7 @@ li_get_software_root ()
 {
 	if (_unittestmode) {
 		const gchar *tmpdir = "/var/tmp/limba/test-root/opt/software";
-		li_touch_dir (tmpdir, NULL);
+		g_mkdir_with_parents (tmpdir, 0755);
 		return tmpdir;
 	} else {
 		return LI_SU_SOFTWARE_ROOT;
@@ -462,7 +439,7 @@ li_get_prefixdir ()
 	if (_unittestmode) {
 		const gchar *tmpdir = "/var/tmp/limba/test-root/usr";
 		const gchar *appdir = "/var/tmp/limba/test-root/usr/share/applications";
-		li_touch_dir (appdir, NULL);
+		g_mkdir_with_parents (appdir, 0755);
 		return tmpdir;
 	} else {
 		return PREFIXDIR;

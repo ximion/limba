@@ -580,11 +580,11 @@ li_package_install (LiPackage *pkg, GError **error)
 		dest_path = g_build_filename (pkg_root_dir, "data", path, NULL);
 		g_free (path);
 
-		if (!li_touch_dir (dest_path, NULL)) {
+		if (g_mkdir_with_parents (dest_path, 0755) != 0) {
 			g_set_error (error,
 				LI_PACKAGE_ERROR,
 				LI_PACKAGE_ERROR_EXTRACT,
-				_("Could not create directory structure '%s'."), dest_path);
+				_("Could not create directory structure '%s'. %s"), dest_path, g_strerror (errno));
 				archive_read_free (payload_ar);
 				return FALSE;
 		}
