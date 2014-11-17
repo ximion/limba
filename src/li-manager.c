@@ -262,6 +262,8 @@ li_manager_get_installed_runtimes (LiManager *mgr)
  * If none is available, %NULL is returned.
  * The resulting runtime needs to be unref'ed with g_object_unref()
  * if it is no longer needed.
+ *
+ * Returns: (transfer full): A #LiRuntime containing @members or %NULL
  */
 LiRuntime*
 li_manager_find_runtime_with_members (LiManager *mgr, GPtrArray *members)

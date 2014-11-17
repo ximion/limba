@@ -37,6 +37,22 @@
 
 G_BEGIN_DECLS
 
+/**
+ * LiVersionRelation:
+ * @LI_VERSION_RELATION_UNKNOWN:	The relation is unknown
+ * @LI_VERSION_RELATION_EQUAL:		Versions should be equal
+ * @LI_VERSION_RELATION_LOWER:		The other version must be lower
+ * @LI_VERSION_RELATION_HIGHER:		The other version must be higher
+ *
+ * Flags defining version requirements on other #LiPkgInfo instances.
+ **/
+typedef enum  {
+	LI_VERSION_RELATION_UNKNOWN = 0,
+	LI_VERSION_RELATION_EQUAL = 1 << 0,
+	LI_VERSION_RELATION_LOWER = 1 << 1,
+	LI_VERSION_RELATION_HIGHER = 1 << 2
+} LiVersionRelation;
+
 typedef struct _LiPkgInfo		LiPkgInfo;
 typedef struct _LiPkgInfoClass	LiPkgInfoClass;
 

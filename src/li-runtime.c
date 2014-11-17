@@ -193,6 +193,8 @@ li_runtime_get_data_path (LiRuntime *rt)
 
 /**
  * li_runtime_get_members:
+ *
+ * Returns: (transfer none) (element-type LiPkgInfo): Array of packages which are members of this runtime
  */
 GPtrArray*
 li_runtime_get_members (LiRuntime *rt)
@@ -383,10 +385,12 @@ out:
 
 /**
  * li_runtime_create_with_members:
- * @members: A list of software as #LiPkgInfo
+ * @members: (element-type LiPkgInfo): A list of software as #LiPkgInfo
  *
  * Generate a new runtime environment consisting of the given
  * members.
+ *
+ * Returns: (transfer full): A new #LiRuntime instance
  */
 LiRuntime*
 li_runtime_create_with_members (GPtrArray *members, GError **error)

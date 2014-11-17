@@ -187,6 +187,8 @@ li_pkg_index_get_data (LiPkgIndex *pkidx)
 
 /**
  * li_pkg_index_get_packages:
+ *
+ * Returns: (transfer none) (element-type LiPkgInfo): Packages in the index
  */
 GPtrArray*
 li_pkg_index_get_packages (LiPkgIndex *pkidx)

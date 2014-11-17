@@ -290,6 +290,8 @@ li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error
 
 /**
  * li_installer_get_package:
+ *
+ * Returns: (transfer none): The #LiPackage which is going to be installed
  */
 LiPackage*
 li_installer_get_package (LiInstaller *inst)
