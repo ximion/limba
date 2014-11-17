@@ -15,7 +15,7 @@ src/li-pkg-info.c
 src/li-utils.c
 # Tools
 tools/runapp/runapp.c
-tools/lipa/main.c
-tools/lipkgen/main.c
+tools/lipa/lipa.c
+tools/lipkgen/lipkgen.c
 # Mimetype
 data/mime/x-ipk.xml.in
