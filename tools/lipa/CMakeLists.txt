@@ -1,7 +1,7 @@
 # CMakeLists for the Limba lipa tool
 
 set(LIMBA_LIPA_SRC
-	main.c
+	lipa.c
 )
 
 add_definitions("-DG_LOG_DOMAIN=\"Lipa\"")

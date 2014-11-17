@@ -1,7 +1,7 @@
 # CMakeLists for the Limba package generator
 
 set(LIMBA_LIPKGEN_SRC
-	main.c
+	lipkgen.c
 )
 
 add_definitions("-DG_LOG_DOMAIN=\"Lipkgen\"")
