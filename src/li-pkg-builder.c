@@ -319,7 +319,7 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 	}
 
 	repo_root = g_build_filename (dir, "repo", NULL);
-	if (!g_file_test (payload_root, G_FILE_TEST_IS_DIR)) {
+	if (!g_file_test (repo_root, G_FILE_TEST_IS_DIR)) {
 		/* we have no dependency repository */
 		g_free (repo_root);
 		repo_root = NULL;

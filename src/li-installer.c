@@ -179,7 +179,7 @@ li_installer_install_dependency_from_embedded (LiInstaller *inst, LiPackage *pkg
 
 	/* install dependency */
 	einst = li_installer_new ();
-	li_installer_set_package (inst, epkg);
+	li_installer_set_package (einst, epkg);
 	g_object_unref (epkg);
 	li_installer_install (einst, &tmp_error);
 	if (tmp_error != NULL) {
@@ -208,7 +208,7 @@ li_installer_install (LiInstaller *inst, GError **error)
 		g_set_error (error,
 			LI_INSTALLER_ERROR,
 			LI_INSTALLER_ERROR_FAILED,
-			_("No package is set."));
+			_("No package is loaded."));
 		return FALSE;
 	}
 
