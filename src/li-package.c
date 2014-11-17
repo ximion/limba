@@ -432,6 +432,15 @@ li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 		}
 	}
 
+	if (priv->cpt == NULL) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Invalid package: Component metadata is missing."));
+		ret = FALSE;
+		goto out;
+	}
+
 	ret = TRUE;
 
 out:
