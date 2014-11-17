@@ -20,10 +20,11 @@
 
 #include "config.h"
 
-#include <config.h>
+#include <stdio.h>
 #include <locale.h>
 #include <glib/gi18n-lib.h>
 #include <limba.h>
+#include <appstream.h>
 
 static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
@@ -93,10 +94,167 @@ pkgen_build_package (const gchar *dir, const gchar *out_fname)
 }
 
 /**
- * lipa_get_summary:
+ * li_get_stdin:
+ */
+static gchar*
+li_get_stdin (void)
+{
+	gchar *tmp = NULL;
+	gchar *str = NULL;
+	size_t size = 0;
+
+	if (getline(&tmp, &size, stdin) > 0) {
+		g_strstrip (tmp);
+		if (g_strcmp0 (tmp, "") != 0)
+			str = g_strdup (tmp);
+	}
+	g_free (tmp);
+
+	return str;
+}
+
+/**
+ * pkgen_make_template:
+ */
+static gint
+pkgen_make_template (const gchar *dir)
+{
+	gint res = 0;
+	gchar *res_dir = NULL;
+	gchar *tmp;
+	gchar *fname;
+	gboolean appstream_linked = FALSE;
+	GError *error = NULL;
+
+	if (dir == NULL) {
+		tmp = g_get_current_dir ();
+		res_dir = g_build_filename (tmp, "pkginstall", NULL);
+		g_free (tmp);
+	} else {
+		res_dir = g_strdup (dir);
+	}
+
+	g_mkdir_with_parents (res_dir, 0755);
+
+	g_print (_("Do you have an AppStream XML file for your software? [y/N]"));
+	tmp = li_get_stdin ();
+	if (tmp != NULL) {
+		gchar *str;
+		str = g_utf8_strdown (tmp, -1);
+		g_free (tmp);
+		g_strstrip (str);
+
+		if (g_strcmp0 (str, "y") == 0) {
+			g_print ("%s ", _("Please specify a path to the AppStream XML data:"));
+			tmp = li_get_stdin ();
+			if (tmp != NULL) {
+				gchar *asfile;
+				asfile = g_build_filename (res_dir, "metainfo.xml", NULL);
+				/* TODO: create relative symlink */
+				symlink (tmp, asfile);
+				g_free (tmp);
+				appstream_linked = TRUE;
+			} else {
+				res = 1;
+				g_print ("%s\n", _("No path given. Exiting."));
+				g_free (str);
+				goto out;
+			}
+		}
+		g_free (str);
+    }
+
+    if (!appstream_linked) {
+		AsComponent *cpt;
+		gchar *asfile;
+		cpt = as_component_new ();
+
+		while (TRUE) {
+			g_print ("%s ", _("Your software needs a unique name.\nIn case of a GUI application, this is its .desktop filename.\nUnique software name:"));
+			tmp = li_get_stdin ();
+			if (tmp != NULL) {
+				as_component_set_id (cpt, tmp);
+				g_free (tmp);
+				break;
+			}
+		}
+
+		while (TRUE) {
+			g_print ("%s ", _("Define a software name (human readable):"));
+			tmp = li_get_stdin ();
+			if (tmp != NULL) {
+				as_component_set_name (cpt, tmp);
+				g_free (tmp);
+				break;
+			}
+		}
+
+		while (TRUE) {
+			g_print ("%s ", _("Define a software version:"));
+			tmp = li_get_stdin ();
+			if (tmp != NULL) {
+				AsRelease *rel;
+				rel = as_release_new ();
+				as_release_set_version (rel, tmp);
+				as_component_add_release (cpt, rel);
+				g_object_unref (rel);
+				g_free (tmp);
+				break;
+			}
+		}
+
+		while (TRUE) {
+			g_print ("%s ", _("Write a short summary (one sentence) about your software:"));
+			tmp = li_get_stdin ();
+			if (tmp != NULL) {
+				as_component_set_summary (cpt, tmp);
+				g_free (tmp);
+				break;
+			}
+		}
+
+		asfile = g_build_filename (res_dir, "metainfo.xml", NULL);
+		tmp = as_component_to_xml (cpt);
+		g_file_set_contents (asfile, tmp, -1, &error);
+		g_free (tmp);
+		g_free (asfile);
+		if (error != NULL) {
+			li_print_stderr (_("Unable to write AppStream data. %s"), error->message);
+			g_error_free (error);
+			res = 2;
+			goto out;
+		}
+    }
+
+    fname = g_build_filename (res_dir, "control", NULL);
+	g_file_set_contents (fname, "Format-Version: 1.0\n\nRequires:\n", -1, &error);
+	g_free (fname);
+	if (error != NULL) {
+		li_print_stderr (_("Unable to write 'control' file. %s"), error->message);
+		g_error_free (error);
+		res = 2;
+		goto out;
+	}
+
+	li_print_stdout ("\n========");
+	li_print_stdout (_("Created project template in '%s'."), res_dir);
+	g_print ("\n");
+	li_print_stdout (_("Please edit the files in that directory, e.g. add a long description to your\napplication and specify its run-time dependencies."));
+	li_print_stdout (_("When you are done with this, build your software with --prefix=/opt/swroot\nand install it into the inst_target subdirectory of your 'pkginstall' directory."));
+	li_print_stdout (_("Then run 'lipkgen build pkginstall/' to create your package."));
+	li_print_stdout (_("If you want to embed dependencies, place their IPK packages in the 'repo/'\nsubdirectory of 'pkginstall/'"));
+	li_print_stdout ("========\n");
+
+out:
+	g_free (res_dir);
+	return res;
+}
+
+/**
+ * pkgen_get_summary:
  **/
 static gchar *
-lipa_get_summary ()
+pkgen_get_summary ()
 {
 	GString *string;
 	string = g_string_new ("");
@@ -106,7 +264,8 @@ lipa_get_summary ()
 				/* these are commands we can use with lipa */
 				_("Subcommands:"));
 
-	g_string_append_printf (string, "  %s - %s\n", "build [DIRECTORY] [PKGNAME]", _("Create a new package from using data found in DIRECTORY"));
+	g_string_append_printf (string, "  %s - %s\n", "build [DIRECTORY] [PKGNAME]", _("Create a new package using data found in DIRECTORY."));
+	g_string_append_printf (string, "  %s - %s\n", "make-template", _("Create sources for a new package."));
 
 	return g_string_free (string, FALSE);
 }
@@ -139,7 +298,7 @@ main (int argc, char *argv[])
 	g_option_context_add_main_entries (opt_context, client_options, NULL);
 
 	/* set the summary text */
-	summary = lipa_get_summary ();
+	summary = pkgen_get_summary ();
 	g_option_context_set_summary (opt_context, summary) ;
 	options_help = g_option_context_get_help (opt_context, TRUE, NULL);
 	g_free (summary);
@@ -181,6 +340,8 @@ main (int argc, char *argv[])
 
 	if ((g_strcmp0 (command, "build") == 0) || (g_strcmp0 (command, "b") == 0)) {
 		exit_code = pkgen_build_package (value1, value2);
+	} else if (g_strcmp0 (command, "make-template") == 0) {
+		exit_code = pkgen_make_template (value1);
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;
