@@ -86,6 +86,7 @@ li_package_tree_teardown (GNode *root)
  * @pki: The package information of this dependency
  * @pkg: The package required to be installed to satisfy this dependency, or %NULL if satisfied
  *
+ * Returns: A reference to the last node which was added, or to the roo node in case parent was %NULL
  */
 static GNode*
 li_package_tree_add_package (GNode *parent, LiPkgInfo *pki, LiPackage *pkg)
@@ -100,8 +101,10 @@ li_package_tree_add_package (GNode *parent, LiPkgInfo *pki, LiPackage *pkg)
 		/* this package is not installed / dependency not satisfied */
 		pkg_node = g_node_new (g_object_ref (pkg));
 		g_node_append (node, pkg_node);
-		return pkg_node;
+		if (parent != NULL)
+			return pkg_node;
 	}
+
 	return node;
 }
 
@@ -497,7 +500,8 @@ li_installer_install (LiInstaller *inst, GError **error)
 	}
 
 	/* create a dependency tree for this package installation */
-	li_installer_check_dependencies (inst, priv->pkgs, &tmp_error);
+	/* NOTE: We can be sure that the first and only child is a LiPackage here */
+	li_installer_check_dependencies (inst, priv->pkgs->children, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;
@@ -566,6 +570,7 @@ li_installer_get_appstream_data (LiInstaller *inst)
 	gchar *data = NULL;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 	GNode *child = priv->pkgs->children;
+
 	if (child == NULL)
 		return NULL;
 
