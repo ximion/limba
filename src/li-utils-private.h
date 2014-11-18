@@ -90,6 +90,12 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 
 #define	LI_PREFIXDIR li_get_prefixdir ()
 
+gboolean		li_str_empty (const gchar* str);
+gchar**			li_ptr_array_to_strv (GPtrArray *array);
+gchar			*li_str_replace (const gchar* str,
+								const gchar* old_str,
+								const gchar* new_str);
+
 gboolean		li_copy_file (const gchar *source,
 								const gchar *destination,
 								GError **error);
@@ -99,12 +105,11 @@ GPtrArray		*li_utils_find_files_matching (const gchar* dir,
 												gboolean recursive);
 GPtrArray		*li_utils_find_files (const gchar* dir,
 									gboolean recursive);
-gboolean		li_utils_is_root (void);
-gchar			*li_str_replace (const gchar* str,
-								const gchar* old_str,
-								const gchar* new_str);
-gchar			*li_compute_checksum_for_file (const gchar *fname);
 gchar			*li_utils_get_tmp_dir (const gchar *prefix);
+
+gboolean		li_utils_is_root (void);
+
+gchar			*li_compute_checksum_for_file (const gchar *fname);
 gchar			*li_get_uuid_string (void);
 const gchar		*li_get_last_version_from_component (AsComponent *cpt);
 

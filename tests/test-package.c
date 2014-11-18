@@ -175,7 +175,7 @@ main (int argc, char **argv)
 
 	li_set_unittestmode (TRUE);
 
-	li_set_verbose (TRUE);
+	li_set_verbose_mode (TRUE);
 	g_test_init (&argc, &argv, NULL);
 
 	/* critical, error and warnings are fatal */
