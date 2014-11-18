@@ -157,7 +157,7 @@ li_package_tree_reset (GNode *root)
 		return;
 
 	while (TRUE) {
-		if (!LI_IS_PACKAGE (child))
+		if (!LI_IS_PACKAGE (child->data))
 			li_package_tree_teardown (child);
 		child = child->next;
 		if (child == NULL)
@@ -553,6 +553,34 @@ li_installer_get_package_info (LiInstaller *inst)
 	return priv->pki;
 }
 
+/**
+ * li_installer_get_appstream_data:
+ *
+ * Dump of AppStream XML data describing the software which will be installed.
+ *
+ * Returns: (transfer full): AppStream XML data or %NULL, free with g_free()
+ */
+gchar*
+li_installer_get_appstream_data (LiInstaller *inst)
+{
+	gchar *data = NULL;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+	GNode *child = priv->pkgs->children;
+	if (child == NULL)
+		return NULL;
+
+	while (TRUE) {
+		if (LI_IS_PACKAGE (child->data)) {
+			data = li_package_get_appstream_data (LI_PACKAGE (child->data));
+			break;
+		}
+		child = child->next;
+		if (child == NULL)
+			break;
+	}
+
+	return data;
+}
 /**
  * li_installer_error_quark:
  *

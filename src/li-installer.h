@@ -86,6 +86,7 @@ gboolean		li_installer_install (LiInstaller *inst,
 										GError **error);
 
 LiPkgInfo		*li_installer_get_package_info (LiInstaller *inst);
+gchar			*li_installer_get_appstream_data (LiInstaller *inst);
 
 G_END_DECLS
 
