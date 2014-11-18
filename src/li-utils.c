@@ -437,9 +437,9 @@ const gchar*
 li_get_prefixdir ()
 {
 	if (_unittestmode) {
-		const gchar *tmpdir = "/var/tmp/limba/test-root/usr";
-		const gchar *appdir = "/var/tmp/limba/test-root/usr/share/applications";
-		g_mkdir_with_parents (appdir, 0755);
+		#define tmpdir "/var/tmp/limba/test-root/usr"
+		g_mkdir_with_parents (tmpdir "/share/applications", 0755);
+		g_mkdir_with_parents (tmpdir "/local/bin", 0755);
 		return tmpdir;
 	} else {
 		return PREFIXDIR;

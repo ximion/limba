@@ -26,6 +26,7 @@
 #include "config.h"
 #include "li-exporter.h"
 
+#include <glib/gstdio.h>
 #include <glib/gi18n-lib.h>
 #include "li-utils-private.h"
 
@@ -180,6 +181,47 @@ out:
 }
 
 /**
+ * li_exporter_process_binary:
+ */
+static gboolean
+li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError **error)
+{
+	_cleanup_free_ gchar *dest;
+	_cleanup_free_ gchar *exec_cmd = NULL;
+	gchar *tmp;
+	GError *tmp_error = NULL;
+	LiExporterPrivate *priv = GET_PRIVATE (exp);
+
+	exec_cmd = g_path_get_basename (disk_location);
+	tmp = g_strdup_printf ("%s-%s", exec_cmd, priv->pkgid);
+	dest = g_build_filename (LI_PREFIXDIR, "local", "bin", tmp, NULL);
+	g_free (tmp);
+
+	if ((!priv->override) && (g_file_test (dest, G_FILE_TEST_EXISTS))) {
+		g_set_error (error,
+					G_FILE_ERROR,
+					G_FILE_ERROR_EXIST,
+					_("File '%s' already exists."), dest);
+		return FALSE;
+	}
+
+	/* create a wrapper script for our new application */
+	tmp = g_strdup_printf ("#!/bin/sh\nrunapp %s:/bin/%s $@\n", priv->pkgid, exec_cmd);
+	g_file_set_contents (dest, tmp, -1, &tmp_error);
+	g_free (tmp);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	g_chmod (dest, 0755);
+
+	/* register installation of new external file */
+	g_ptr_array_add (priv->external_files, g_strdup (dest));
+	return TRUE;
+}
+
+/**
  * li_exporter_process_file:
  */
 gboolean
@@ -194,6 +236,8 @@ li_exporter_process_file (LiExporter *exp, const gchar *filename, const gchar *d
 
 	if ((g_str_has_prefix (filename, "share/applications")) && (g_str_has_suffix (filename, ".desktop")))
 		ret = li_exporter_process_desktop_file (exp, disk_location, error);
+	else if (g_str_has_prefix (filename, "bin"))
+		ret = li_exporter_process_binary (exp, disk_location, error);
 
 	return ret;
 }
