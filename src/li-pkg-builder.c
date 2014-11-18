@@ -392,6 +392,9 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 
 	g_ptr_array_unref (files);
 
+	/* cleanup temporary dir */
+	li_delete_dir_recursive (tmp_dir);
+
 	return TRUE;
 }
 
