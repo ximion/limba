@@ -281,7 +281,6 @@ li_installer_find_dependency_embedded (LiInstaller *inst, GNode *root, LiPkgInfo
 	LiPkgInfo *epki;
 	LiPackage *epkg;
 	GPtrArray *embedded;
-	GPtrArray *deps = NULL;
 	GError *tmp_error = NULL;
 	GNode *node;
 	LiPackage *pkg = LI_PACKAGE (root->data);
@@ -297,7 +296,6 @@ li_installer_find_dependency_embedded (LiInstaller *inst, GNode *root, LiPkgInfo
 	}
 
 	/* we have found a matching dependency! */
-	/* check that the dependencies' dependencies are or can be satisfied */
 	epkg = li_package_extract_embedded_package (pkg, epki, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
@@ -305,16 +303,43 @@ li_installer_find_dependency_embedded (LiInstaller *inst, GNode *root, LiPkgInfo
 	}
 
 	node = li_package_tree_add_package (root, epki, epkg);
+
 	/* check if we have the dependencies, or can install them */
 	li_installer_check_dependencies (inst, node, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
-		g_object_unref (deps);
 		return FALSE;
 	}
 	g_object_unref (epkg);
 
 	return TRUE;
+}
+
+/**
+ * li_installer_find_embedded_parent:
+ *
+ * This function checks for embedded dependencies in the parent package, which
+ * might satisfy dependencies in the child.
+ *
+ * Returns: %TRUE if dependency was found and added to the graph
+ */
+static gboolean
+li_installer_find_embedded_parent (LiInstaller *inst, GNode *pkinode, LiPkgInfo *dep)
+{
+	GNode *parent;
+
+	if (pkinode == NULL)
+		return FALSE;
+
+	parent = pkinode->parent;
+	/* parent needs to be non-null (in case we hit root)... */
+	if (parent == NULL)
+		return FALSE;
+	/*... and a package node */
+	if (!LI_IS_PACKAGE (parent))
+		return FALSE;
+
+	return li_installer_find_dependency_embedded (inst, parent, dep, NULL);
 }
 
 /**
@@ -345,6 +370,12 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 
 		/* test if this package is already in the installed set */
 		if (li_installer_find_satisfying_pkg (installed_sw, dep) == NULL) {
+			gboolean ret;
+			/* check if the parent package has this dependency */
+			ret = li_installer_find_embedded_parent (inst, root->parent, dep);
+			if (ret)
+				continue;
+
 			/* maybe we find this dependency as embedded copy? */
 			li_installer_find_dependency_embedded (inst, root, dep, &tmp_error);
 			if (tmp_error != NULL) {
