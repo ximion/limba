@@ -144,7 +144,7 @@ main (int argc, char **argv)
 
 	li_set_unittestmode (TRUE);
 
-	g_setenv ("G_MESSAGES_DEBUG", "all", TRUE);
+	li_set_verbose (TRUE);
 	g_test_init (&argc, &argv, NULL);
 
 	/* clean up test directory */

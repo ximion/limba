@@ -67,6 +67,10 @@ li_pkg_index_fetch_values_from_cdata (LiPkgIndex *pkidx, LiConfigData *cdata)
 		li_pkg_info_set_version (pki, str);
 		g_free (str);
 
+		str = li_config_data_get_value (cdata, "Requires");
+		li_pkg_info_set_dependencies (pki, str);
+		g_free (str);
+
 		str = li_config_data_get_value (cdata, "SHA256");
 		li_pkg_info_set_checksum_sha256 (pki, str);
 		g_free (str);
@@ -94,6 +98,7 @@ li_pkg_index_write_cdata_values (LiPkgIndex *pkidx, LiConfigData *cdata)
 		li_config_data_set_value (cdata, "PkgName", li_pkg_info_get_name (pki));
 		li_config_data_set_value (cdata, "Name", li_pkg_info_get_appname (pki));
 		li_config_data_set_value (cdata, "Version", li_pkg_info_get_version (pki));
+		li_config_data_set_value (cdata, "Requires", li_pkg_info_get_dependencies (pki));
 		li_config_data_set_value (cdata, "SHA256", li_pkg_info_get_checksum_sha256 (pki));
 	}
 }

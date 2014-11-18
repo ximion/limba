@@ -30,6 +30,7 @@ G_BEGIN_DECLS
 gboolean		li_str_empty (const gchar* str);
 gchar**			li_ptr_array_to_strv (GPtrArray *array);
 const gchar		*li_get_software_root (void);
+void			li_set_verbose (gboolean verbose);
 
 G_END_DECLS
 

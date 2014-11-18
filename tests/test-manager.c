@@ -124,8 +124,11 @@ main (int argc, char **argv)
 
 	li_set_unittestmode (TRUE);
 
-	g_setenv ("G_MESSAGES_DEBUG", "all", TRUE);
+	li_set_verbose (TRUE);
 	g_test_init (&argc, &argv, NULL);
+
+	/* clean up test directory */
+	li_delete_dir_recursive ("/var/tmp/limba/test-root");
 
 	/* critical, error and warnings are fatal */
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);

@@ -109,7 +109,6 @@ GPtrArray		*li_package_get_embedded_packages (LiPackage *pkg);
 LiPackage*		li_package_extract_embedded_package (LiPackage *pkg,
 													LiPkgInfo *pki,
 													GError **error);
-gchar			*li_package_get_appstream_data (LiPackage *pkg);
 
 G_END_DECLS
 

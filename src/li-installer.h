@@ -85,9 +85,7 @@ gboolean		li_installer_open_file (LiInstaller *inst,
 gboolean		li_installer_install (LiInstaller *inst,
 										GError **error);
 
-LiPackage		*li_installer_get_package (LiInstaller *inst);
-void			li_installer_set_package (LiInstaller *inst,
-											LiPackage *pkg);
+LiPkgInfo		*li_installer_get_package_info (LiInstaller *inst);
 
 G_END_DECLS
 

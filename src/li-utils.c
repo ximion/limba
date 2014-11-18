@@ -454,3 +454,16 @@ li_set_unittestmode (gboolean testmode)
 {
 	_unittestmode = testmode;
 }
+
+/**
+ * li_set_verbose:
+ * @verbose: %TRUE to increase verbosity
+ *
+ * Write verbose output on the command line.
+ */
+void
+li_set_verbose (gboolean verbose)
+{
+	/* TODO: Replace this hack with a logging handler */
+	g_setenv ("G_MESSAGES_DEBUG", "all", TRUE);
+}
