@@ -138,7 +138,7 @@ li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, Li
 	node = g_node_new (g_object_ref (li_package_get_info (pkg)));
 	g_node_append (parent, node);
 
-	g_hash_table_insert (priv->install_todo,
+	ret = g_hash_table_insert (priv->install_todo,
 						g_strdup (li_package_get_id (pkg)),
 						g_object_ref (pkg));
 	if (ret)
