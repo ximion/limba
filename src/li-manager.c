@@ -412,6 +412,7 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 		} else {
 			/* apparently nothing uses this runtime anymore - remove it */
 			li_runtime_remove (rt);
+			g_debug ("Removed runtime: %s", li_runtime_get_uuid (rt));
 		}
 		g_object_unref (rt);
 	}
@@ -437,6 +438,8 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 					_("Could not remove software directory."));
 		return FALSE;
 	}
+
+	g_debug ("Removed package: %s", pkgid);
 
 	/* we need to recreate the caches, now that the installed software has changed */
 	li_manager_reset_cached_data (mgr);

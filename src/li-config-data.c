@@ -228,6 +228,7 @@ li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 	GList *l;
 	gboolean add_to_value = FALSE;
 	gboolean found = FALSE;
+	gchar *tmp_str;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
 	if (priv->content == NULL) {
@@ -282,10 +283,16 @@ li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 	if (!found) {
 		/* we did not find the field */
 		g_string_free (res, TRUE);
-		return FALSE;
+		return NULL;
 	}
 
-	return g_string_free (res, FALSE);
+	tmp_str = g_string_free (res, FALSE);
+	g_strstrip (tmp_str);
+	if (li_str_empty (tmp_str)) {
+		g_free (tmp_str);
+		return NULL;
+	}
+	return tmp_str;
 }
 
 /**
