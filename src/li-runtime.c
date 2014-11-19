@@ -339,7 +339,10 @@ out:
 	return TRUE;
 }
 
-gboolean
+/**
+ * li_runtime_link_software:
+ */
+static gboolean
 li_runtime_link_software (LiRuntime *rt, LiPkgInfo *pki, GError **error)
 {
 	gchar *data_path;
@@ -372,12 +375,6 @@ li_runtime_link_software (LiRuntime *rt, LiPkgInfo *pki, GError **error)
 
 	/* register the added member with the runtime */
 	li_runtime_add_member (rt, pkid);
-
-	/* store metadata on disk */
-	ret = li_runtime_save (rt, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-	}
 out:
 	g_free (rt_path);
 	return ret;
@@ -416,6 +413,11 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 			g_propagate_prefixed_error (error, tmp_error, "%s ", "Unable to link runtime.");
 			goto out;
 		}
+	}
+	/* store metadata on disk */
+	ret = li_runtime_save (rt, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
 	}
 
 out:

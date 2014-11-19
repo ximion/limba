@@ -347,20 +347,25 @@ li_installer_find_dependency_embedded (LiInstaller *inst, GNode *root, LiPkgInfo
  * Returns: %TRUE if dependency was found and added to the graph
  */
 static gboolean
-li_installer_find_embedded_parent (LiInstaller *inst, GNode *pkinode, LiPkgInfo *dep)
+li_installer_find_embedded_parent (LiInstaller *inst, GNode *child, LiPkgInfo *dep)
 {
 	GNode *parent;
 
-	if (pkinode == NULL)
+	if (child == NULL)
 		return FALSE;
 
-	parent = pkinode->parent;
+	parent = child->parent;
 	/* parent needs to be non-null (in case we hit root)... */
 	if (parent == NULL)
 		return FALSE;
 	/*... and a package node */
-	if (!LI_IS_PACKAGE (parent))
+	if (!LI_IS_PACKAGE (parent->data))
 		return FALSE;
+
+	g_debug ("Reverse-lookup for component %s-%s in package %s.",
+				li_pkg_info_get_name (dep),
+				li_pkg_info_get_version (dep),
+				li_package_get_id (LI_PACKAGE (parent->data)));
 
 	return li_installer_find_dependency_embedded (inst, parent, dep, NULL);
 }
@@ -395,7 +400,7 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 		if (li_installer_find_satisfying_pkg (installed_sw, dep) == NULL) {
 			gboolean ret;
 			/* check if the parent package has this dependency */
-			ret = li_installer_find_embedded_parent (inst, root->parent, dep);
+			ret = li_installer_find_embedded_parent (inst, root, dep);
 			if (ret)
 				continue;
 
@@ -458,6 +463,7 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 		/* now get the runtime-env id for the new application */
 		rt = li_manager_find_runtime_with_members (priv->mgr, full_deps);
 		if (rt == NULL) {
+			g_debug ("Creating new runtime.");
 			/* no runtime was found, create a new one */
 			rt = li_runtime_create_with_members (full_deps, &tmp_error);
 			if ((tmp_error != NULL) || (rt == NULL)) {
