@@ -413,7 +413,7 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 
 		li_runtime_link_software (rt, pki, &tmp_error);
 		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+			g_propagate_prefixed_error (error, tmp_error, "%s ", "Unable to link runtime.");
 			goto out;
 		}
 	}
