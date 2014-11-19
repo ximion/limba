@@ -81,7 +81,7 @@ pkg_check_modules(UUID REQUIRED uuid>=2.0)
 
 find_package(GI REQUIRED)
 find_package(LibArchive REQUIRED)
-find_package(GPGMe REQUIRED)
+#find_package(GPGMe REQUIRED)
 find_library(M_LIB m)
 
 #
