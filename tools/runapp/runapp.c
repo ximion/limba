@@ -268,7 +268,6 @@ main (gint argc, gchar *argv[])
 	setuid (getuid ());
 
 	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/lib");
-	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/usr/lib");
 
 	child_argv = malloc ((1 + argc - 1) * sizeof (char *));
 	if (child_argv == NULL) {
