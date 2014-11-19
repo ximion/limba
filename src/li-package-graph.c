@@ -22,8 +22,8 @@
  * SECTION:li-package-graph
  * @short_description: Represents a package dependency graph
  *
- * This class represents a graph of all to-be-installed packages, as well as a hash-table of
- * packages which need installation.
+ * This class represents a graph of packages (nodes are #LiPkgInfo instances, edges represent a dependency),
+ * as well as a hash-table of packages which need installation.
  * It is mainly used by #LiInstaller at time.
  */
 
@@ -69,13 +69,6 @@ li_package_graph_init (LiPackageGraph *pg)
 	priv->root_pkg = g_node_new (NULL);
 	priv->install_todo = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 }
-
-/**
- * The package/dependency tree contains all packages the current to-be-installed
- * software depends on.
- *
- * Nodes have a #LiPkgInfo as data.
- */
 
 /**
  * _li_package_graph_free_node:
