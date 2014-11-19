@@ -186,11 +186,16 @@ out:
 static gboolean
 li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError **error)
 {
-	_cleanup_free_ gchar *dest;
+	_cleanup_free_ gchar *dest = NULL;
 	_cleanup_free_ gchar *exec_cmd = NULL;
 	gchar *tmp;
 	GError *tmp_error = NULL;
+	struct stat sb;
 	LiExporterPrivate *priv = GET_PRIVATE (exp);
+
+	/* only process this if the file is executable */
+	if (stat (disk_location, &sb) == 0 && !(sb.st_mode & S_IXUSR))
+		return TRUE;
 
 	exec_cmd = g_path_get_basename (disk_location);
 	tmp = g_strdup_printf ("%s-%s", exec_cmd, priv->pkgid);
