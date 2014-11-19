@@ -31,13 +31,15 @@
 #include "li-pkg-info.h"
 #include "li-manager.h"
 #include "li-runtime.h"
+#include "li-package-graph.h"
 
 typedef struct _LiInstallerPrivate	LiInstallerPrivate;
 struct _LiInstallerPrivate
 {
 	LiManager *mgr;
-	GNode *pkgs;
 	LiPkgInfo *pki;
+	LiPackageGraph *pg;
+	LiPackage *pkg;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
@@ -45,148 +47,6 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
 #define GET_PRIVATE(o) (li_installer_get_instance_private (o))
 
 static void li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error);
-
-/**
- * The package/dependency tree contains all packages the current to-be-installed
- * software depends on.
- *
- * Nodes have a #LiPackage as data, in case the package still needs to be installed.
- * Otherwise, a #LiPkgInfo instance is present instead.
- */
-
-/**
- * _li_package_tree_free_node:
- */
-static gboolean
-_li_package_tree_free_node (GNode *node, gpointer data)
-{
-	if (node->data != NULL)
-		g_object_unref (node->data);
-
-	return FALSE;
-}
-
-/**
- * li_package_tree_teardown:
- */
-static void
-li_package_tree_teardown (GNode *root)
-{
-	g_node_traverse (root,
-					G_IN_ORDER,
-					G_TRAVERSE_ALL,
-					-1,
-					_li_package_tree_free_node,
-					NULL);
-	g_node_destroy (root);
-}
-
-/**
- * li_package_tree_add_package:
- * @pkg: The package required to be installed
- *
- * Returns: A reference to the new node
- */
-static GNode*
-li_package_tree_add_package (GNode *parent, LiPackage *pkg)
-{
-	GNode *node;
-
-	node = g_node_new (g_object_ref (pkg));
-	if (parent != NULL)
-		g_node_append (parent, node);
-	g_debug ("Package %s marked for installation.", li_package_get_id (pkg));
-
-	return node;
-}
-
-/**
- * li_package_tree_add_package_info:
- * @pki: The information about an installed package
- *
- * Returns: A reference to the new node
- */
-static GNode*
-li_package_tree_add_package_info (GNode *parent, LiPkgInfo *pki)
-{
-	GNode *node;
-
-	node = g_node_new (g_object_ref (pki));
-	if (parent != NULL)
-		g_node_append (parent, node);
-	g_debug ("Component %s-%s found.", li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
-
-	return node;
-}
-
-/**
- * _li_package_tree_add_pki_to_array:
- */
-static gboolean
-_li_package_tree_add_pki_to_array (GNode *node, gpointer data)
-{
-	LiPackage *pkg;
-	GPtrArray *array = (GPtrArray*) data;
-
-	if (LI_IS_PKG_INFO (node->data)) {
-		g_ptr_array_add (array, node->data);
-	} else {
-		pkg = LI_PACKAGE (node->data);
-		g_ptr_array_add (array, li_package_get_info (pkg));
-	}
-
-	return FALSE;
-}
-
-/**
- * li_package_tree_branch_to_array:
- *
- * Get an array of #LiPkgInfo objects this node depends on.
- */
-static GPtrArray*
-li_package_tree_branch_to_array (GNode *root)
-{
-	GPtrArray *array;
-
-	if (root->children == NULL)
-		return NULL;
-
-	array = g_ptr_array_new ();
-	g_node_traverse (root,
-					G_PRE_ORDER,
-					G_TRAVERSE_ALL,
-					-1,
-					_li_package_tree_add_pki_to_array,
-					array);
-
-	/* remove the root node value from the array */
-	if (array->len > 0)
-		g_ptr_array_remove_index (array, 0);
-
-	/* return null in case the array is empty */
-	if (array->len == 0) {
-		g_ptr_array_unref (array);
-		return NULL;
-	}
-
-	return array;
-}
-
-/**
- * li_package_tree_reset:
- *
- * Remove all nodes from the tree, except for the root node.
- */
-static void
-li_package_tree_reset (GNode *root)
-{
-	GNode *child = root->children;
-	if (child == NULL)
-		return;
-
-	while (child->next != NULL)
-		li_package_tree_teardown (child->next);
-}
 
 /**
  * li_installer_finalize:
@@ -198,7 +58,9 @@ li_installer_finalize (GObject *object)
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	g_object_unref (priv->mgr);
-	li_package_tree_teardown (priv->pkgs);
+	g_object_unref (priv->pg);
+	if (priv->pkg != NULL)
+		g_object_unref (priv->pkg);
 
 	G_OBJECT_CLASS (li_installer_parent_class)->finalize (object);
 }
@@ -212,7 +74,7 @@ li_installer_init (LiInstaller *inst)
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	priv->mgr = li_manager_new ();
-	priv->pkgs = g_node_new (NULL);
+	priv->pg = li_package_graph_new ();
 }
 
 /**
@@ -289,24 +151,31 @@ li_installer_find_satisfying_pkg (GPtrArray *pkglist, LiPkgInfo *dep)
 		}
 
 		// TODO: Check version as well
-
 	}
 
 	return NULL;
 }
 
 /**
- * li_installer_find_dependency_embedded:
+ * li_installer_find_dependency_embedded_single:
  */
 static gboolean
-li_installer_find_dependency_embedded (LiInstaller *inst, GNode *root, LiPkgInfo *dep_pki, GError **error)
+li_installer_find_dependency_embedded_single (LiInstaller *inst, GNode *root, LiPkgInfo *dep_pki, GError **error)
 {
 	LiPkgInfo *epki;
 	LiPackage *epkg;
 	GPtrArray *embedded;
 	GError *tmp_error = NULL;
 	GNode *node;
-	LiPackage *pkg = LI_PACKAGE (root->data);
+	LiPkgInfo *pki = LI_PKG_INFO (root->data);
+	LiPackage *pkg;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	pkg = li_package_graph_get_install_candidate (priv->pg, pki);
+	if (pkg == NULL) {
+		g_debug ("Skipping dependency-lookup in installed package %s", li_pkg_info_get_id (pki));
+		return FALSE;
+	}
 
 	embedded = li_package_get_embedded_packages (pkg);
 	epki = li_installer_find_satisfying_pkg (embedded, dep_pki);
@@ -314,18 +183,25 @@ li_installer_find_dependency_embedded (LiInstaller *inst, GNode *root, LiPkgInfo
 		g_set_error (error,
 			LI_INSTALLER_ERROR,
 			LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND,
-			_("Could not find dependency: %s"), li_pkg_info_get_name (dep_pki));
+			_("Could not find dependency: %s"),
+			li_pkg_info_get_name (dep_pki));
 		return FALSE;
 	}
 
 	/* we have found a matching dependency! */
-	epkg = li_package_extract_embedded_package (pkg, epki, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
+	epkg = li_package_graph_get_install_candidate (priv->pg, epki);
+	if (epkg == NULL) {
+		/* this package is not yet on the todo-list, so add it! */
+		epkg = li_package_extract_embedded_package (pkg, epki, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return FALSE;
+		}
+	} else {
+		g_object_ref (epkg);
 	}
 
-	node = li_package_tree_add_package (root, epkg);
+	node = li_package_graph_add_package_install_todo (priv->pg, root, epkg);
 
 	/* check if we have the dependencies, or can install them */
 	li_installer_check_dependencies (inst, node, &tmp_error);
@@ -339,35 +215,61 @@ li_installer_find_dependency_embedded (LiInstaller *inst, GNode *root, LiPkgInfo
 }
 
 /**
- * li_installer_find_embedded_parent:
+ * li_installer_find_dependency_embedded:
  *
- * This function checks for embedded dependencies in the parent package, which
- * might satisfy dependencies in the child.
+ * This function checks for embedded dependencies in the current package,
+ * the parent package and in the root package, which might satisfy dependencies
+ * in the child.
  *
  * Returns: %TRUE if dependency was found and added to the graph
  */
 static gboolean
-li_installer_find_embedded_parent (LiInstaller *inst, GNode *child, LiPkgInfo *dep)
+li_installer_find_dependency_embedded (LiInstaller *inst, GNode *child, LiPkgInfo *dep, GError **error)
 {
+	GError *tmp_error = NULL;
 	GNode *parent;
+	GNode *root;
+	gboolean ret;
 
-	if (child == NULL)
-		return FALSE;
+	ret = li_installer_find_dependency_embedded_single (inst, child, dep, &tmp_error);
+	if (ret)
+		return TRUE;
 
 	parent = child->parent;
-	/* parent needs to be non-null (in case we hit root)... */
-	if (parent == NULL)
+	/* parent needs to be non-null (in case we hit root) */
+	if (parent == NULL) {
+		g_propagate_error (error, tmp_error);
 		return FALSE;
-	/*... and a package node */
-	if (!LI_IS_PACKAGE (parent->data))
-		return FALSE;
+	}
+	g_error_free (tmp_error);
+	tmp_error = NULL;
 
-	g_debug ("Reverse-lookup for component %s-%s in package %s.",
+	g_debug ("Reverse-lookup for component %s (~%s) in package %s (requested by %s).",
 				li_pkg_info_get_name (dep),
 				li_pkg_info_get_version (dep),
-				li_package_get_id (LI_PACKAGE (parent->data)));
+				li_pkg_info_get_id (LI_PKG_INFO (parent->data)),
+				li_pkg_info_get_id (LI_PKG_INFO (child->data)));
 
-	return li_installer_find_dependency_embedded (inst, parent, dep, NULL);
+	ret = li_installer_find_dependency_embedded_single (inst, parent, dep, &tmp_error);
+	if (ret)
+		return TRUE;
+
+	root = g_node_get_root (parent);
+	if (root == parent) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+	g_error_free (tmp_error);
+	tmp_error = NULL;
+
+	g_debug ("Reverse-lookup for component %s (~%s) in root package.",
+				li_pkg_info_get_name (dep),
+				li_pkg_info_get_version (dep));
+
+	ret = li_installer_find_dependency_embedded_single (inst, root, dep, &tmp_error);
+	g_propagate_error (error, tmp_error);
+
+	return ret;
 }
 
 /**
@@ -384,8 +286,13 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 	GPtrArray *deps;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	pkg = LI_PACKAGE (root->data);
-	pki = li_package_get_info (pkg);
+	pki = LI_PKG_INFO (root->data);
+	pkg = li_package_graph_get_install_candidate (priv->pg, pki);
+	if (pkg == NULL) {
+		g_debug ("Hit installed package: %s", li_pkg_info_get_id (pki));
+		return;
+	}
+
 	deps = li_installer_parse_dependency_string (li_pkg_info_get_dependencies (pki));
 
 	/* do we have dependencies at all? */
@@ -398,12 +305,6 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 
 		/* test if this package is already in the installed set */
 		if (li_installer_find_satisfying_pkg (installed_sw, dep) == NULL) {
-			gboolean ret;
-			/* check if the parent package has this dependency */
-			ret = li_installer_find_embedded_parent (inst, root, dep);
-			if (ret)
-				continue;
-
 			/* maybe we find this dependency as embedded copy? */
 			li_installer_find_dependency_embedded (inst, root, dep, &tmp_error);
 			if (tmp_error != NULL) {
@@ -412,7 +313,7 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 			}
 		} else {
 			/* dependency is already installed, add it as satisfied */
-			li_package_tree_add_package_info (root, dep);
+			li_package_graph_add_package (priv->pg, root, dep);
 		}
 	}
 
@@ -449,14 +350,15 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 	}
 
 	/* already installed nodes are not really interesting here */
-	if (LI_IS_PKG_INFO (node->data))
+	info = LI_PKG_INFO (node->data);
+	pkg = li_package_graph_get_install_candidate (priv->pg, info);
+	if (pkg == NULL) {
+		g_debug ("Skipping '%s': Already installed.", li_pkg_info_get_id (info));
 		return TRUE;
-
-	pkg = LI_PACKAGE (node->data);
-	info = li_package_get_info (pkg);
+	}
 
 	/* create runtime for this software */
-	full_deps = li_package_tree_branch_to_array (node);
+	full_deps = li_package_graph_branch_to_array (node);
 	if (full_deps != NULL) {
 		LiRuntime *rt;
 
@@ -484,7 +386,9 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 		g_propagate_error (error, tmp_error);
 		goto out;
 	}
+
 	g_debug ("Installed package: %s", li_package_get_id (pkg));
+	li_package_graph_mark_installed (priv->pg, info);
 
 	ret = TRUE;
 out:
@@ -502,10 +406,12 @@ li_installer_set_package (LiInstaller *inst, LiPackage *pkg)
 {
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	/* remove the current package tree */
-	li_package_tree_teardown (priv->pkgs);
+	li_package_graph_set_root_install_todo (priv->pg, pkg);
 
-	priv->pkgs = li_package_tree_add_package (NULL, pkg);
+	/* we hold a reference to our main package over the whole LiInstaller lifecycle */
+	if (priv->pkg != NULL)
+		g_object_unref (priv->pkg);
+	priv->pkg = g_object_ref (pkg);
 }
 
 /**
@@ -516,9 +422,11 @@ li_installer_install (LiInstaller *inst, GError **error)
 {
 	gboolean ret = FALSE;
 	GError *tmp_error = NULL;
+	GNode *root;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	if (priv->pkgs->data == NULL) {
+	root = li_package_graph_get_root (priv->pg);
+	if (root->data == NULL) {
 		g_set_error (error,
 			LI_INSTALLER_ERROR,
 			LI_INSTALLER_ERROR_FAILED,
@@ -528,14 +436,14 @@ li_installer_install (LiInstaller *inst, GError **error)
 
 	/* create a dependency tree for this package installation */
 	/* NOTE: The root node is always the to-be-installed package (a LiPackage instance) */
-	li_installer_check_dependencies (inst, priv->pkgs, &tmp_error);
+	li_installer_check_dependencies (inst, root, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;
 	}
 
 	/* install the package tree */
-	ret = li_installer_install_node (inst, priv->pkgs, &tmp_error);
+	ret = li_installer_install_node (inst, root, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;
@@ -543,7 +451,7 @@ li_installer_install (LiInstaller *inst, GError **error)
 
 out:
 	/* teardown current dependency tree */
-	li_package_tree_reset (priv->pkgs);
+	li_package_graph_reset (priv->pg);
 
 	return ret;
 }
@@ -581,7 +489,7 @@ LiPkgInfo*
 li_installer_get_package_info (LiInstaller *inst)
 {
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
-	return priv->pki;
+	return li_package_get_info (priv->pkg);
 }
 
 /**
@@ -594,14 +502,12 @@ li_installer_get_package_info (LiInstaller *inst)
 gchar*
 li_installer_get_appstream_data (LiInstaller *inst)
 {
-	LiPackage *pkg;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	pkg = priv->pkgs->data;
-	if (pkg == NULL)
+	if (priv->pkg == NULL)
 		return NULL;
 
-	return li_package_get_appstream_data (pkg);
+	return li_package_get_appstream_data (priv->pkg);
 }
 /**
  * li_installer_error_quark:

@@ -448,6 +448,27 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 }
 
 /**
+ * li_manager_package_is_installed:
+ *
+ * Test if package is installed.
+ */
+gboolean
+li_manager_package_is_installed (LiManager *mgr, LiPkgInfo *pki)
+{
+	_cleanup_free_ gchar *pkid = NULL;
+	_cleanup_free_ gchar *path = NULL;
+
+	pkid = g_strdup_printf ("%s-%s",
+							li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
+	path = g_build_filename (LI_SOFTWARE_ROOT, pkid, "control", NULL);
+
+	if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
+		return TRUE;
+
+	return FALSE;
+}
+
+/**
  * li_manager_error_quark:
  *
  * Return value: An error quark.

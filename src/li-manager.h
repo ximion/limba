@@ -93,6 +93,9 @@ gboolean		li_manager_remove_software (LiManager *mgr,
 											const gchar *pkgid,
 											GError **error);
 
+gboolean		li_manager_package_is_installed (LiManager *mgr,
+												LiPkgInfo *pki);
+
 G_END_DECLS
 
 #endif /* __LI_MANAGER_H */

@@ -13,6 +13,7 @@ set(LIBLIMBA_SRC
 	li-package.c
 	li-runtime.c
 	li-exporter.c
+	li-package-graph.c
 	li-installer.c
 	li-manager.c
 	li-pkg-builder.c
@@ -34,6 +35,7 @@ set(LIBLIMBA_PRIVATE_HEADERS
 	li-utils-private.h
 	li-config-data.h
 	li-exporter.h
+	li-package-graph.h
 )
 
 add_definitions("-DLI_COMPILATION"

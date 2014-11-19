@@ -261,9 +261,9 @@ li_runtime_link_data_path (const gchar* sw_dir, const gchar* rt_destination, GEr
 		goto out;
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		gchar *path;
+		_cleanup_free_ gchar *path = NULL;
+		_cleanup_free_ gchar *dest_path = NULL;
 		gchar *tmp;
-		gchar *dest_path;
 		gint res;
 
 		path = g_build_filename (sw_dir,
@@ -276,8 +276,6 @@ li_runtime_link_data_path (const gchar* sw_dir, const gchar* rt_destination, GEr
 		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
 			/* if there is already a file with that name at the destination, we skip this directory */
 			if (g_file_test (dest_path, G_FILE_TEST_IS_REGULAR)) {
-				g_free (path);
-				g_free (dest_path);
 				continue;
 			}
 
@@ -296,11 +294,12 @@ li_runtime_link_data_path (const gchar* sw_dir, const gchar* rt_destination, GEr
 			li_runtime_link_data_path (path, dest_path, &tmp_error);
 			/* if there was an error, exit */
 			if (tmp_error != NULL) {
-				g_free (path);
-				g_free (dest_path);
 				goto out;
 			}
 		} else {
+			if (g_file_test (dest_path, G_FILE_TEST_EXISTS))
+				continue;
+
 			if (g_file_test (path, G_FILE_TEST_IS_SYMLINK)) {
 				gchar *target;
 				target = g_file_read_link (path, &tmp_error);
@@ -320,9 +319,6 @@ li_runtime_link_data_path (const gchar* sw_dir, const gchar* rt_destination, GEr
 				goto out;
 			}
 		}
-
-		g_free (path);
-		g_free (dest_path);
 	}
 	if (tmp_error != NULL)
 		goto out;
@@ -395,7 +391,10 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 	guint i;
 	LiRuntime *rt;
 	gboolean ret = TRUE;
+	_cleanup_hashtable_unref_ GHashTable *dedup;
 	GError *tmp_error = NULL;
+
+	dedup = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 
 	rt = li_runtime_new ();
 	for (i = 0; i < members->len; i++) {
@@ -407,6 +406,10 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 			g_warning ("Found package without identifier!");
 			continue;
 		}
+
+		/* did we add this already? */
+		if (!g_hash_table_add (dedup, g_strdup (pkid)))
+			continue;
 
 		li_runtime_link_software (rt, pki, &tmp_error);
 		if (tmp_error != NULL) {
