@@ -37,6 +37,8 @@
 
 G_BEGIN_DECLS
 
+#define LI_IPK_MAGIC "limba1\t\034"
+
 /**
  * LiPackageError:
  * @LI_PACKAGE_ERROR_FAILED:			Generic failure

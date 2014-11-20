@@ -252,6 +252,7 @@ li_package_open_base_ipk (LiPackage *pkg, GError **error)
 {
 	struct archive *ar;
 	int res;
+	gchar magic[8];
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
 	/* create new archive object for reading */
@@ -261,8 +262,14 @@ li_package_open_base_ipk (LiPackage *pkg, GError **error)
 	/* ...and are tarballs */
 	archive_read_support_format_tar (ar);
 
-	/* open the file, exit on error */
+	/* try to read the IPK header (first 8 bytes) */
 	rewind (priv->archive_file);
+	fread (&magic, sizeof (gchar), sizeof (magic), priv->archive_file);
+	if (strcmp (magic, LI_IPK_MAGIC) != 0) {
+		/* file doesn't have an IPK magic number - try to process it anyway */
+		rewind (priv->archive_file);
+	}
+
 	res = archive_read_open_FILE (ar, priv->archive_file);
 	if (res != ARCHIVE_OK) {
 		g_set_error (error,

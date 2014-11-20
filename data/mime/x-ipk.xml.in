@@ -6,6 +6,8 @@
     <generic-icon name="package-x-generic"/>
     <alias type="application/x-limba-package"/>
     <glob pattern="*.ipk"/>
-    <glob pattern="*.lpk"/>
+    <magic priority="60">
+        <match value="limba1\t\034" type="string" offset="0"/>
+    </magic>
   </mime-type>
 </mime-info>

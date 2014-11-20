@@ -40,12 +40,14 @@ G_BEGIN_DECLS
  * LiBuilderError:
  * @LI_BUILDER_ERROR_FAILED:		Generic failure
  * @LI_BUILDER_ERROR_NOT_FOUND:		A required file or entity was not found
+ * @LI_BUILDER_ERROR_WRITE:			An error occured while writing data
  *
  * The error type.
  **/
 typedef enum {
 	LI_BUILDER_ERROR_FAILED,
 	LI_BUILDER_ERROR_NOT_FOUND,
+	LI_BUILDER_ERROR_WRITE,
 	/*< private >*/
 	LI_BUILDER_ERROR_LAST
 } LiBuilderError;

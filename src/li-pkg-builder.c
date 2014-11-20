@@ -220,7 +220,7 @@ li_pkg_builder_add_embedded_packages (const gchar *tmp_dir, const gchar *repo_so
  * li_pkg_builder_write_package:
  */
 static void
-li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname)
+li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname, GError **error)
 {
 	struct archive *a;
 	struct archive_entry *entry;
@@ -229,11 +229,31 @@ li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname)
 	int len;
 	int fd;
 	guint i;
+	FILE *fp;
+
+	fp = fopen (out_fname, "w");
+	if (fp == NULL) {
+		g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_WRITE,
+				_("Could not open file '%s' for writing."), out_fname);
+		return;
+	}
+
+	/* write magic number */
+	if (fputs (LI_IPK_MAGIC, fp) < 0) {
+		g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_WRITE,
+				_("Could not write to file: '%s'"), out_fname);
+		fclose (fp);
+		return;
+	}
 
 	a = archive_write_new ();
 	archive_write_add_filter_gzip (a);
 	archive_write_set_format_pax_restricted (a);
-	archive_write_open_filename (a, out_fname);
+	archive_write_open_FILE (a, fp);
 
 	for (i = 0; i < files->len; i++) {
 		gchar *ar_fname;
@@ -271,8 +291,9 @@ li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname)
 		archive_entry_free (entry);
 	}
 
-	archive_write_close(a);
-	archive_write_free(a);
+	archive_write_close (a);
+	archive_write_free (a);
+	fclose (fp);
 }
 
 /**
@@ -388,9 +409,13 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 	g_ptr_array_add (files, payload_file);
 
 	/* write package */
-	li_pkg_builder_write_package (files, pkg_fname);
-
+	li_pkg_builder_write_package (files, pkg_fname, &tmp_error);
 	g_ptr_array_unref (files);
+
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
 
 	/* cleanup temporary dir */
 	li_delete_dir_recursive (tmp_dir);
