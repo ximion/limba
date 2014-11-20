@@ -217,13 +217,25 @@ pkgen_make_template (const gchar *dir)
 		tmp = as_component_to_xml (cpt);
 		g_file_set_contents (asfile, tmp, -1, &error);
 		g_free (tmp);
-		g_free (asfile);
 		if (error != NULL) {
 			li_print_stderr (_("Unable to write AppStream data. %s"), error->message);
 			g_error_free (error);
 			res = 2;
+			g_free (asfile);
 			goto out;
 		}
+
+		if (g_file_test ("/usr/bin/xmllint", G_FILE_TEST_EXISTS)) {
+			gchar *cmd;
+			/* we can try to pretty-print our XML file. Using xmllint from the environment should
+			 * not be a security risk here */
+			cmd = g_strdup_printf ("xmllint --format %s -o %s", asfile, asfile);
+
+			/* any error / exit-code isn't relevant here - a failed attempt to format the XML will do no harm */
+			g_spawn_command_line_sync (cmd, NULL, NULL, NULL, NULL);
+			g_free (cmd);
+		}
+		g_free (asfile);
     }
 
     fname = g_build_filename (res_dir, "control", NULL);
