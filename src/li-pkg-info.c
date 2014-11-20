@@ -39,6 +39,7 @@ struct _LiPkgInfoPrivate
 	gchar *dependencies;
 	gchar *hash_sha256;
 
+	LiPackageFlags flags;
 	LiVersionFlags vrel;
 };
 
@@ -47,11 +48,21 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiPkgInfo, li_pkg_info, G_TYPE_OBJECT)
 #define GET_PRIVATE(o) (li_pkg_info_get_instance_private (o))
 
 /**
+ * li_str_to_bool:
+ */
+static inline gboolean
+li_str_to_bool (const gchar *str)
+{
+		return g_strcmp0 (str, "true") == 0;
+}
+
+/**
  * li_pkg_info_fetch_values_from_cdata:
  **/
 static void
 li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 {
+	gchar *str;
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 
 	g_free (priv->id);
@@ -71,6 +82,11 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 
 	g_free (priv->runtime_uuid);
 	priv->runtime_uuid = li_config_data_get_value (cdata, "Runtime-UUID");
+
+	str = li_config_data_get_value (cdata, "Automatic");
+	if (li_str_to_bool (str))
+		li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_AUTOMATIC);
+	g_free (str);
 }
 
 /**
@@ -95,6 +111,9 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 
 	if (priv->runtime_uuid != NULL)
 		li_config_data_set_value (cdata, "Runtime-UUID", priv->runtime_uuid);
+
+	if (priv->flags & LI_PACKAGE_FLAG_AUTOMATIC)
+		li_config_data_set_value (cdata, "Automatic", "true");
 }
 
 /**
@@ -126,6 +145,7 @@ li_pkg_info_init (LiPkgInfo *pki)
 
 	priv->id = NULL;
 	priv->version = NULL;
+	priv->flags = LI_PACKAGE_FLAG_NONE;
 	priv->vrel = LI_VERSION_UNKNOWN;
 }
 
@@ -340,6 +360,36 @@ li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki, const gchar *hash)
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 	g_free (priv->hash_sha256);
 	priv->hash_sha256 = g_strdup (hash);
+}
+
+/**
+ * li_pkg_info_set_flags:
+ */
+void
+li_pkg_info_set_flags (LiPkgInfo *pki, LiPackageFlags flags)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	priv->flags = flags;
+}
+
+/**
+ * li_pkg_info_add_flag:
+ */
+void
+li_pkg_info_add_flag (LiPkgInfo *pki, LiPackageFlags flag)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	priv->flags |= flag;
+}
+
+/**
+ * li_pkg_info_get_flags:
+ */
+LiPackageFlags
+li_pkg_info_get_flags (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->flags;
 }
 
 /**

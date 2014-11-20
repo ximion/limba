@@ -407,6 +407,10 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 		return TRUE;
 	}
 
+	/* only the root node was set for manual installation */
+	if (!G_NODE_IS_ROOT (node))
+		li_pkg_info_add_flag (info, LI_PACKAGE_FLAG_AUTOMATIC);
+
 	/* create runtime for this software */
 	full_deps = li_package_graph_branch_to_array (node);
 	if (full_deps != NULL) {

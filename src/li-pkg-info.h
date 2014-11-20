@@ -38,7 +38,7 @@
 G_BEGIN_DECLS
 
 /**
- * LiVersionRelation:
+ * LiVersionFlags:
  * @LI_VERSION_UNKNOWN:		The relation is unknown
  * @LI_VERSION_EQUAL:		Versions should be equal
  * @LI_VERSION_LOWER:		The other version must be lower
@@ -52,6 +52,20 @@ typedef enum  {
 	LI_VERSION_LOWER = 1 << 1,
 	LI_VERSION_HIGHER = 1 << 2
 } LiVersionFlags;
+
+/**
+ * LiPackageFlags:
+ * @LI_PACKAGE_FLAG_NONE:		No package flag is set
+ * @LI_PACKAGE_FLAG_AUTOMATIC:	This package has been installed automatically
+ * @LI_PACKAGE_FLAG_REMOVE:		Remove this package automatically, if it is no longer in use
+ *
+ * Flags defining version requirements on other #LiPkgInfo instances.
+ **/
+typedef enum  {
+	LI_PACKAGE_FLAG_NONE = 0,
+	LI_PACKAGE_FLAG_AUTOMATIC = 1 << 0,
+	LI_PACKAGE_FLAG_REMOVE = 1 << 1
+} LiPackageFlags;
 
 typedef struct _LiPkgInfo		LiPkgInfo;
 typedef struct _LiPkgInfoClass	LiPkgInfoClass;
@@ -110,6 +124,12 @@ const gchar		*li_pkg_info_get_id (LiPkgInfo *pki);
 const gchar		*li_pkg_info_get_checksum_sha256 (LiPkgInfo *pki);
 void			li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki,
 										const gchar *hash);
+
+void			li_pkg_info_set_flags (LiPkgInfo *pki,
+									   LiPackageFlags flags);
+void			li_pkg_info_add_flag (LiPkgInfo *pki,
+									LiPackageFlags flag);
+LiPackageFlags	li_pkg_info_get_flags (LiPkgInfo *pki);
 
 void			li_pkg_info_set_version_relation (LiPkgInfo *pki,
 												LiVersionFlags vrel);
