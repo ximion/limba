@@ -38,6 +38,8 @@ struct _LiPkgInfoPrivate
 	gchar *runtime_uuid;
 	gchar *dependencies;
 	gchar *hash_sha256;
+
+	LiVersionFlags vrel;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPkgInfo, li_pkg_info, G_TYPE_OBJECT)
@@ -124,6 +126,7 @@ li_pkg_info_init (LiPkgInfo *pki)
 
 	priv->id = NULL;
 	priv->version = NULL;
+	priv->vrel = LI_VERSION_UNKNOWN;
 }
 
 /**
@@ -335,9 +338,28 @@ void
 li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki, const gchar *hash)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
-
 	g_free (priv->hash_sha256);
 	priv->hash_sha256 = g_strdup (hash);
+}
+
+/**
+ * li_pkg_info_set_version_relation:
+ */
+void
+li_pkg_info_set_version_relation (LiPkgInfo *pki, LiVersionFlags vrel)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	priv->vrel = vrel;
+}
+
+/**
+ * li_pkg_info_get_version_relation:
+ */
+LiVersionFlags
+li_pkg_info_get_version_relation (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->vrel;
 }
 
 /**

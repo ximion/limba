@@ -28,6 +28,7 @@
 
 #include <glib/gi18n-lib.h>
 
+#include "li-utils.h"
 #include "li-pkg-info.h"
 #include "li-manager.h"
 #include "li-runtime.h"
@@ -95,32 +96,60 @@ li_installer_parse_dependency_string (const gchar *depstr)
 
 	for (i = 0; slices[i] != NULL; i++) {
 		gchar *dep_raw;
-		//gchar *dep_version;
-		LiPkgInfo *ipkc;
+		LiPkgInfo *pki;
 
-		g_strstrip (slices[i]);
 		dep_raw = slices[i];
+		g_strstrip (dep_raw);
 
-		ipkc = li_pkg_info_new ();
+		pki = li_pkg_info_new ();
 		if (g_strrstr (dep_raw, "(") != NULL) {
 			gchar **strv;
-			//gchar *ver_tmp;
+			gchar *ver_tmp;
 
 			strv = g_strsplit (dep_raw, "(", 2);
 			g_strstrip (strv[0]);
 
-			li_pkg_info_set_name (ipkc, strv[0]);
-			//ver_tmp = strv[1];
-			//g_strstrip (ver_tmp);
+			li_pkg_info_set_name (pki, strv[0]);
+			ver_tmp = strv[1];
+			g_strstrip (ver_tmp);
+			if (strlen (ver_tmp) > 2) {
+				LiVersionFlags flags = LI_VERSION_UNKNOWN;
+				guint i;
 
+				/* extract the version relation (>>, >=, <=, ==, <<) */
+				for (i = 0; i <= 1; i++) {
+					if (ver_tmp[i] == '>')
+						flags |= LI_VERSION_HIGHER;
+					else if (ver_tmp[i] == '<')
+						flags |= LI_VERSION_LOWER;
+					else if (ver_tmp[i] == '=')
+						flags |= LI_VERSION_EQUAL;
+					else {
+						g_warning ("Found invalid character in version relation: %c", ver_tmp[i]);
+						flags = LI_VERSION_UNKNOWN;
+					}
+				}
 
-			// TODO: Extract version and relation (>>, >=, <=, ==, <<)
+				/* extract the version */
+				if (g_str_has_suffix (ver_tmp, ")")) {
+					ver_tmp = g_strndup (ver_tmp+2, strlen (ver_tmp)-3);
+					g_strstrip (ver_tmp);
+
+					li_pkg_info_set_version (pki, ver_tmp);
+					li_pkg_info_set_version_relation (pki, flags);
+					g_free (ver_tmp);
+				} else {
+					g_warning ("Malformed dependency string found: Closing bracket of version is missing: %s (%s", strv[0], ver_tmp);
+				}
+			}
+			g_strfreev (strv);
 		} else {
-			li_pkg_info_set_name (ipkc, dep_raw);
+			li_pkg_info_set_name (pki, dep_raw);
 		}
 
-		g_ptr_array_add (array, ipkc);
+		g_ptr_array_add (array, pki);
 	}
+	g_strfreev (slices);
 
 	return array;
 }
@@ -133,24 +162,45 @@ li_installer_find_satisfying_pkg (GPtrArray *pkglist, LiPkgInfo *dep)
 {
 	guint i;
 	const gchar *dep_name;
+	const gchar *dep_version;
+	LiVersionFlags dep_vrel;
 
 	if (pkglist == NULL)
 		return NULL;
 
 	dep_name = li_pkg_info_get_name (dep);
+	dep_version = li_pkg_info_get_version (dep);
+	dep_vrel = li_pkg_info_get_version_relation (dep);
 	for (i = 0; i < pkglist->len; i++) {
-		const gchar *str;
+		const gchar *pname;
 		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (pkglist, i));
 
-		str = li_pkg_info_get_name (pki);
-		if (g_strcmp0 (dep_name, str) == 0) {
-			/* update version of the dependency to match the one of the installed software */
-			str = li_pkg_info_get_version (pki);
-			li_pkg_info_set_version (dep, str);
-			return pki;
-		}
+		pname = li_pkg_info_get_name (pki);
+		if (g_strcmp0 (dep_name, pname) == 0) {
+			gint cmp;
+			const gchar *pver;
+			/* we found something which has the same name as the software we are looking for */
+			pver = li_pkg_info_get_version (pki);
+			if (dep_version == NULL) {
+				/* any version satisfies this dependency - so we are happy already */
+				li_pkg_info_set_version (dep, pver);
+				return pki;
+			}
 
-		// TODO: Check version as well
+			/* now verify that its version is sufficient */
+			cmp = li_compare_versions (pver, dep_version);
+			if (((cmp == 1) && (dep_vrel & LI_VERSION_HIGHER)) ||
+				((cmp == 0) && (dep_vrel & LI_VERSION_EQUAL)) ||
+				((cmp == -1) && (dep_vrel & LI_VERSION_LOWER))) {
+				/* we are good, the found package satisfies our requirements */
+
+				/* update the version of the dependency to what we found */
+				li_pkg_info_set_version (dep, pver);
+				return pki;
+			} else {
+				g_debug ("Found %s (%s), skipping because version does not pass requirements(%i#%s).", pname, pver, dep_vrel, dep_version);
+			}
+		}
 	}
 
 	return NULL;

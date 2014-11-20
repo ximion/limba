@@ -29,6 +29,8 @@ G_BEGIN_DECLS
 
 const gchar		*li_get_software_root (void);
 void			li_set_verbose_mode (gboolean verbose);
+gint			li_compare_versions (const gchar* a,
+									const gchar *b);
 
 G_END_DECLS
 

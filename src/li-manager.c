@@ -401,7 +401,7 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 				g_set_error (error,
 					LI_MANAGER_ERROR,
 					LI_MANAGER_ERROR_DEPENDENCY,
-						_("Removing  '%s' would break at least '%s' as well."), pkgid, li_pkg_info_get_name (pki2));
+						_("Removing '%s' would break at least '%s'."), pkgid, li_pkg_info_get_name (pki2));
 				dependency_found = TRUE;
 				break;
 			}

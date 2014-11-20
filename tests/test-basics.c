@@ -127,6 +127,17 @@ test_pkgindex ()
 	g_object_unref (idx);
 }
 
+void
+test_versions () {
+	g_assert (li_compare_versions ("6", "8") == -1);
+	g_assert (li_compare_versions ("0.6.12b-d", "0.6.12a") == 1);
+	g_assert (li_compare_versions ("7.4", "7.4") == 0);
+	g_assert (li_compare_versions ("ab.d", "ab.f") == -1);
+	g_assert (li_compare_versions ("0.6.16", "0.6.14") == 1);
+
+	g_assert (li_compare_versions ("3.0.rc2", "3.0.0") == -1);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -155,6 +166,7 @@ main (int argc, char **argv)
 
 	g_test_add_func ("/Limba/ConfigData", test_configdata);
 	g_test_add_func ("/Limba/PackageIndex", test_pkgindex);
+	g_test_add_func ("/Limba/CompareVersions", test_versions);
 
 	ret = g_test_run ();
 	g_free (datadir);
