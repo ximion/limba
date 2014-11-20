@@ -248,13 +248,15 @@ pkgen_make_template (const gchar *dir)
 		goto out;
 	}
 
-	li_print_stdout ("\n========");
-	li_print_stdout (_("Created project template in '%s'."), res_dir);
-	g_print ("\n");
-	li_print_stdout (_("Please edit the files in that directory, e.g. add a long description to your\napplication and specify its run-time dependencies."));
-	li_print_stdout (_("When you are done with this, build your software with --prefix=%s\nand install it into the inst_target subdirectory of your 'pkginstall' directory."), LI_SW_ROOT_PREFIX);
-	li_print_stdout (_("Then run 'lipkgen build pkginstall/' to create your package."));
-	li_print_stdout (_("If you want to embed dependencies, place their IPK packages in the 'repo/'\nsubdirectory of 'pkginstall/'"));
+	li_print_stdout ("\n========");\
+	li_print_stdout (_("Created project template in '%s'.\n\n" \
+"Please edit the files in that directory, e.g. add a long description to your\n" \
+"application and specify its run-time dependencies.\n" \
+"When you are done with this, build your software with --prefix=%s\n" \
+"and install it into the inst_target subdirectory of your 'pkginstall' directory.\n" \
+"Then run 'lipkgen build pkginstall/' to create your package. \n" \
+"If you want to embed dependencies, place their IPK packages in the 'repo/'\n" \
+"subdirectory of 'pkginstall/'"), res_dir, LI_SW_ROOT_PREFIX);
 	li_print_stdout ("========\n");
 
 out:

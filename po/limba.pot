@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2014-11-16 01:00+0100\n"
+        "POT-Creation-Date: 2014-11-20 03:57+0100\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,6 +15,10 @@ msgstr  "Project-Id-Version: limba\n"
         "MIME-Version: 1.0\n"
         "Content-Type: text/plain; charset=CHARSET\n"
         "Content-Transfer-Encoding: 8bit\n"
+
+#, c-format
+msgid   "Checksum for embedded package '%s' did not match."
+msgstr  ""
 
 #, c-format
 msgid   "Closing of file desriptor failed. Error: %s"
@@ -25,7 +29,11 @@ msgid   "Command '%s' is unknown."
 msgstr  ""
 
 #, c-format
-msgid   "Could not create directory structure '%s'."
+msgid   "Could not create directory structure '%s'. %s"
+msgstr  ""
+
+#, c-format
+msgid   "Could not create directory structure for runtime. %s"
 msgstr  ""
 
 #, c-format
@@ -69,11 +77,19 @@ msgid   "Could not install package: Component metadata is missing."
 msgstr  ""
 
 #, c-format
+msgid   "Could not install software: %s"
+msgstr  ""
+
+#, c-format
 msgid   "Could not open IPK file! Error: %s"
 msgstr  ""
 
 #, c-format
 msgid   "Could not open IPK payload! Error: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Could not open package: %s"
 msgstr  ""
 
 #, c-format
@@ -84,10 +100,39 @@ msgstr  ""
 msgid   "Could not remove software directory."
 msgstr  ""
 
-msgid   "Create a new package from using data found in DIRECTORY"
+msgid   "Create a new package using data found in DIRECTORY."
+msgstr  ""
+
+msgid   "Create sources for a new package."
+msgstr  ""
+
+#, c-format
+msgid   "Created project template in '%s'.\n"
+        "\n"
+        "Please edit the files in that directory, e.g. add a long description to your\n"
+        "application and specify its run-time dependencies.\n"
+        "When you are done with this, build your software with --prefix=%s\n"
+        "and install it into the inst_target subdirectory of your 'pkginstall' directory.\n"
+        "Then run 'lipkgen build pkginstall/' to create your package. \n"
+        "If you want to embed dependencies, place their IPK packages in the 'repo/'\n"
+        "subdirectory of 'pkginstall/'"
+msgstr  ""
+
+msgid   "Define a software name (human readable):"
+msgstr  ""
+
+msgid   "Define a software version:"
+msgstr  ""
+
+#, c-format
+msgid   "Do you have an AppStream XML file for your software? [y/N]"
 msgstr  ""
 
 msgid   "Don't show \"fancy\" output"
+msgstr  ""
+
+#, c-format
+msgid   "Embedded package '%s' was not found."
 msgstr  ""
 
 #, c-format
@@ -95,6 +140,10 @@ msgid   "File '%s' already exists."
 msgstr  ""
 
 msgid   "Install a local software package"
+msgstr  ""
+
+#, c-format
+msgid   "Invalid package: Component metadata is missing."
 msgstr  ""
 
 #. : This is the header to the --help menu
@@ -113,14 +162,24 @@ msgid   "List installed software"
 msgstr  ""
 
 #, c-format
+msgid   "No package is loaded."
+msgstr  ""
+
+msgid   "No path given. Exiting."
+msgstr  ""
+
+#, c-format
 msgid   "Package file '%s' was not found."
+msgstr  ""
+
+msgid   "Please specify a path to the AppStream XML data:"
 msgstr  ""
 
 msgid   "Remove an installed software package"
 msgstr  ""
 
 #, c-format
-msgid   "Removing  '%s' would break at least '%s' as well."
+msgid   "Removing '%s' would break at least '%s'."
 msgstr  ""
 
 #, c-format
@@ -178,8 +237,24 @@ msgstr  ""
 msgid   "Unable to remove existing installation of '%s (%s)'."
 msgstr  ""
 
+#, c-format
+msgid   "Unable to write 'control' file. %s"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to write AppStream data. %s"
+msgstr  ""
+
+msgid   "Write a short summary (one sentence) about your software:"
+msgstr  ""
+
 msgid   "You need to specify a command."
 msgstr  ""
 
 msgid   "You need to specify a directory with build-metadata."
+msgstr  ""
+
+msgid   "Your software needs a unique name.\n"
+        "In case of a GUI application, this is its .desktop filename.\n"
+        "Unique software name:"
 msgstr  ""
