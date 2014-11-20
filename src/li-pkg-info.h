@@ -55,16 +55,18 @@ typedef enum  {
 
 /**
  * LiPackageFlags:
- * @LI_PACKAGE_FLAG_NONE:		No package flag is set
- * @LI_PACKAGE_FLAG_AUTOMATIC:	This package has been installed automatically
- * @LI_PACKAGE_FLAG_REMOVE:		Remove this package automatically, if it is no longer in use
+ * @LI_PACKAGE_FLAG_NONE:			No package flag is set
+ * @LI_PACKAGE_FLAG_NEEDS_RUNTIME:	This package needs a runtime
+ * @LI_PACKAGE_FLAG_AUTOMATIC:		This package has been installed automatically
+ * @LI_PACKAGE_FLAG_REMOVE:			Remove this package automatically, if it is no longer in use
  *
  * Flags defining version requirements on other #LiPkgInfo instances.
  **/
 typedef enum  {
 	LI_PACKAGE_FLAG_NONE = 0,
-	LI_PACKAGE_FLAG_AUTOMATIC = 1 << 0,
-	LI_PACKAGE_FLAG_REMOVE = 1 << 1
+	LI_PACKAGE_FLAG_NEEDS_RUNTIME = 1 << 0,
+	LI_PACKAGE_FLAG_AUTOMATIC = 1 << 1,
+	LI_PACKAGE_FLAG_REMOVE = 1 << 2
 } LiPackageFlags;
 
 typedef struct _LiPkgInfo		LiPkgInfo;
@@ -98,6 +100,7 @@ void 			li_pkg_info_load_data (LiPkgInfo *pki,
 										const gchar *data);
 gboolean		li_pkg_info_save_to_file (LiPkgInfo *pki,
 											const gchar *filename);
+gboolean		li_pkg_info_save_changes (LiPkgInfo *pki);
 
 const gchar		*li_pkg_info_get_version (LiPkgInfo *pki);
 void			li_pkg_info_set_version (LiPkgInfo *pki,

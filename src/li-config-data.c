@@ -466,12 +466,21 @@ li_config_data_save_to_file (LiConfigData *cdata, const gchar *filename, GError 
 	gchar *data = NULL;
 
 	file = g_file_new_for_path (filename);
-
-	fos = g_file_create (file, G_FILE_CREATE_REPLACE_DESTINATION, NULL, &tmp_error);
+	if (g_file_query_exists (file, NULL)) {
+		fos = g_file_replace (file,
+							NULL,
+							FALSE,
+							G_FILE_CREATE_REPLACE_DESTINATION,
+							NULL,
+							&tmp_error);
+	} else {
+		fos = g_file_create (file, G_FILE_CREATE_REPLACE_DESTINATION, NULL, &tmp_error);
+	}
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;
 	}
+
 	dos = g_data_output_stream_new (G_OUTPUT_STREAM (fos));
 	g_object_unref (fos);
 

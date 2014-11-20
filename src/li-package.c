@@ -513,7 +513,7 @@ li_package_install (LiPackage *pkg, GError **error)
 
 	/* create a new exporter to integrate the new software into the system */
 	exp = li_exporter_new ();
-	li_exporter_set_pkgid (exp, pkg_id);
+	li_exporter_set_pkg_info (exp, priv->info);
 
 	/* the directory where all package data is installed to */
 	pkg_root_dir = g_build_filename (priv->install_root, pkg_id, NULL);

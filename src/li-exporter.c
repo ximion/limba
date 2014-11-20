@@ -35,7 +35,8 @@ struct _LiExporterPrivate
 {
 	GPtrArray *external_files;
 	gboolean override;
-	gchar *pkgid;
+
+	LiPkgInfo *pki;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiExporter, li_exporter, G_TYPE_OBJECT)
@@ -51,8 +52,9 @@ li_exporter_finalize (GObject *object)
 	LiExporter *exp = LI_EXPORTER (object);
 	LiExporterPrivate *priv = GET_PRIVATE (exp);
 
-	g_free (priv->pkgid);
 	g_ptr_array_unref (priv->external_files);
+	if (priv->pki != NULL)
+		g_object_unref (priv->pki);
 
 	G_OBJECT_CLASS (li_exporter_parent_class)->finalize (object);
 }
@@ -112,7 +114,12 @@ li_exporter_process_desktop_file (LiExporter *exp, const gchar *disk_location, G
 	GError *tmp_error = NULL;
 	GKeyFile *kfile = NULL;
 	_cleanup_free_ gchar *exec_cmd = NULL;
+	const gchar *pkgid;
 	LiExporterPrivate *priv = GET_PRIVATE (exp);
+
+	pkgid = li_pkg_info_get_id (priv->pki);
+	if (pkgid == NULL)
+		return FALSE;
 
 	tmp = g_path_get_basename (disk_location);
 	dest = g_build_filename (LI_PREFIXDIR, "share", "applications", tmp, NULL);
@@ -142,10 +149,10 @@ li_exporter_process_desktop_file (LiExporter *exp, const gchar *disk_location, G
 
 	if (g_strrstr (exec_cmd, "%RUNAPP%") == NULL) {
 		if (g_str_has_prefix (exec_cmd, "/")) {
-			tmp = g_strdup_printf ("runapp %s:%s", priv->pkgid, exec_cmd);
+			tmp = g_strdup_printf ("runapp %s:%s", pkgid, exec_cmd);
 		} else {
 			/* just guess that the application is in bin */
-			tmp = g_strdup_printf ("runapp %s:/bin/%s", priv->pkgid, exec_cmd);
+			tmp = g_strdup_printf ("runapp %s:/bin/%s", pkgid, exec_cmd);
 		}
 		g_free (exec_cmd);
 		exec_cmd = tmp;
@@ -155,7 +162,7 @@ li_exporter_process_desktop_file (LiExporter *exp, const gchar *disk_location, G
 
 		/* process the runapp placeholder */
 
-		tmp1 = g_strdup_printf ("runapp %s:", priv->pkgid);
+		tmp1 = g_strdup_printf ("runapp %s:", pkgid);
 		tmp2 = li_str_replace (exec_cmd, "%RUNAPP%", tmp1);
 		g_free (tmp1);
 
@@ -197,8 +204,13 @@ li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError 
 	if (stat (disk_location, &sb) == 0 && !(sb.st_mode & S_IXUSR))
 		return TRUE;
 
+	/* we have an executable file - this means we need a runtime */
+	li_pkg_info_add_flag (priv->pki, LI_PACKAGE_FLAG_NEEDS_RUNTIME);
+
 	exec_cmd = g_path_get_basename (disk_location);
-	tmp = g_strdup_printf ("%s-%s", exec_cmd, priv->pkgid);
+	tmp = g_strdup_printf ("%s-%s",
+						exec_cmd,
+						li_pkg_info_get_version (priv->pki));
 	dest = g_build_filename (LI_PREFIXDIR, "local", "bin", tmp, NULL);
 	g_free (tmp);
 
@@ -211,7 +223,9 @@ li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError 
 	}
 
 	/* create a wrapper script for our new application */
-	tmp = g_strdup_printf ("#!/bin/sh\nrunapp %s:/bin/%s $@\n", priv->pkgid, exec_cmd);
+	tmp = g_strdup_printf ("#!/bin/sh\nrunapp %s:/bin/%s $@\n",
+						li_pkg_info_get_id (priv->pki),
+						exec_cmd);
 	g_file_set_contents (dest, tmp, -1, &tmp_error);
 	g_free (tmp);
 	if (tmp_error != NULL) {
@@ -233,11 +247,15 @@ gboolean
 li_exporter_process_file (LiExporter *exp, const gchar *filename, const gchar *disk_location, GError **error)
 {
 	gboolean ret = FALSE;
+	LiExporterPrivate *priv = GET_PRIVATE (exp);
 
 	if (!g_file_test (disk_location, G_FILE_TEST_IS_REGULAR)) {
-		/* ignore stuff which isn't a file */
+		/* ignore stuff that isn't a file */
 		return FALSE;
 	}
+
+	/* ensure we always have a pki at this stage */
+	g_assert (priv->pki != NULL);
 
 	if ((g_str_has_prefix (filename, "share/applications")) && (g_str_has_suffix (filename, ".desktop")))
 		ret = li_exporter_process_desktop_file (exp, disk_location, error);
@@ -273,24 +291,25 @@ li_exporter_get_exported_files_index (LiExporter *exp)
 }
 
 /**
- * li_exporter_get_pkgid:
+ * li_exporter_get_pkg_info:
  */
-const gchar*
-li_exporter_get_pkgid (LiExporter *exp)
+LiPkgInfo*
+li_exporter_get_pkg_info (LiExporter *exp)
 {
 	LiExporterPrivate *priv = GET_PRIVATE (exp);
-	return priv->pkgid;
+	return priv->pki;
 }
 
 /**
- * li_exporter_set_pkgid:
+ * li_exporter_set_pkg_info:
  */
 void
-li_exporter_set_pkgid (LiExporter *exp, const gchar *pkgid)
+li_exporter_set_pkg_info (LiExporter *exp, LiPkgInfo *pki)
 {
 	LiExporterPrivate *priv = GET_PRIVATE (exp);
-	g_free (priv->pkgid);
-	priv->pkgid = g_strdup (pkgid);
+	if (priv->pki != NULL)
+		g_object_unref (pki);
+	priv->pki = g_object_ref (pki);
 }
 
 /**

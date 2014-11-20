@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include "li-utils.h"
 #include "li-pkg-info.h"
 #include "li-config-data.h"
 
@@ -190,6 +191,35 @@ li_pkg_info_save_to_file (LiPkgInfo *pki, const gchar *filename)
 	li_pkg_info_update_cdata_values (pki, cdata);
 	ret = li_config_data_save_to_file (cdata, filename, NULL);
 	g_object_unref (cdata);
+
+	return ret;
+}
+
+/**
+ * li_pkg_info_save_changes:
+ *
+ * Save changes to the control file of the installed
+ * package which matches the id of this #LiPkgInfo.
+ * This does only override an existing file.
+ */
+gboolean
+li_pkg_info_save_changes (LiPkgInfo *pki)
+{
+	gchar *fname;
+	gboolean ret;
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+
+	if (priv->id == NULL)
+		return FALSE;
+
+	fname = g_build_filename (LI_SOFTWARE_ROOT, priv->id, "control", NULL);
+	if (!g_file_test (fname, G_FILE_TEST_EXISTS)) {
+		g_free (fname);
+		return FALSE;
+	}
+
+	ret = li_pkg_info_save_to_file (pki, fname);
+	g_free (fname);
 
 	return ret;
 }

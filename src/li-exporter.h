@@ -26,6 +26,7 @@
 #define __LI_EXPORTER_H
 
 #include <glib-object.h>
+#include "li-pkg-info.h"
 
 #define LI_TYPE_EXPORTER			(li_exporter_get_type())
 #define LI_EXPORTER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_EXPORTER, LiExporter))
@@ -70,9 +71,9 @@ gboolean		li_exporter_get_override_allowed (LiExporter *exp);
 void			li_exporter_set_override_allowed (LiExporter *exp,
 										gboolean override);
 
-const gchar		*li_exporter_get_pkgid (LiExporter *exp);
-void			li_exporter_set_pkgid (LiExporter *exp,
-										const gchar *pkgid);
+LiPkgInfo		*li_exporter_get_pkg_info (LiExporter *exp);
+void			li_exporter_set_pkg_info (LiExporter *exp,
+										LiPkgInfo *pki);
 
 gchar			*li_exporter_get_exported_files_index (LiExporter *exp);
 

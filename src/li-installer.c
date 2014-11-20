@@ -411,20 +411,30 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 	if (!G_NODE_IS_ROOT (node))
 		li_pkg_info_add_flag (info, LI_PACKAGE_FLAG_AUTOMATIC);
 
-	/* create runtime for this software */
+	/* now nstall the package */
+	li_package_install (pkg, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	g_debug ("Installed package: %s", li_package_get_id (pkg));
+	li_package_graph_mark_installed (priv->pg, info);
+
+	/* create runtime for this software, if one is required */
 	full_deps = li_package_graph_branch_to_array (node);
-	if (full_deps != NULL) {
+	if ((li_pkg_info_get_flags (info) & LI_PACKAGE_FLAG_NEEDS_RUNTIME) && (full_deps != NULL)) {
 		LiRuntime *rt;
 
 		/* now get the runtime-env id for the new application */
 		rt = li_manager_find_runtime_with_members (priv->mgr, full_deps);
 		if (rt == NULL) {
-			g_debug ("Creating new runtime.");
+			g_debug ("Creating new runtime for %s.", li_package_get_id (pkg));
 			/* no runtime was found, create a new one */
 			rt = li_runtime_create_with_members (full_deps, &tmp_error);
 			if ((tmp_error != NULL) || (rt == NULL)) {
 				g_propagate_error (error, tmp_error);
-				goto out;
+			goto out;
 			}
 		}
 		li_pkg_info_set_runtime_dependency (info,
@@ -434,15 +444,8 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 		/* if the installed software does not need a runtime to run, we explicity state that */
 		li_pkg_info_set_runtime_dependency (info, "None");
 	}
-
-	li_package_install (pkg, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		goto out;
-	}
-
-	g_debug ("Installed package: %s", li_package_get_id (pkg));
-	li_package_graph_mark_installed (priv->pg, info);
+	/* store the changed metadata on disk */
+	li_pkg_info_save_changes (info);
 
 	ret = TRUE;
 out:
