@@ -338,10 +338,10 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 
 	pki = LI_PKG_INFO (root->data);
 	pkg = li_package_graph_get_install_candidate (priv->pg, pki);
-	if (pkg == NULL) {
+	if (pkg == NULL)
 		g_debug ("Hit installed package: %s", li_pkg_info_get_id (pki));
-		return;
-	}
+	else
+		g_debug ("Hit new package: %s", li_pkg_info_get_id (pki));
 
 	deps = li_installer_parse_dependency_string (li_pkg_info_get_dependencies (pki));
 
@@ -351,10 +351,12 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 
 	installed_sw = li_manager_get_installed_software (priv->mgr);
 	for (i = 0; i < deps->len; i++) {
+		LiPkgInfo *ipki;
 		LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, i));
 
 		/* test if this package is already in the installed set */
-		if (li_installer_find_satisfying_pkg (installed_sw, dep) == NULL) {
+		ipki = li_installer_find_satisfying_pkg (installed_sw, dep);
+		if (ipki == NULL) {
 			/* maybe we find this dependency as embedded copy? */
 			li_installer_find_dependency_embedded (inst, root, dep, &tmp_error);
 			if (tmp_error != NULL) {
@@ -362,8 +364,16 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 				return;
 			}
 		} else {
+			GNode *node;
 			/* dependency is already installed, add it as satisfied */
-			li_package_graph_add_package (priv->pg, root, dep);
+			node = li_package_graph_add_package (priv->pg, root, ipki);
+
+			/* we need a full dependency tree to generate one or more working runtimes later */
+			li_installer_check_dependencies (inst, node, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return;
+			}
 		}
 	}
 
