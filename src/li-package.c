@@ -731,6 +731,47 @@ li_package_extract_embedded_package (LiPackage *pkg, LiPkgInfo *pki, GError **er
 }
 
 /**
+ * li_package_extract_contents:
+ *
+ * Extracts the package contants into a directory.
+ * Useful to inspect the package structure manually.
+ */
+void
+li_package_extract_contents (LiPackage *pkg, const gchar *dest_dir, GError **error)
+{
+	struct archive *ar;
+	struct archive_entry* e;
+	GError *tmp_error = NULL;
+
+	ar = li_package_open_base_ipk (pkg, &tmp_error);
+	if ((ar == NULL) || (tmp_error != NULL)) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
+		gchar *tmp;
+		gchar *dest;
+
+		tmp = g_path_get_dirname (archive_entry_pathname (e));
+		dest = g_build_filename (dest_dir,  tmp, NULL);
+		g_free (tmp);
+		g_mkdir_with_parents (dest, 0755);
+
+		li_package_extract_entry_to (pkg, ar, e, dest, &tmp_error);
+		g_free (dest);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+	}
+
+out:
+	archive_read_close (ar);
+	archive_read_free (ar);
+}
+
+/**
  * li_package_get_install_root:
  *
  * Get the installation root directory

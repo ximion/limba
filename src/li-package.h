@@ -113,6 +113,10 @@ LiPackage*		li_package_extract_embedded_package (LiPackage *pkg,
 													GError **error);
 gchar			*li_package_get_appstream_data (LiPackage *pkg);
 
+void			li_package_extract_contents (LiPackage *pkg,
+											const gchar *dest_dir,
+											GError **error);
+
 G_END_DECLS
 
 #endif /* __LI_PACKAGE_H */

@@ -265,6 +265,37 @@ out:
 }
 
 /**
+ * pkgen_unpack_pkg:
+ */
+static gint
+pkgen_unpack_pkg (const gchar *fname, const gchar *dir)
+{
+	LiPackage *pkg;
+	gint res = 1;
+	GError *error = NULL;
+
+	pkg = li_package_new ();
+	li_package_open_file (pkg, fname, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Unable to open package. %s"), error->message);
+		g_error_free (error);
+		goto out;
+	}
+
+	li_package_extract_contents (pkg, dir, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Unable to unpack package. %s"), error->message);
+		g_error_free (error);
+		goto out;
+	}
+
+	res = 0;
+out:
+	g_object_unref (pkg);
+	return res;
+}
+
+/**
  * pkgen_get_summary:
  **/
 static gchar *
@@ -280,6 +311,7 @@ pkgen_get_summary ()
 
 	g_string_append_printf (string, "  %s - %s\n", "build [DIRECTORY] [PKGNAME]", _("Create a new package using data found in DIRECTORY."));
 	g_string_append_printf (string, "  %s - %s\n", "make-template", _("Create sources for a new package."));
+	g_string_append_printf (string, "  %s - %s\n", "unpack-pkg [PKGNAME] [DIRECTORY]", _("Unpack the Limba package to a directory."));
 
 	return g_string_free (string, FALSE);
 }
@@ -356,6 +388,8 @@ main (int argc, char *argv[])
 		exit_code = pkgen_build_package (value1, value2);
 	} else if (g_strcmp0 (command, "make-template") == 0) {
 		exit_code = pkgen_make_template (value1);
+	} else if (g_strcmp0 (command, "unpack-pkg") == 0) {
+		exit_code = pkgen_unpack_pkg (value1, value2);
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;
