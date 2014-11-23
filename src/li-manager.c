@@ -469,6 +469,82 @@ li_manager_package_is_installed (LiManager *mgr, LiPkgInfo *pki)
 }
 
 /**
+ * li_manager_cleanup:
+ *
+ * Remove unnecessary software.
+ */
+gboolean
+li_manager_cleanup (LiManager *mgr, GError **error)
+{
+	GHashTable *sws;
+	GHashTable *rts;
+	GPtrArray *rt_array;
+	GPtrArray *sw_array;
+	guint i;
+	GList *l;
+	GList *list = NULL;
+	gboolean ret = FALSE;
+
+	rts = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	sws = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+
+	/* build hash tables */
+	sw_array = li_manager_get_installed_software (mgr);
+	for (i = 0; i < sw_array->len; i++) {
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (sw_array, i));
+		g_hash_table_insert (sws,
+							g_strdup (li_pkg_info_get_id (pki)),
+							g_object_ref (pki));
+	}
+
+	/* remove every software from the list which is not member of a runtime */
+	rt_array = li_manager_get_installed_runtimes (mgr);
+	for (i = 0; i < rt_array->len; i++) {
+		GPtrArray *rt_members;
+		guint j;
+		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (rt_array, i));
+
+		rt_members = li_runtime_get_members (rt);
+		for (j = 0; j < rt_members->len; j++) {
+			const gchar *member_id = (const gchar *) g_ptr_array_index (rt_members, j);
+			g_hash_table_remove (sws, member_id);
+		}
+		g_hash_table_insert (rts,
+							g_strdup (li_runtime_get_uuid (rt)),
+							g_object_ref (rt));
+	}
+
+	/* re-add every software which references a runtime */
+	for (i = 0; i < sw_array->len; i++) {
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (sw_array, i));
+
+		if (g_hash_table_lookup (rts, li_pkg_info_get_runtime_dependency (pki)) != NULL)
+			g_hash_table_insert (sws,
+								g_strdup (li_pkg_info_get_id (pki)),
+								g_object_ref (pki));
+	}
+
+	list = g_hash_table_get_values (sws);
+	for (l = list; l != NULL; l = l->next) {
+		li_manager_remove_software (mgr, li_pkg_info_get_id (LI_PKG_INFO (l->data)), error);
+		if (error != NULL)
+			goto out;
+	}
+
+	/* cleanup tmp dir */
+	li_delete_dir_recursive ("/var/tmp/limba");
+	ret = TRUE;
+
+out:
+	if (list != NULL)
+		g_list_free (list);
+	g_hash_table_unref (sws);
+	g_hash_table_unref (rts);
+
+	return ret;
+}
+
+/**
  * li_manager_error_quark:
  *
  * Return value: An error quark.
