@@ -533,8 +533,11 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 
 	/* cleanup tmp dir */
 	li_delete_dir_recursive ("/var/tmp/limba");
-	ret = TRUE;
 
+	/* installed software might have changed */
+	li_manager_reset_cached_data (mgr);
+
+	ret = TRUE;
 out:
 	if (list != NULL)
 		g_list_free (list);

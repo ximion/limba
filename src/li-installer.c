@@ -198,7 +198,7 @@ li_installer_find_satisfying_pkg (GPtrArray *pkglist, LiPkgInfo *dep)
 				li_pkg_info_set_version (dep, pver);
 				return pki;
 			} else {
-				g_debug ("Found %s (%s), skipping because version does not pass requirements(%i#%s).", pname, pver, dep_vrel, dep_version);
+				g_debug ("Found %s (%s), skipping because version does not satisfy requirements(%i#%s).", pname, pver, dep_vrel, dep_version);
 			}
 		}
 	}
