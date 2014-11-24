@@ -378,7 +378,7 @@ li_utils_get_tmp_dir (const gchar *prefix)
 	gchar *tmp_dir = NULL;
 	const gchar *tmp_root_path = "/var/tmp/limba";
 
-	g_mkdir_with_parents (tmp_root_path, 0755);
+	g_mkdir_with_parents (tmp_root_path, 0777);
 
 	template = g_strdup_printf ("%s-XXXXXX", prefix);
 	/* create temporary directory */

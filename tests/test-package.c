@@ -44,7 +44,10 @@ test_compile_foobar ()
 	inst_dir_lib = g_build_filename (dirname, "libfoo", "pkginstall", "inst_target", NULL);
 	chdir (dirname);
 
-	ret = system ("./autogen.sh --prefix=/opt/swroot");
+	if (g_file_test ("Makefile", G_FILE_TEST_EXISTS))
+		system ("make clean");
+
+	ret = system ("./autogen.sh --prefix=/opt/bundle");
 	g_assert (ret == 0);
 
 	ret = system ("make");
