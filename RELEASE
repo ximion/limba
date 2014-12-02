@@ -2,10 +2,10 @@ Limba Release Notes
 
 1. Write NEWS entries for Limba in the same format as usual.
 
-git shortlog LIMBA_0_1_0.. | grep -i -v trivial | grep -v Merge > NEWS.new
+git shortlog LIMBA_0_2_0.. | grep -i -v trivial | grep -v Merge > NEWS.new
 
 --------------------------------------------------------------------------------
-Version 0.2.0
+Version 0.3.0
 ~~~~~~~~~~~~~~
 Released: 2014-xx-xx
 
@@ -20,12 +20,12 @@ Bugfixes:
 
 3. Commit changes in Limba git:
 
-git commit -a -m "Release version 0.2.0"
-git tag -s -f -m "Release 0.2.0" LIMBA_0_2_0 <gpg password>
+git commit -a -m "Release version 0.3.0"
+git tag -s -f -m "Release 0.3.0" LIMBA_0_3_0 <gpg password>
 git push --tags
 git push
 
-4. run './release.sh --version=0.2.0 --git-tag=LIMBA_0_2_0 --sign'
+4. run './release.sh --version=0.3.0 --git-tag=LIMBA_0_3_0 --sign'
 
 5. Upload tarball: scp -r *.tar.xz* annarchy.freedesktop.org:~/public_html/limba/releases
 
@@ -37,7 +37,7 @@ git commit -a -m "trivial: post release version bump"
 git push
 
 =================================================
-Limba 0.2.0 released!
+Limba 0.3.0 released!
 
 Tarballs available here: http://people.freedesktop.org/~mak/limba/releases/
 
