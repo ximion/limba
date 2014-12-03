@@ -44,6 +44,7 @@ endif(${CMAKE_SOURCE_DIR} MATCHES ${CMAKE_BINARY_DIR})
 option(MAINTAINER "Enable maintainer mode" OFF)
 option(LIBUILD "Build and install the LIBuild facilities" OFF)
 option(L10N "Enable localization" ON)
+option(INSTALL_SUID "Install runapp with suid bit set" ON)
 
 #
 # Default paths
