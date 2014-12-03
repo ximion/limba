@@ -235,7 +235,7 @@ main (gint argc, gchar *argv[])
 	uid_t uid = getuid(), euid = geteuid();
 
 	if ((uid > 0) && (uid == euid)) {
-		g_error ("This program needs the suid bit to be set to function correpkiy.");
+		g_error ("This program needs the suid bit to be set to function correctly.");
 		return 3;
 	}
 
