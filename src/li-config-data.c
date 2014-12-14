@@ -32,7 +32,7 @@ typedef struct _LiConfigDataPrivate	LiConfigDataPrivate;
 struct _LiConfigDataPrivate
 {
 	GList *content;
-	gint current_block_id;
+	GList *current_block_pos;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiConfigData, li_config_data, G_TYPE_OBJECT)
@@ -61,7 +61,7 @@ li_config_data_init (LiConfigData *cdata)
 {
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
-	priv->current_block_id = -1;
+	priv->current_block_pos = NULL;
 }
 
 /**
@@ -130,7 +130,7 @@ void
 li_config_data_reset (LiConfigData *cdata)
 {
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
-	priv->current_block_id = -1;
+	priv->current_block_pos = NULL;
 }
 
 /**
@@ -158,9 +158,8 @@ li_line_empty (const gchar *line)
 gboolean
 li_config_data_open_block (LiConfigData *cdata, const gchar *field, const gchar *value, gboolean reset_index)
 {
-	guint i;
 	GList *l;
-	guint block_id;
+	GList *block_pos;
 	gboolean start = FALSE;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
@@ -172,23 +171,22 @@ li_config_data_open_block (LiConfigData *cdata, const gchar *field, const gchar 
 		return FALSE;
 	}
 
-	if (priv->current_block_id <= 0) {
-		block_id = 0;
+	block_pos = priv->content;
+	if (priv->current_block_pos == NULL) {
+		priv->current_block_pos = priv->content;
 		start = TRUE;
 	}
 
-	for (l = priv->content; l != NULL; l = l->next) {
+	for (l = priv->current_block_pos; l != NULL; l = l->next) {
 		gchar *line;
 		gchar *field_data;
 
-		i = g_list_position (priv->content, l);
-		if (((gint) i) < priv->current_block_id)
-			continue;
 		line = (gchar*) l->data;
-
 		if (li_line_empty (line)) {
 			start = TRUE;
-			block_id = i + 1;
+			if (l->next == NULL)
+				return FALSE;
+			block_pos = l->next;
 		}
 
 		if (!start)
@@ -197,7 +195,7 @@ li_config_data_open_block (LiConfigData *cdata, const gchar *field, const gchar 
 		if (value == NULL) {
 			field_data = g_strdup_printf ("%s:", field);
 			if (g_str_has_prefix (line, field_data)) {
-				priv->current_block_id = block_id;
+				priv->current_block_pos = block_pos;
 				g_free (field_data);
 				return TRUE;
 			}
@@ -205,7 +203,7 @@ li_config_data_open_block (LiConfigData *cdata, const gchar *field, const gchar 
 		} else {
 			field_data = g_strdup_printf ("%s: %s", field, value);
 			if (g_strcmp0 (line, field_data) == 0) {
-				priv->current_block_id = block_id;
+				priv->current_block_pos = block_pos;
 				g_free (field_data);
 				return TRUE;
 			}
@@ -213,7 +211,7 @@ li_config_data_open_block (LiConfigData *cdata, const gchar *field, const gchar 
 		}
 	}
 
-	priv->current_block_id = -1;
+	priv->current_block_pos = NULL;
 	return FALSE;
 }
 
@@ -224,8 +222,8 @@ gchar*
 li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 {
 	GString *res;
-	gint i;
 	GList *l;
+	GList *start_pos;
 	gboolean add_to_value = FALSE;
 	gboolean found = FALSE;
 	gchar *tmp_str;
@@ -235,20 +233,20 @@ li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 		return NULL;
 	}
 
+	start_pos = priv->current_block_pos;
+	if (start_pos == NULL)
+		start_pos = priv->content;
+
 	res = g_string_new ("");
-	for (l = priv->content; l != NULL; l = l->next) {
+	for (l = start_pos; l != NULL; l = l->next) {
 		gchar *line;
 		gchar *field_data;
 
-		i = g_list_position (priv->content, l);
-		if (i < priv->current_block_id)
-			continue;
 		line = (gchar*) l->data;
-
 		if (li_str_empty (line)) {
 			/* check if we should continue although we have reached the end of this block */
-			if (priv->current_block_id < 0) {
-				/* a negative current block id means no block was opened previously, so we continue in that case
+			if (priv->current_block_pos == NULL) {
+				/* a "NULL position" means no block was opened previously, so we continue in that case
 				 and break otherwise */
 				continue;
 			} else {
@@ -258,8 +256,11 @@ li_config_data_get_value (LiConfigData *cdata, const gchar *field)
 
 		if (add_to_value) {
 			if (g_str_has_prefix (line, " ")) {
-				g_strstrip (line);
-				g_string_append_printf (res, "\n%s", line);
+				gchar *str;
+				str = g_strdup (line);
+				g_strstrip (str);
+				g_string_append_printf (res, "\n%s", str);
+				g_free (str);
 				found = TRUE;
 			} else {
 				break;
@@ -310,8 +311,8 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 {
 	gchar **value_lines;
 	gchar *tmp;
-	gint i;
 	GList *l;
+	GList *start_pos;
 	_cleanup_free_ gchar *field_str = NULL;
 	gchar *field_data;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
@@ -321,9 +322,13 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 	if (value == NULL)
 		return FALSE;
 
-	/* don't trust the current id pointer */
+	/* don't trust the current position pointer */
 	if (priv->content == NULL)
-		priv->current_block_id = -1;
+		priv->current_block_pos = NULL;
+
+	start_pos = priv->current_block_pos;
+	if (start_pos == NULL)
+		start_pos = priv->content;
 
 	value_lines = g_strsplit (value, "\n", -1);
 	tmp = g_strjoinv ("\n ", value_lines);
@@ -331,18 +336,28 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 	field_data = g_strdup_printf ("%s: %s", field, tmp);
 	g_free (tmp);
 
-	for (l = priv->content; l != NULL; l = l->next) {
+	if (start_pos == g_list_last (priv->content)) {
+		/* handle new block starts immediately */
+		priv->content = g_list_append (priv->content, field_data);
+
+		/* did we open a new block? */
+		if (start_pos == NULL) {
+			priv->current_block_pos = priv->content;
+		} else if (li_str_empty ((gchar*) start_pos->data)) {
+			priv->current_block_pos = g_list_last (priv->content);
+		}
+
+		return TRUE;
+	}
+
+	for (l = start_pos; l != NULL; l = l->next) {
 		gchar *line;
 
-		i = g_list_position (priv->content, l);
-		if (((int) i) < priv->current_block_id)
-			continue;
 		line = (gchar*) l->data;
-
 		if (li_str_empty (line)) {
 			/* check if we should continue although we have reached the end of this block */
-			if (priv->current_block_id < 0) {
-				/* a negative current block id means no block was opened previously, so we continue in that case
+			if (priv->current_block_pos == NULL) {
+				/* an empty current block position means no block was opened previously, so we continue in that case
 				 and break otherwise */
 				continue;
 			} else {
@@ -413,7 +428,7 @@ li_config_data_new_block (LiConfigData *cdata)
 	if (!li_line_empty ((gchar*) l->data)) {
 		priv->content = g_list_append (priv->content, g_strdup (""));
 	}
-	priv->current_block_id = (gint) g_list_length (priv->content);
+	priv->current_block_pos = g_list_last (priv->content);
 }
 
 /**
@@ -427,8 +442,8 @@ li_config_data_new_block (LiConfigData *cdata)
 gboolean
 li_config_data_next (LiConfigData *cdata)
 {
-	guint i;
 	GList *l;
+	GList *start_pos;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
 	if (priv->content == NULL) {
@@ -436,15 +451,18 @@ li_config_data_next (LiConfigData *cdata)
 		return FALSE;
 	}
 
-	for (l = priv->content; l != NULL; l = l->next) {
-		gchar *line;
-		i = g_list_position (priv->content, l);
-		if (((gint) i) < priv->current_block_id)
-			continue;
-		line = (gchar*) l->data;
+	start_pos = priv->current_block_pos;
+	if (start_pos == NULL)
+		start_pos = priv->content;
 
+	for (l = start_pos; l != NULL; l = l->next) {
+		gchar *line;
+
+		line = (gchar*) l->data;
 		if (li_line_empty (line)) {
-			priv->current_block_id = i + 1;
+			if (l->next == NULL)
+				return FALSE;
+			priv->current_block_pos = l->next;
 			return TRUE;
 		}
 	}

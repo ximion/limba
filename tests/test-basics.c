@@ -49,21 +49,18 @@ test_configdata ()
 	g_assert (ret);
 
 	str = li_config_data_get_value (cdata, "Sample");
-	ret = g_strcmp0 (str, "valueX") == 0;
-	g_assert (ret);
+	g_assert_cmpstr (str, ==, "valueX");
 	g_free (str);
 
 	ret = li_config_data_open_block (cdata, "Section", "test2", TRUE);
 	g_assert (ret);
 
 	str = li_config_data_get_value (cdata, "Sample");
-	ret = g_strcmp0 (str, "valueY") == 0;
-	g_assert (ret);
+	g_assert_cmpstr (str, ==, "valueY");
 	g_free (str);
 
 	str = li_config_data_get_value (cdata, "Multiline");
-	ret = g_strcmp0 (str, "A\nB\nC\nD") == 0;
-	g_assert (ret);
+	g_assert_cmpstr (str, ==, "A\nB\nC\nD");
 	g_free (str);
 
 	str = li_config_data_get_data (cdata);
