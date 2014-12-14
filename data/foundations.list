@@ -1,0 +1,18 @@
+# This file contains a list of basic "foundation" packages.
+# It should ony be modified to correct file locations.
+# Do not add new foundations / modify the existing ones!
+
+ID: foundation:libc6
+ConditionLibraryExists: libc.so.6
+Description: The GNU C library (or a compatibe library)
+
+ID: foundation:Xserver
+ConditionFileExists: /usr/bin/Xorg
+Description: The Xorg X11 server.
+
+ID: foundation:systemd-logind
+ConditionFileExists: /lib/systemd/systemd-logind
+Description: Session tracking service by the systemd project
+
+ID: foundation:Linux
+Description: The Linux kernel
