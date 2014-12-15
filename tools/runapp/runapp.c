@@ -163,8 +163,8 @@ mount_overlay (const gchar *pkgid)
 		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, rt_path);
 #endif
 
-		res = mount ("", LI_SW_ROOT_PREFIX,
-					"overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
+		res = mount ("overlay", LI_SW_ROOT_PREFIX,
+					"overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
 
 		g_free (tmp);
 		g_free (rt_path);
@@ -181,8 +181,8 @@ mount_overlay (const gchar *pkgid)
 	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, main_data_path);
 #endif
 
-	res = mount ("", LI_SW_ROOT_PREFIX,
-				 "overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
+	res = mount ("overlay", LI_SW_ROOT_PREFIX,
+				 "overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
 	g_free (tmp);
 	if (res != 0) {
 		fprintf (stderr, "Unable to mount directory. %s\n", strerror (errno));
