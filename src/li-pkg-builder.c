@@ -34,6 +34,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <appstream.h>
+#include <gpgme.h>
+#include <locale.h>
 
 #include "li-utils.h"
 #include "li-utils-private.h"
@@ -44,11 +46,15 @@ typedef struct _LiPkgBuilderPrivate	LiPkgBuilderPrivate;
 struct _LiPkgBuilderPrivate
 {
 	gchar *dir;
+	gchar *gpg_key;
+	gboolean sign_package;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPkgBuilder, li_pkg_builder, G_TYPE_OBJECT)
 
 #define GET_PRIVATE(o) (li_pkg_builder_get_instance_private (o))
+
+#define LI_GPG_PROTOCOL GPGME_PROTOCOL_OpenPGP
 
 /**
  * li_pkg_builder_finalize:
@@ -70,6 +76,18 @@ li_pkg_builder_finalize (GObject *object)
 static void
 li_pkg_builder_init (LiPkgBuilder *builder)
 {
+	gpgme_error_t err;
+	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
+
+	priv->gpg_key = NULL;
+
+	/* initialize GPGMe */
+	gpgme_check_version (NULL);
+	setlocale (LC_ALL, "");
+	gpgme_set_locale (NULL, LC_CTYPE, setlocale (LC_CTYPE, NULL));
+
+	err = gpgme_engine_check_version (LI_GPG_PROTOCOL);
+	g_assert (err == 0);
 }
 
 /**
@@ -158,8 +176,10 @@ li_pkg_builder_write_payload (const gchar *input_dir, const gchar *out_fname)
 
 /**
  * li_pkg_builder_add_embedded_packages:
+ *
+ * Returns: (transfer full): A path to the index file of embedded packages
  */
-static void
+static gchar*
 li_pkg_builder_add_embedded_packages (const gchar *tmp_dir, const gchar *repo_source, GPtrArray *files, GError **error)
 {
 	guint i;
@@ -169,12 +189,12 @@ li_pkg_builder_add_embedded_packages (const gchar *tmp_dir, const gchar *repo_so
 	LiPkgIndex *idx;
 	GError *tmp_error = NULL;
 
-	pkgs_tmpdir = g_build_filename (tmp_dir, "pkgs", NULL);
+	pkgs_tmpdir = g_build_filename (tmp_dir, "repo", NULL);
 	g_mkdir_with_parents (pkgs_tmpdir, 0775);
 
 	packages = li_utils_find_files_matching (repo_source, "*.ipk", FALSE);
 	if (packages == NULL)
-		return;
+		return NULL;
 
 	idx = li_pkg_index_new ();
 	for (i = 0; i < packages->len; i++) {
@@ -188,7 +208,7 @@ li_pkg_builder_add_embedded_packages (const gchar *tmp_dir, const gchar *repo_so
 		if (tmp_error != NULL) {
 			g_propagate_prefixed_error (error, tmp_error, "Unable to process external package '%s'.", fname);
 			g_object_unref (pkg);
-			return;
+			return NULL;
 		}
 
 		pki = li_package_get_info (pkg);
@@ -205,15 +225,16 @@ li_pkg_builder_add_embedded_packages (const gchar *tmp_dir, const gchar *repo_so
 			g_propagate_prefixed_error (error, tmp_error, "Unable to process external package '%s'.", li_pkg_info_get_name (pki));
 			g_object_unref (pkg);
 			g_free (tmp);
-			return;
+			return NULL;
 		}
 
 		g_ptr_array_add (files, tmp);
 	}
 
-	tmp = g_build_filename (tmp_dir, "repo-index", NULL);
+	tmp = g_build_filename (tmp_dir, "repo", "repo-index", NULL);
 	li_pkg_index_save_to_file (idx, tmp);
-	g_ptr_array_add (files, tmp);
+
+	return tmp;
 }
 
 /**
@@ -296,6 +317,175 @@ li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname, GError *
 	fclose (fp);
 }
 
+static void
+print_result (gpgme_sign_result_t result, gpgme_sig_mode_t type)
+{
+  gpgme_invalid_key_t invkey;
+  gpgme_new_signature_t sig;
+
+  for (invkey = result->invalid_signers; invkey; invkey = invkey->next)
+    printf ("Signing key `%s' not used: %s <%s>\n",
+            invkey->fpr,
+            gpg_strerror (invkey->reason), gpg_strsource (invkey->reason));
+
+  for (sig = result->signatures; sig; sig = sig->next)
+    {
+      printf ("Key fingerprint: %s\n", sig->fpr);
+      printf ("Signature type : %d\n", sig->type);
+      printf ("Public key algo: %d\n", sig->pubkey_algo);
+      printf ("Hash algo .....: %d\n", sig->hash_algo);
+      printf ("Creation time .: %ld\n", sig->timestamp);
+      printf ("Sig class .....: 0x%u\n", sig->sig_class);
+    }
+}
+
+/**
+ * li_pkg_builder_sign_package:
+ */
+static gchar*
+li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrArray *sign_files, GError **error)
+{
+	guint i;
+	GString *index_str;
+	_cleanup_free_ gchar *indexdata = NULL;
+
+	gpgme_error_t err;
+	gpgme_ctx_t ctx;
+	gpgme_sig_mode_t sigmode = GPGME_SIG_MODE_CLEAR;
+	gpgme_data_t din, dout;
+	gpgme_sign_result_t sig_res;
+
+	#define BUF_SIZE 512
+	gchar *sig_fname;
+	char buf[BUF_SIZE + 1];
+	FILE *file;
+	int ret;
+	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
+
+	index_str = g_string_new ("");
+	for (i = 0; i < sign_files->len; i++) {
+		gchar *checksum;
+		gchar *internal_name;
+		const gchar *fname = (const gchar *) g_ptr_array_index (sign_files, i);
+
+		if (g_str_has_prefix (fname, tmp_dir)) {
+			internal_name = g_strdup (&fname[strlen (tmp_dir) + 1]);
+		} else {
+			internal_name = g_path_get_basename (fname);
+		}
+
+		checksum = li_compute_checksum_for_file (fname);
+		if (checksum == NULL) {
+			g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Unable to calculate checksum for: %s"),
+				internal_name);
+			g_free (internal_name);
+			return NULL;
+		}
+
+		g_string_append_printf (index_str, "%s\t%s\n", checksum, internal_name);
+		g_free (checksum);
+		g_free (internal_name);
+	}
+	indexdata = g_string_free (index_str, FALSE);
+
+	err = gpgme_new (&ctx);
+	if (err != 0) {
+		g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Signing package failed: %s"),
+				gpgme_strsource (err));
+		return NULL;
+	}
+
+	gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
+	gpgme_set_armor (ctx, TRUE);
+
+	if (priv->gpg_key != NULL) {
+		gpgme_key_t akey;
+
+		err = gpgme_get_key (ctx, priv->gpg_key, &akey, 1);
+		if (err != 0) {
+			g_set_error (error,
+					LI_BUILDER_ERROR,
+					LI_BUILDER_ERROR_SIGN,
+					_("Signing package failed: %s"),
+					gpgme_strsource (err));
+			return NULL;
+		}
+
+		err = gpgme_signers_add (ctx, akey);
+		if (err != 0) {
+			g_set_error (error,
+					LI_BUILDER_ERROR,
+					LI_BUILDER_ERROR_SIGN,
+					_("Signing package failed: %s"),
+					gpgme_strsource (err));
+			return NULL;
+		}
+		gpgme_key_unref (akey);
+	}
+
+	err = gpgme_data_new_from_mem (&din, indexdata, strlen (indexdata), 0);
+	if (err != 0) {
+		g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Signing package failed: %s"),
+				gpgme_strsource (err));
+		return NULL;
+	}
+
+	err = gpgme_data_new (&dout);
+	if (err != 0) {
+		g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Signing package failed: %s"),
+				gpgme_strsource (err));
+		return NULL;
+	}
+
+	err = gpgme_op_sign (ctx, din, dout, sigmode);
+	sig_res = gpgme_op_sign_result (ctx);
+	if (sig_res)
+		print_result (sig_res, sigmode);
+	if (err != 0) {
+		g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Signing package failed: %s"),
+				gpgme_strsource (err));
+		return NULL;
+	}
+
+	sig_fname = g_build_filename (tmp_dir, "_signature", NULL);
+	file = fopen (sig_fname, "w");
+	if (file == NULL) {
+		g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Unable to write signature: %s"),
+				g_strerror (errno));
+		g_free (sig_fname);
+		return NULL;
+	}
+
+	gpgme_data_seek (dout, 0, SEEK_SET);
+	while ((ret = gpgme_data_read (dout, buf, BUF_SIZE)) > 0)
+		fwrite (buf, ret, 1, file);
+	fclose (file);
+
+	gpgme_data_release (dout);
+	gpgme_data_release (din);
+	gpgme_release (ctx);
+
+	return sig_fname;
+}
+
 /**
  * li_pkg_builder_create_package_from_dir:
  */
@@ -309,8 +499,11 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 	_cleanup_free_ gchar *tmp_dir = NULL;
 	_cleanup_free_ gchar *payload_file = NULL;
 	_cleanup_free_ gchar *pkg_fname = NULL;
-	GPtrArray *files;
+	_cleanup_free_ gchar *sig_fname = NULL;
+	_cleanup_ptrarray_unref_ GPtrArray *files = NULL;
+	_cleanup_ptrarray_unref_ GPtrArray *sign_files = NULL;
 	GError *tmp_error = NULL;
+	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
 
 	ctl_fname = g_build_filename (dir, "control", NULL);
 	if (!g_file_test (ctl_fname, G_FILE_TEST_IS_REGULAR)) {
@@ -392,21 +585,40 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 	li_pkg_builder_write_payload (payload_root, payload_file);
 
 	/* construct package contents */
-	files = g_ptr_array_new ();
+	files = g_ptr_array_new_with_free_func (g_free);
+	sign_files = g_ptr_array_new ();
 
 	if (repo_root != NULL) {
+		gchar *repo_fname;
 		/* we have extra packages to embed */
-		li_pkg_builder_add_embedded_packages (tmp_dir, repo_root, files, &tmp_error);
+		repo_fname = li_pkg_builder_add_embedded_packages (tmp_dir, repo_root, files, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
-			g_ptr_array_unref (files);
 			return FALSE;
 		}
+		g_ptr_array_add (files, repo_fname);
+		/* we need to sign the repo file */
+		g_ptr_array_add (sign_files, repo_fname);
 	}
 
-	g_ptr_array_add (files, ctl_fname);
-	g_ptr_array_add (files, as_metadata);
-	g_ptr_array_add (files, payload_file);
+	/* we want these files in the package */
+	g_ptr_array_add (files, g_strdup (ctl_fname));
+	g_ptr_array_add (files, g_strdup (as_metadata));
+	g_ptr_array_add (files, g_strdup (payload_file));
+
+	/* these files need to be signed in order to verify the whole package */
+	g_ptr_array_add (sign_files, ctl_fname);
+	g_ptr_array_add (sign_files, as_metadata);
+	g_ptr_array_add (sign_files, payload_file);
+
+	if (priv->sign_package) {
+		sig_fname = li_pkg_builder_sign_package (builder, tmp_dir, sign_files, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return FALSE;
+		}
+		g_ptr_array_add (files, g_strdup (sig_fname));
+	}
 
 	/* write package */
 	li_pkg_builder_write_package (files, pkg_fname, &tmp_error);
