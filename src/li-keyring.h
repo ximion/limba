@@ -42,7 +42,7 @@ G_BEGIN_DECLS
  * @LI_KEYRING_KIND_USER:		Use the manual keyring, containing explicitly trusted keys
  * @LI_KEYRING_KIND_AUTOMATIC:	Use the automatic keyring, containing automatically added keys
  *
- * The error type.
+ * Type of the keyring to validate against.
  **/
 typedef enum {
 	LI_KEYRING_KIND_ALL,
@@ -58,6 +58,7 @@ typedef enum {
  * @LI_KEYRING_ERROR_LOOKUP:		An error occured while looking up a key
  * @LI_KEYRING_ERROR_KEY_UNKNOWN: 	The key we are dealing with is unknown
  * @LI_KEYRING_ERROR_IMPORT:		Importing of a key failed
+ * @LI_KEYRING_ERROR_VERIFY:		Verification failed
  *
  * The error type.
  **/
@@ -66,12 +67,31 @@ typedef enum {
 	LI_KEYRING_ERROR_LOOKUP,
 	LI_KEYRING_ERROR_KEY_UNKNOWN,
 	LI_KEYRING_ERROR_IMPORT,
+	LI_KEYRING_ERROR_VERIFY,
 	/*< private >*/
 	LI_KEYRING_ERROR_LAST
 } LiKeyringError;
 
 #define	LI_KEYRING_ERROR li_keyring_error_quark ()
 GQuark li_keyring_error_quark (void);
+
+/**
+ * LiTrustLevel:
+ * @LI_TRUST_LEVEL_NONE:	We don't trust that software at all (usually means no signature was found)
+ * @LI_TRUST_LEVEL_LOW:		Low trust level (signed and validated, but no trusted author)
+ * @LI_TRUST_LEVEL_MEDIUM:	Medium trust level (we already have software by this author installed and auto-trust him)
+ * @LI_TRUST_LEVEL_HIGH:	High trust level (The software author is in our trusted database)
+ *
+ * A simple indicator on how much we trust a software package.
+ **/
+typedef enum {
+	LI_TRUST_LEVEL_NONE,
+	LI_TRUST_LEVEL_LOW,
+	LI_TRUST_LEVEL_MEDIUM,
+	LI_TRUST_LEVEL_HIGH,
+	/*< private >*/
+	LI_TRUST_LEVEL_LAST
+} LiTrustLevel;
 
 typedef struct _LiKeyring		LiKeyring;
 typedef struct _LiKeyringClass	LiKeyringClass;
@@ -101,6 +121,10 @@ LiKeyring		*li_keyring_new		(void);
 gboolean		li_keyring_import_key (LiKeyring *kr,
 									const gchar *fpr,
 									LiKeyringKind kind,
+									GError **error);
+gchar			*li_keyring_verify_clear_signature (LiKeyring *kr,
+									const gchar *sigtext,
+									gchar **out_fpr,
 									GError **error);
 
 G_END_DECLS

@@ -27,15 +27,52 @@
 
 static gchar *datadir = NULL;
 
+const gchar *sig_signature = "-----BEGIN PGP SIGNED MESSAGE-----\n"
+"Hash: SHA1\n\n"
+"d0bb8a23da064efb222b1c8407711f231655460c6ed643b3ff311b6f92f99d69	repo/repo-index\n"
+"ab33f19095252116ef503c4b7c3562410a1f4961a27c919f7e4efbb53e7df15a	control\n"
+"c34d4eb3f7ef6343998e77a32f0fb85a78201229086190dddaf00e4a0ab17731	metainfo.xml\n"
+"096ba20c95d07d96d5bb8de664cc6a2dd5bcf87ad4120978e3d3babedf0a2d3b	main-data.tar.xz\n"
+"-----BEGIN PGP SIGNATURE-----\n"
+"Version: GnuPG v2\n\n"
+"iQIcBAEBAgAGBQJUkY9rAAoJEElMil+/Tezr9PYQAIkXBX8XDjw3tTruCkTCqzS5\n"
+"V05H1I0TUWIS5at4TB1GEbQBQhiwKo44dVVqJQerZEeVGeQKi7d41J9/87Kfv9KO\n"
+"Dyx6NizHqTHOfqY3xV/s9Zrm/SIQFdjAA69i3dTiOJwSWHdbdvOKPgA8wrtVYl5D\n"
+"mVlydTONjdjFia8tRqsgQd4X2VNTuvO8YBZkKCv4d0mYVw0BNID0ZknNr1BnWecy\n"
+"xj+7BCUMWm/l3Ykzk3q68h0R/hz32/mWHRWn3Ntu9LRYKqzGsxTluXBDUi9Zb3/h\n"
+"DWvGDIvV79BHUK/P8suRZns+dG/+JJlChJzW0bKJRptf9gSyJeJjjhsVkYoEuZ8Q\n"
+"mEzeJjk+tl22RiWWm2WiYOUTkwOuhLzEf8kjS/3i8QWnaEZhWujBN9fF6oiOLzgg\n"
+"Hm4uZ1z4hGhVLxIN2Ai/7PJsma/SMwKovlAwJdFfsvjR2xs2nD0wIWiyfYIaKIVc\n"
+"rJuMCzEmh8gQLv/6imdbOJw2QP2uA4QbafLNipF9zaPNL0UsrGF38H3M0t0h+87w\n"
+"GqCwFTdPfBJrIFjWf8ahpzGXThcVyD5DSkMOQoQbl1eo56saeXHrWa9nijFilhKm\n"
+"ddSKdDdSZa1SDLHLltf/fGApXxdvbxyTed0tjid+YCIfylme++r/Q9gwo/l2pOAn\n"
+"9g1WX9RGeQSVbvne/2XX\n"
+"=I+8J\n"
+"-----END PGP SIGNATURE-----\n";
+
+const gchar *sig_message = "d0bb8a23da064efb222b1c8407711f231655460c6ed643b3ff311b6f92f99d69	repo/repo-index\n"
+"ab33f19095252116ef503c4b7c3562410a1f4961a27c919f7e4efbb53e7df15a	control\n"
+"c34d4eb3f7ef6343998e77a32f0fb85a78201229086190dddaf00e4a0ab17731	metainfo.xml\n"
+"096ba20c95d07d96d5bb8de664cc6a2dd5bcf87ad4120978e3d3babedf0a2d3b	main-data.tar.xz\n";
+
 void
 test_keyring () {
 	LiKeyring *kr;
 	GError *error = NULL;
+	gchar *tmp;
+	gchar *fpr = NULL;
 
 	kr = li_keyring_new ();
 
-	li_keyring_import_key (kr, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB", LI_KEYRING_KIND_USER, &error);
-	//! g_assert_no_error (error);
+	tmp = li_keyring_verify_clear_signature (kr, sig_signature, &fpr, &error);
+	g_assert_no_error (error);
+	g_assert_cmpstr (sig_message, ==, tmp);
+	g_assert_cmpstr (fpr, ==, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB");
+	g_free (tmp);
+
+	li_keyring_import_key (kr, fpr, LI_KEYRING_KIND_USER, &error);
+	g_assert_no_error (error);
+	g_free (fpr);
 
 	g_object_unref (kr);
 }

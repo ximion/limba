@@ -241,6 +241,105 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 	return TRUE;
 }
 
+static void
+print_validity (gpgme_validity_t val)
+{
+  const char *s = NULL;
+
+  switch (val)
+    {
+    case GPGME_VALIDITY_UNKNOWN:  s = "unknown"; break;
+    case GPGME_VALIDITY_UNDEFINED:s = "undefined"; break;
+    case GPGME_VALIDITY_NEVER:    s = "never"; break;
+    case GPGME_VALIDITY_MARGINAL: s = "marginal"; break;
+    case GPGME_VALIDITY_FULL:     s = "full"; break;
+    case GPGME_VALIDITY_ULTIMATE: s = "ultimate"; break;
+    }
+  if (s)
+    fputs (s, stdout);
+  else
+    printf ("[bad validity value %u]", (unsigned int)val);
+}
+
+/**
+ * li_keyring_verify_clear_signature:
+ */
+gchar*
+li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_fpr, GError **error)
+{
+	gpgme_ctx_t ctx;
+	gpgme_error_t err;
+	gpgme_data_t sigdata = NULL;
+	gpgme_data_t data = NULL;
+	#define BUF_SIZE 512
+	char buf[BUF_SIZE + 1];
+	int ret;
+	GString *str;
+	gpgme_verify_result_t result;
+	gpgme_signature_t sig;
+
+	ctx = li_keyring_get_context (kr, LI_KEYRING_KIND_USER);
+
+	err = gpgme_data_new_from_mem (&sigdata, sigtext, strlen (sigtext), 1);
+	if (err != 0) {
+		g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_VERIFY,
+				_("Signature validation failed: %s"),
+				gpgme_strsource (err));
+		gpgme_release (ctx);
+		return NULL;
+	}
+
+	gpgme_data_new (&data);
+
+	err = gpgme_op_verify (ctx, sigdata, NULL, data);
+	if (err != 0) {
+		g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_VERIFY,
+				_("Signature validation failed: %s"),
+				gpgme_strsource (err));
+		gpgme_data_release (sigdata);
+		gpgme_release (ctx);
+		return NULL;
+	}
+
+	result = gpgme_op_verify_result (ctx);
+	if (result)
+		print_result (result);
+
+	sig = result->signatures;
+	if (sig->status != GPG_ERR_NO_ERROR) {
+		g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_VERIFY,
+				_("Signature validation failed. Signature is invalid. (%s)"),
+				gpgme_strsource (sig->status));
+		gpgme_data_release (sigdata);
+		gpgme_data_release (data);
+		gpgme_release (ctx);
+		return NULL;
+	}
+
+	str = g_string_new ("");
+	ret = gpgme_data_seek (data, 0, SEEK_SET);
+	while ((ret = gpgme_data_read (data, buf, BUF_SIZE)) > 0)
+		g_string_append_len (str, buf, ret);
+
+	if (out_fpr != NULL) {
+		*out_fpr = g_strdup (sig->fpr);
+	}
+
+	gpgme_data_release (data);
+	gpgme_data_release (sigdata);
+
+	gpgme_release (ctx);
+
+	return g_string_free (str, FALSE);
+}
+
+
 /**
  * li_keyring_error_quark:
  *
