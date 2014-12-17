@@ -420,7 +420,7 @@ const gchar*
 li_get_software_root ()
 {
 	if (_unittestmode) {
-		const gchar *tmpdir = "/var/tmp/limba/test-root/opt/software";
+		const gchar *tmpdir = "/var/tmp/limba/tests/root/opt/software";
 		g_mkdir_with_parents (tmpdir, 0755);
 		return tmpdir;
 	} else {
@@ -434,10 +434,10 @@ li_get_software_root ()
  * A hack to support unit-tests running as non-root.
  */
 const gchar*
-li_get_prefixdir ()
+li_get_prefixdir (void)
 {
 	if (_unittestmode) {
-		#define tmpdir "/var/tmp/limba/test-root/usr"
+		#define tmpdir "/var/tmp/limba/tests/root/usr"
 		g_mkdir_with_parents (tmpdir "/share/applications", 0755);
 		g_mkdir_with_parents (tmpdir "/local/bin", 0755);
 		return tmpdir;
@@ -453,6 +453,15 @@ void
 li_set_unittestmode (gboolean testmode)
 {
 	_unittestmode = testmode;
+}
+
+/**
+ * li_get_unittestmode:
+ */
+gboolean
+li_get_unittestmode (void)
+{
+	return _unittestmode;
 }
 
 /**

@@ -98,7 +98,7 @@ main (int argc, char **argv)
 	g_test_init (&argc, &argv, NULL);
 
 	/* clean up test directory */
-	li_delete_dir_recursive ("/var/tmp/limba/test-root");
+	li_delete_dir_recursive ("/var/tmp/limba/tests");
 
 	/* critical, error and warnings are fatal */
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);

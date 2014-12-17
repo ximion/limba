@@ -73,6 +73,7 @@ static void
 li_keyring_init (LiKeyring *kr)
 {
 	gpgme_error_t err;
+	gchar *keyring_root;
 	LiKeyringPrivate *priv = GET_PRIVATE (kr);
 
 	gpgme_check_version (NULL);
@@ -81,8 +82,16 @@ li_keyring_init (LiKeyring *kr)
 	err = gpgme_engine_check_version (LI_GPG_PROTOCOL);
 	g_assert (err == 0);
 
-	priv->gpg_home_user = g_build_filename (LI_KEYRING_ROOT, "trusted", NULL);
-	priv->gpg_home_automatic = g_build_filename (LI_KEYRING_ROOT, "automatic", NULL);
+	/* use a temporary keyring for unit-tests */
+	if (li_get_unittestmode ()) {
+		keyring_root = g_strdup ("/var/tmp/limba/tests/localstate/keyring");
+	} else {
+		keyring_root = g_strdup (LI_KEYRING_ROOT);
+	}
+
+	priv->gpg_home_user = g_build_filename (keyring_root, "trusted", NULL);
+	priv->gpg_home_automatic = g_build_filename (keyring_root, "automatic", NULL);
+	g_free (keyring_root);
 }
 
 /**
@@ -103,7 +112,8 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 	else
 		g_critical ("Invalid keyring kind passed to create_context!");
 
-	if ((li_utils_is_root ()) && (!g_file_test (home, G_FILE_TEST_IS_DIR)))  {
+	if ((li_utils_is_root () || li_get_unittestmode ()) &&
+		(!g_file_test (home, G_FILE_TEST_IS_DIR)))  {
 		gchar *gpgconf_fname;
 		const gchar *gpg_conf = "# Options for GnuPG used by Limba \n\n"
 			"no-greeting\n"
@@ -241,26 +251,6 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 	return TRUE;
 }
 
-static void
-print_validity (gpgme_validity_t val)
-{
-  const char *s = NULL;
-
-  switch (val)
-    {
-    case GPGME_VALIDITY_UNKNOWN:  s = "unknown"; break;
-    case GPGME_VALIDITY_UNDEFINED:s = "undefined"; break;
-    case GPGME_VALIDITY_NEVER:    s = "never"; break;
-    case GPGME_VALIDITY_MARGINAL: s = "marginal"; break;
-    case GPGME_VALIDITY_FULL:     s = "full"; break;
-    case GPGME_VALIDITY_ULTIMATE: s = "ultimate"; break;
-    }
-  if (s)
-    fputs (s, stdout);
-  else
-    printf ("[bad validity value %u]", (unsigned int)val);
-}
-
 /**
  * li_keyring_verify_clear_signature:
  */
@@ -306,10 +296,18 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 	}
 
 	result = gpgme_op_verify_result (ctx);
-	if (result)
-		print_result (result);
-
+	if (result == NULL) {
+		g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_VERIFY,
+				_("Signature validation failed: %s"),
+				_("No result received."));
+		gpgme_data_release (sigdata);
+		gpgme_release (ctx);
+		return NULL;
+	}
 	sig = result->signatures;
+
 	if (sig->status != GPG_ERR_NO_ERROR) {
 		g_set_error (error,
 				LI_KEYRING_ERROR,
