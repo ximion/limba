@@ -742,6 +742,7 @@ li_package_extract_contents (LiPackage *pkg, const gchar *dest_dir, GError **err
 	struct archive *ar;
 	struct archive_entry* e;
 	GError *tmp_error = NULL;
+	g_assert_nonnull (dest_dir);
 
 	ar = li_package_open_base_ipk (pkg, &tmp_error);
 	if ((ar == NULL) || (tmp_error != NULL)) {

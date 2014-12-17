@@ -272,6 +272,7 @@ pkgen_unpack_pkg (const gchar *fname, const gchar *dir)
 {
 	LiPackage *pkg;
 	gint res = 1;
+	gchar *dest_dir;
 	GError *error = NULL;
 
 	pkg = li_package_new ();
@@ -282,7 +283,12 @@ pkgen_unpack_pkg (const gchar *fname, const gchar *dir)
 		goto out;
 	}
 
-	li_package_extract_contents (pkg, dir, &error);
+	if (dir != NULL)
+		dest_dir = g_strdup (dir);
+	else
+		dest_dir = g_get_current_dir ();
+
+	li_package_extract_contents (pkg, dest_dir, &error);
 	if (error != NULL) {
 		li_print_stderr (_("Unable to unpack package. %s"), error->message);
 		g_error_free (error);
