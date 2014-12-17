@@ -19,6 +19,12 @@ add_executable(li-test-basics test-basics.c)
 add_dependencies(li-test-basics limba)
 add_test(basic-test li-test-basics ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Keyring tests
+add_executable(li-test-keyring test-keyring.c)
+add_dependencies(li-test-keyring limba)
+add_test(keyring-test li-test-keyring ${CMAKE_CURRENT_SOURCE_DIR})
+set_property(TEST keyring-test APPEND PROPERTY DEPENDS basic-test)
+
 # IPK package tests
 add_executable(li-test-package test-package.c)
 add_dependencies(li-test-package limba)
