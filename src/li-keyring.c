@@ -174,7 +174,7 @@ li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, gboolean remote, GErro
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_LOOKUP,
 				_("Key lookup failed: %s"),
-				gpgme_strsource (err));
+				gpgme_strerror (err));
 		return NULL;
 	}
 
@@ -188,7 +188,7 @@ li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, gboolean remote, GErro
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_LOOKUP,
 				_("Key lookup failed: %s"),
-				gpgme_strsource (err));
+				gpgme_strerror (err));
 		return NULL;
 	}
 
@@ -254,7 +254,7 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_IMPORT,
 				_("Importing of key failed: %s"),
-				gpgme_strsource (err));
+				gpgme_strerror (err));
 		gpgme_key_unref (key);
 		gpgme_release (ctx);
 		return FALSE;
@@ -303,7 +303,7 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_VERIFY,
 				_("Signature validation failed: %s"),
-				gpgme_strsource (err));
+				gpgme_strerror (err));
 		gpgme_release (ctx);
 		return NULL;
 	}
@@ -316,7 +316,7 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_VERIFY,
 				_("Signature validation failed: %s"),
-				gpgme_strsource (err));
+				gpgme_strerror (err));
 		gpgme_data_release (sigdata);
 		gpgme_release (ctx);
 		return NULL;
@@ -340,7 +340,7 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_VERIFY,
 				_("Signature validation failed. Signature is invalid. (%s)"),
-				gpgme_strsource (sig->status));
+				gpgme_strerror (sig->status));
 		gpgme_data_release (sigdata);
 		gpgme_data_release (data);
 		gpgme_release (ctx);
