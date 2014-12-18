@@ -107,6 +107,13 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 
+	li_config_data_reset (cdata);
+
+	/* write format header */
+	li_config_data_set_value (cdata, "Format-Version", priv->format_version);
+	li_config_data_new_block (cdata);
+
+	/* write actual data block */
 	if (priv->name != NULL)
 		li_config_data_set_value (cdata, "PkgName", priv->name);
 
@@ -145,6 +152,7 @@ li_pkg_info_finalize (GObject *object)
 	g_free (priv->version);
 	g_free (priv->dependencies);
 	g_free (priv->runtime_uuid);
+	g_free (priv->format_version);
 
 	G_OBJECT_CLASS (li_pkg_info_parent_class)->finalize (object);
 }
@@ -162,6 +170,7 @@ li_pkg_info_init (LiPkgInfo *pki)
 	priv->flags = LI_PACKAGE_FLAG_NONE;
 	priv->vrel = LI_VERSION_UNKNOWN;
 	priv->arch = li_get_current_arch_h ();
+	priv->format_version = g_strdup ("1.0");
 }
 
 /**
