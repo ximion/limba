@@ -43,6 +43,7 @@ struct _LiKeyringPrivate
 {
 	gchar *gpg_home_user;
 	gchar *gpg_home_automatic;
+	gchar *gpg_home_tmp;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiKeyring, li_keyring, G_TYPE_OBJECT)
@@ -62,6 +63,10 @@ li_keyring_finalize (GObject *object)
 
 	g_free (priv->gpg_home_user);
 	g_free (priv->gpg_home_automatic);
+	if (priv->gpg_home_tmp != NULL) {
+		li_delete_dir_recursive (priv->gpg_home_tmp);
+		g_free (priv->gpg_home_tmp);
+	}
 
 	G_OBJECT_CLASS (li_keyring_parent_class)->finalize (object);
 }
@@ -91,6 +96,7 @@ li_keyring_init (LiKeyring *kr)
 
 	priv->gpg_home_user = g_build_filename (keyring_root, "trusted", NULL);
 	priv->gpg_home_automatic = g_build_filename (keyring_root, "automatic", NULL);
+	priv->gpg_home_tmp = NULL;
 	g_free (keyring_root);
 }
 
@@ -101,25 +107,34 @@ gpgme_ctx_t
 li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 {
 	const gchar *home = NULL;
+	gboolean tmpdir = FALSE;
 	gpgme_error_t err;
 	gpgme_ctx_t ctx;
 	LiKeyringPrivate *priv = GET_PRIVATE (kr);
 
-	if (kind == LI_KEYRING_KIND_USER)
+	if (kind == LI_KEYRING_KIND_USER) {
 		home = priv->gpg_home_user;
-	else if (kind == LI_KEYRING_KIND_AUTOMATIC)
+	} else if (kind == LI_KEYRING_KIND_AUTOMATIC) {
 		home = priv->gpg_home_automatic;
-
-	err = gpgme_new (&ctx);
-	g_assert (err == 0);
-	gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
-
-	if (home == NULL) {
-		return ctx;
+	} else {
+		/* we create these super-ugly temporary GPG home dirs to prevent a normal
+		 * signature validation from tampering with our keyring (e.g. by occasionally
+		 * importing a key to it)
+		 * This has been done in several other projects, but we should do something
+		 * less-hackish as soon as that option exists.
+		 */
+		if (priv->gpg_home_tmp != NULL) {
+			li_delete_dir_recursive (priv->gpg_home_tmp);
+			g_free (priv->gpg_home_tmp);
+		}
+		priv->gpg_home_tmp = g_build_filename ("/tmp", "gpg.tmp-XXXXXX", NULL);
+		g_mkdtemp (priv->gpg_home_tmp);
+		home = priv->gpg_home_tmp;
+		tmpdir = TRUE;
 	}
 
-	if ((li_utils_is_root () || li_get_unittestmode ()) &&
-		(!g_file_test (home, G_FILE_TEST_IS_DIR)))  {
+	if ((tmpdir) || ((li_utils_is_root () || li_get_unittestmode ()) &&
+		(!g_file_test (home, G_FILE_TEST_IS_DIR))))  {
 		gchar *gpgconf_fname;
 		const gchar *gpg_conf = "# Options for GnuPG used by Limba \n\n"
 			"no-greeting\n"
@@ -135,6 +150,10 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 		g_file_set_contents (gpgconf_fname, gpg_conf, -1, NULL);
 		g_free (gpgconf_fname);
 	}
+
+	err = gpgme_new (&ctx);
+	g_assert (err == 0);
+	gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
 	gpgme_ctx_set_engine_info (ctx, LI_GPG_PROTOCOL, NULL, home);
 
 	return ctx;
