@@ -231,7 +231,7 @@ li_pkg_builder_add_embedded_packages (const gchar *tmp_dir, const gchar *repo_so
 		g_ptr_array_add (files, tmp);
 	}
 
-	tmp = g_build_filename (tmp_dir, "repo", "repo-index", NULL);
+	tmp = g_build_filename (tmp_dir, "repo", "index", NULL);
 	li_pkg_index_save_to_file (idx, tmp);
 
 	return tmp;
@@ -283,7 +283,7 @@ li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname, GError *
 		ar_fname = g_path_get_basename (fname);
 
 		/* sort the repository files into their subdirectory */
-		if (g_strcmp0 (ar_fname, "repo-index") == 0) {
+		if (g_str_has_suffix (fname, "repo/index")) {
 			g_free (ar_fname);
 			ar_fname = g_strdup ("repo/index");
 		} else if (g_str_has_suffix (ar_fname, ".ipk")) {
@@ -351,7 +351,7 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 
 	gpgme_error_t err;
 	gpgme_ctx_t ctx;
-	gpgme_sig_mode_t sigmode = GPGME_SIG_MODE_CLEAR;
+	gpgme_sig_mode_t sigmode = GPGME_SIG_MODE_NORMAL;
 	gpgme_data_t din, dout;
 	gpgme_sign_result_t sig_res;
 

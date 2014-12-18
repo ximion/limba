@@ -27,6 +27,7 @@
 
 #include <glib-object.h>
 #include "li-pkg-info.h"
+#include "li-keyring.h"
 
 #define LI_TYPE_PACKAGE			(li_package_get_type())
 #define LI_PACKAGE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PACKAGE, LiPackage))
@@ -49,6 +50,7 @@ G_BEGIN_DECLS
  * @LI_PACKAGE_ERROR_EXTRACT:				Could not extract data
  * @LI_PACKAGE_ERROR_CHECKSUM_MISMATCH:		A checksum did not match
  * @LI_PACKAGE_ERROR_WRONG_ARCHITECTURE:	The package was built for a different architecture
+ * @LI_PACKAGE_ERROR_SIGNATURE_BROKEN:		The signature of this package is broken
  *
  * The error type.
  **/
@@ -61,6 +63,7 @@ typedef enum {
 	LI_PACKAGE_ERROR_EXTRACT,
 	LI_PACKAGE_ERROR_CHECKSUM_MISMATCH,
 	LI_PACKAGE_ERROR_WRONG_ARCHITECTURE,
+	LI_PACKAGE_ERROR_SIGNATURE_BROKEN,
 	/*< private >*/
 	LI_PACKAGE_ERROR_LAST
 } LiPackageError;
@@ -98,6 +101,8 @@ gboolean		li_package_open_file (LiPackage *pkg,
 										GError **error);
 gboolean		li_package_install (LiPackage *pkg,
 										GError **error);
+LiTrustLevel	li_package_verify_signature (LiPackage *pkg,
+											GError **error);
 
 const gchar		*li_package_get_install_root (LiPackage *pkg);
 void			li_package_set_install_root (LiPackage *pkg,

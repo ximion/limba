@@ -27,33 +27,34 @@
 
 static gchar *datadir = NULL;
 
-const gchar *sig_signature = "-----BEGIN PGP SIGNED MESSAGE-----\n"
-"Hash: SHA1\n\n"
-"d0bb8a23da064efb222b1c8407711f231655460c6ed643b3ff311b6f92f99d69	repo/repo-index\n"
-"ab33f19095252116ef503c4b7c3562410a1f4961a27c919f7e4efbb53e7df15a	control\n"
-"c34d4eb3f7ef6343998e77a32f0fb85a78201229086190dddaf00e4a0ab17731	metainfo.xml\n"
-"096ba20c95d07d96d5bb8de664cc6a2dd5bcf87ad4120978e3d3babedf0a2d3b	main-data.tar.xz\n"
-"-----BEGIN PGP SIGNATURE-----\n"
+const gchar *sig_signature = "-----BEGIN PGP MESSAGE-----\n"
 "Version: GnuPG v2\n\n"
-"iQIcBAEBAgAGBQJUkY9rAAoJEElMil+/Tezr9PYQAIkXBX8XDjw3tTruCkTCqzS5\n"
-"V05H1I0TUWIS5at4TB1GEbQBQhiwKo44dVVqJQerZEeVGeQKi7d41J9/87Kfv9KO\n"
-"Dyx6NizHqTHOfqY3xV/s9Zrm/SIQFdjAA69i3dTiOJwSWHdbdvOKPgA8wrtVYl5D\n"
-"mVlydTONjdjFia8tRqsgQd4X2VNTuvO8YBZkKCv4d0mYVw0BNID0ZknNr1BnWecy\n"
-"xj+7BCUMWm/l3Ykzk3q68h0R/hz32/mWHRWn3Ntu9LRYKqzGsxTluXBDUi9Zb3/h\n"
-"DWvGDIvV79BHUK/P8suRZns+dG/+JJlChJzW0bKJRptf9gSyJeJjjhsVkYoEuZ8Q\n"
-"mEzeJjk+tl22RiWWm2WiYOUTkwOuhLzEf8kjS/3i8QWnaEZhWujBN9fF6oiOLzgg\n"
-"Hm4uZ1z4hGhVLxIN2Ai/7PJsma/SMwKovlAwJdFfsvjR2xs2nD0wIWiyfYIaKIVc\n"
-"rJuMCzEmh8gQLv/6imdbOJw2QP2uA4QbafLNipF9zaPNL0UsrGF38H3M0t0h+87w\n"
-"GqCwFTdPfBJrIFjWf8ahpzGXThcVyD5DSkMOQoQbl1eo56saeXHrWa9nijFilhKm\n"
-"ddSKdDdSZa1SDLHLltf/fGApXxdvbxyTed0tjid+YCIfylme++r/Q9gwo/l2pOAn\n"
-"9g1WX9RGeQSVbvne/2XX\n"
-"=I+8J\n"
-"-----END PGP SIGNATURE-----\n";
+"owEBbAOT/JANAwACAUlMil+/TezrAcvAe2IAVJNGxmNlNjg0NjQ2MTBhYWYxYTFk\n"
+"MmNhNDQxZDY5Y2YwYzUzYzE0YzIxZjU5OGE4MjEzM2U2OTUyMmVkMDhiMmU5ZmEJ\n"
+"cmVwby9pbmRleAoxM2NkZmM3ZjA2ZjNhYjdlZjdiY2ZlOTJiYmRiODFjNWQ2Mzhh\n"
+"ZDg1YjJjNzA0M2UzZGJmNzczNzViM2ZlM2RkCWNvbnRyb2wKYzM0ZDRlYjNmN2Vm\n"
+"NjM0Mzk5OGU3N2EzMmYwZmI4NWE3ODIwMTIyOTA4NjE5MGRkZGFmMDBlNGEwYWIx\n"
+"NzczMQltZXRhaW5mby54bWwKM2Y5ZTkxMDI5NGU2NmI5OGM1ZTJiYjdiMDJmZjI3\n"
+"NTUwZTE4Nzg3M2I2YzhhZGJjOTk4YmJmOWY1ZjUxN2Q4ZAltYWluLWRhdGEudGFy\n"
+"Lnh6CokCHAQAAQIABgUCVJNGxgAKCRBJTIpfv03s6+xmD/0TgAdrxSuAaovBvghM\n"
+"VKlPgVSH2c7M7wO6PcLTHhUgAfll75kIIbdNT4CDhjkL3jMK5T4orxGBRWxp9rTH\n"
+"FkoorWPiJ2OHggRfAXdYmkIqSQlDGdjq2a3U5NCXxa6JqFR65qpNFKBhfgPq89N2\n"
+"ZwV3BtO3b5hGs1bgLmTgyUQ4MdNvrVrv1mT9UijVk620Vom2Z0oKV33SKhvHi8Ju\n"
+"jjWI9wdv4zI7DSsFsATLz5XyJn/BfB+h49sEEEpBeFye7I0vJDZqm3MTsJBEnUhc\n"
+"tTNfaHVK0IuYKzZaO75tp/xJWr7OIUT9PnPOiwaRwx5tWxHBKa/fcD1tJjoSBCfp\n"
+"/UT3MkAuo1gbZUafJrbdqlR2KxOwEVMWKEqkeQhW2RVDQ55TBbbbF6A0pQV/hoj9\n"
+"7b7ybmgE0Cm5VTPSkMDG8NaygtBij0NjuN2DPyQNfKgwR4PSTChQfmcrlvKh673G\n"
+"NwgHk9m5HS1wjW+mKa1IiZP9O0UIvJOp2o6zmvE4k3kkxXN7DWzaGzd3pRRgGYxn\n"
+"69uyfl8FE62HaVJA4fLX1H7ZPnteh47e73H/5YTjKqKcN3cJGaaxmmg2rtyaq79J\n"
+"OR5HF5Zkh3ogx1mrQZnETeskOJoAWpSIxr/YbQ+OxRwwUYKLMTk3GfIC/nDZbgdj\n"
+"FMvyzfF5CkHUZRvHP2jkyt0tBw==\n"
+"=Acpp\n"
+"-----END PGP MESSAGE-----\n";
 
-const gchar *sig_message = "d0bb8a23da064efb222b1c8407711f231655460c6ed643b3ff311b6f92f99d69	repo/repo-index\n"
-"ab33f19095252116ef503c4b7c3562410a1f4961a27c919f7e4efbb53e7df15a	control\n"
-"c34d4eb3f7ef6343998e77a32f0fb85a78201229086190dddaf00e4a0ab17731	metainfo.xml\n"
-"096ba20c95d07d96d5bb8de664cc6a2dd5bcf87ad4120978e3d3babedf0a2d3b	main-data.tar.xz\n";
+const gchar *sig_message = "ce68464610aaf1a1d2ca441d69cf0c53c14c21f598a82133e69522ed08b2e9fa\trepo/index\n"
+"13cdfc7f06f3ab7ef7bcfe92bbdb81c5d638ad85b2c7043e3dbf77375b3fe3dd\tcontrol\n"
+"c34d4eb3f7ef6343998e77a32f0fb85a78201229086190dddaf00e4a0ab17731\tmetainfo.xml\n"
+"3f9e910294e66b98c5e2bb7b02ff27550e187873b6c8adbc998bbf9f5f517d8d\tmain-data.tar.xz\n";
 
 void
 test_keyring () {

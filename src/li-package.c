@@ -41,6 +41,7 @@
 #include "li-utils-private.h"
 #include "li-exporter.h"
 #include "li-pkg-index.h"
+#include "li-keyring.h"
 
 #define DEFAULT_BLOCK_SIZE 65536
 
@@ -49,12 +50,19 @@ struct _LiPackagePrivate
 {
 	FILE *archive_file;
 	gchar *tmp_dir;
+	gchar *tmp_payload_path; /* we cache the extracted payload path for performance reasons */
 	LiPkgInfo *info;
 	AsComponent *cpt;
 
 	gchar *install_root;
 	gchar *id;
 	GPtrArray *embedded_packages;
+
+	LiKeyring *kr;
+	gchar *signature_data;
+	gchar *sig_fpr;
+	LiTrustLevel tlevel;
+	GHashTable *contents_hash;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPackage, li_package, G_TYPE_OBJECT)
@@ -81,8 +89,13 @@ li_package_finalize (GObject *object)
 		li_delete_dir_recursive (priv->tmp_dir);
 		g_free (priv->tmp_dir);
 	}
+	g_free (priv->tmp_payload_path);
+	g_free (priv->signature_data);
+	g_free (priv->sig_fpr);
 	g_free (priv->install_root);
 	g_free (priv->id);
+	g_object_unref (priv->kr);
+	g_hash_table_unref (priv->contents_hash);
 
 	G_OBJECT_CLASS (li_package_parent_class)->finalize (object);
 }
@@ -99,6 +112,10 @@ li_package_init (LiPackage *pkg)
 	priv->tmp_dir = NULL;
 	priv->archive_file = NULL;
 	priv->install_root = g_strdup (LI_SOFTWARE_ROOT);
+
+	priv->kr = li_keyring_new ();
+	priv->contents_hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+	priv->tlevel = LI_TRUST_LEVEL_NONE;
 }
 
 /**
@@ -404,6 +421,10 @@ li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 				goto out;
 			}
 			li_pkg_info_load_data (priv->info, info_data);
+			/* generate a checksum for this to verify the data later */
+			g_hash_table_insert (priv->contents_hash,
+						g_strdup ("control"),
+						g_compute_checksum_for_string (G_CHECKSUM_SHA256, info_data, -1));
 			g_free (info_data);
 		} else if (g_strcmp0 (pathname, "metainfo.xml") == 0) {
 			gchar *as_data;
@@ -413,11 +434,16 @@ li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 				goto out;
 			}
 			li_package_read_component_data (pkg, as_data, &tmp_error);
-			g_free (as_data);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
+				g_free (as_data);
 				goto out;
 			}
+			/* generate a checksum for this to verify the data later */
+			g_hash_table_insert (priv->contents_hash,
+						g_strdup ("metainfo.xml"),
+						g_compute_checksum_for_string (G_CHECKSUM_SHA256, as_data, -1));
+			g_free (as_data);
 		} else if (g_strcmp0 (pathname, "repo/index") == 0) {
 			LiPkgIndex *idx;
 			gchar *index_data;
@@ -428,6 +454,11 @@ li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 			}
 			idx = li_pkg_index_new ();
 			li_pkg_index_load_data (idx, index_data);
+
+			/* generate a checksum for this to verify the data later */
+			g_hash_table_insert (priv->contents_hash,
+						g_strdup ("repo/index"),
+						g_compute_checksum_for_string (G_CHECKSUM_SHA256, index_data, -1));
 			g_free (index_data);
 
 			/* clean up a possible previous list of packages */
@@ -438,6 +469,14 @@ li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 			/* we need to refcount here, otherwise the array will be removed with the index instance in the next step */
 			g_ptr_array_ref (priv->embedded_packages);
 			g_object_unref (idx);
+		} else if (g_strcmp0 (pathname, "_signature") == 0) {
+			if (priv->signature_data != NULL)
+				g_free (priv->signature_data);
+			priv->signature_data = li_package_read_entry (pkg, ar, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
 		} else {
 			archive_read_data_skip (ar);
 		}
@@ -462,13 +501,67 @@ out:
 }
 
 /**
+ * li_package_extract_payload_archive:
+ *
+ * Returns the temporary path to our extracted payload archive
+ */
+static const gchar*
+li_package_extract_payload_archive (LiPackage *pkg, GError **error)
+{
+	struct archive *ar;
+	struct archive_entry* e1;
+	GError *tmp_error = NULL;
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+
+	if (priv->tmp_payload_path != NULL)
+		/* we already extracted the payload, return its path */
+		goto finish;
+
+	ar = li_package_open_base_ipk (pkg, &tmp_error);
+	if ((ar == NULL) || (tmp_error != NULL)) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+
+	while (archive_read_next_header (ar, &e1) == ARCHIVE_OK) {
+		const gchar *pathname;
+
+		pathname = archive_entry_pathname (e1);
+		if (g_strcmp0 (pathname, "main-data.tar.xz") == 0) {
+			li_package_extract_entry_to (pkg, ar, e1, priv->tmp_dir, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				archive_read_free (ar);
+				return NULL;
+			}
+		} else {
+			archive_read_data_skip (ar);
+		}
+	}
+
+	archive_read_close (ar);
+	archive_read_free (ar);
+
+	priv->tmp_payload_path = g_build_filename (priv->tmp_dir, "main-data.tar.xz", NULL);
+
+finish:
+	if (!g_file_test (priv->tmp_payload_path, G_FILE_TEST_EXISTS)) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Unable to find or unpack package payload."));
+		return NULL;
+	}
+
+	return priv->tmp_payload_path;
+}
+
+/**
  * li_package_install:
  */
 gboolean
 li_package_install (LiPackage *pkg, GError **error)
 {
-	struct archive *ar;
-	struct archive_entry* e1;
 	struct archive *payload_ar;
 	struct archive_entry* en;
 	GError *tmp_error = NULL;
@@ -479,6 +572,7 @@ li_package_install (LiPackage *pkg, GError **error)
 	gint res;
 	gboolean ret;
 	const gchar *version;
+	const gchar *tmp_payload_path;
 	_cleanup_object_unref_ LiExporter *exp = NULL;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
@@ -519,6 +613,16 @@ li_package_install (LiPackage *pkg, GError **error)
 		return FALSE;
 	}
 
+	if (priv->tlevel < LI_TRUST_LEVEL_LOW) {
+		/* we we have a below-low trust level, we either didn't validate yet or validation failed.
+		 * in both cases, better validate (again). */
+		li_package_verify_signature (pkg, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return FALSE;
+		}
+	}
+
 	/* create a new exporter to integrate the new software into the system */
 	exp = li_exporter_new ();
 	li_exporter_set_pkg_info (exp, priv->info);
@@ -542,30 +646,12 @@ li_package_install (LiPackage *pkg, GError **error)
 		li_exporter_set_override_allowed (exp, TRUE);
 	}
 
-	ar = li_package_open_base_ipk (pkg, &tmp_error);
-	if ((ar == NULL) || (tmp_error != NULL)) {
+	/* extract payload (if necessary) */
+	tmp_payload_path = li_package_extract_payload_archive (pkg, &tmp_error);
+	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
-
-	while (archive_read_next_header (ar, &e1) == ARCHIVE_OK) {
-		const gchar *pathname;
-
-		pathname = archive_entry_pathname (e1);
-		if (g_strcmp0 (pathname, "main-data.tar.xz") == 0) {
-			li_package_extract_entry_to (pkg, ar, e1, priv->tmp_dir, &tmp_error);
-			if (tmp_error != NULL) {
-				g_propagate_error (error, tmp_error);
-				archive_read_free (ar);
-				return FALSE;
-			}
-		} else {
-			archive_read_data_skip (ar);
-		}
-	}
-
-	archive_read_close (ar);
-	archive_read_free (ar);
 
 	/* open the payload archive */
 	payload_ar = archive_read_new ();
@@ -573,25 +659,13 @@ li_package_install (LiPackage *pkg, GError **error)
 	archive_read_support_filter_xz (payload_ar);
 	archive_read_support_format_tar (payload_ar);
 
-	tmp = g_build_filename (priv->tmp_dir, "main-data.tar.xz", NULL);
-	if (!g_file_test (tmp, G_FILE_TEST_EXISTS)) {
-		g_set_error (error,
-				LI_PACKAGE_ERROR,
-				LI_PACKAGE_ERROR_DATA_MISSING,
-				_("Unable to find or unpack package payload."));
-		g_free (tmp);
-		archive_read_free (payload_ar);
-		return FALSE;
-	}
-
 	/* open the file, exit on error */
-	res = archive_read_open_filename (payload_ar, tmp, DEFAULT_BLOCK_SIZE);
-	g_free (tmp);
+	res = archive_read_open_filename (payload_ar, tmp_payload_path, DEFAULT_BLOCK_SIZE);
 	if (res != ARCHIVE_OK) {
 		g_set_error (error,
 				LI_PACKAGE_ERROR,
 				LI_PACKAGE_ERROR_ARCHIVE,
-				_("Could not open IPK payload! Error: %s"), archive_error_string (ar));
+				_("Could not open IPK payload! Error: %s"), archive_error_string (payload_ar));
 		archive_read_free (payload_ar);
 		return FALSE;
 	}
@@ -621,7 +695,7 @@ li_package_install (LiPackage *pkg, GError **error)
 		li_package_extract_entry_to (pkg, payload_ar, en, dest_path, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
-			archive_read_free (ar);
+			archive_read_free (payload_ar);
 			return FALSE;
 		}
 
@@ -631,7 +705,7 @@ li_package_install (LiPackage *pkg, GError **error)
 		li_exporter_process_file (exp, archive_entry_pathname (en), dest_fname, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
-			archive_read_free (ar);
+			archive_read_free (payload_ar);
 			return FALSE;
 		}
 	}
@@ -778,6 +852,119 @@ li_package_extract_contents (LiPackage *pkg, const gchar *dest_dir, GError **err
 out:
 	archive_read_close (ar);
 	archive_read_free (ar);
+}
+
+/**
+ * _li_package_signature_hash_matches:
+ *
+ * Helper function for verify_signature()
+ */
+gboolean
+_li_package_signature_hash_matches (GHashTable *contents_hash, gchar **sigparts, const gchar *fname)
+{
+	gint i;
+	gboolean valid;
+	_cleanup_free_ gchar *hash = NULL;
+
+	/* if we don't have that file which needs to be checked, we consider this as a match */
+	if (g_hash_table_lookup (contents_hash, fname) == NULL)
+		return TRUE;
+
+	for (i = 0; sigparts[i] != NULL; i++) {
+		if (g_str_has_suffix (sigparts[i], fname)) {
+			gchar **tmp;
+			tmp = g_strsplit (sigparts[i], "\t", 2);
+			if (g_strv_length (tmp) != 2) {
+				g_strfreev (tmp);
+				continue;
+			}
+			hash = g_strdup (tmp[0]);
+			g_strfreev (tmp);
+			break;
+		}
+	}
+
+	valid = g_strcmp0 (g_hash_table_lookup (contents_hash, fname), hash) == 0;
+	if (!valid)
+		g_debug ("Hash values on IPK metadata '%s' do not match the signature.", fname);
+	return valid;
+}
+
+/**
+ * li_package_verify_signature:
+ *
+ * Verifies the signature of this package and returns a trust level.
+ */
+LiTrustLevel
+li_package_verify_signature (LiPackage *pkg, GError **error)
+{
+	GError *tmp_error = NULL;
+	const gchar *payload_fname;
+	_cleanup_free_ gchar *sig_content = NULL;
+	LiTrustLevel level;
+	gchar **parts = NULL;
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+
+	priv->tlevel = LI_TRUST_LEVEL_NONE;
+
+	/* no signature == no trust level */
+	if (priv->signature_data == NULL)
+		return priv->tlevel;
+
+	/* we need a hash of the payload archive. That value is not automatically generated, since
+	 * the payload might be huge and generating the hash might take some time. In case the LiPackage
+	 * is just used to peek some metadata (e.g. the AppStream XML), the hashing process would take time
+	 * for no gain. So we do it here, when we actually need it. */
+	if (g_hash_table_lookup (priv->contents_hash, "main-data.tar.xz") == NULL) {
+		payload_fname = li_package_extract_payload_archive (pkg, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return priv->tlevel;
+		}
+		g_hash_table_insert (priv->contents_hash,
+						g_strdup ("main-data.tar.xz"),
+						li_compute_checksum_for_file (payload_fname));
+	}
+
+	priv->tlevel = LI_TRUST_LEVEL_INVALID;
+	if (priv->sig_fpr != NULL)
+		g_free (priv->sig_fpr);
+
+	level = li_keyring_process_pkg_signature (priv->kr, priv->signature_data, &sig_content, &priv->sig_fpr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	/* if we are here, we need to validate that all hashsums match */
+	/* we check them explicitly, to prevent an attack where the attacker could just provide an empty signature */
+	parts = g_strsplit (sig_content, "\n", -1);
+
+	if (!_li_package_signature_hash_matches (priv->contents_hash, parts, "control"))
+		goto invalid_error;
+	if (!_li_package_signature_hash_matches (priv->contents_hash, parts, "metainfo.xml"))
+		goto invalid_error;
+	if (!_li_package_signature_hash_matches (priv->contents_hash, parts, "main-data.tar.xz"))
+		goto invalid_error;
+	if (!_li_package_signature_hash_matches (priv->contents_hash, parts, "repo/index"))
+		goto invalid_error;
+
+	/* everything was okay, assign the signature trust level */
+	priv->tlevel = level;
+
+invalid_error:
+	if (priv->tlevel == LI_TRUST_LEVEL_INVALID) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_SIGNATURE_BROKEN,
+				_("This package has a broken signature."));
+	}
+
+out:
+	if (parts != NULL)
+		g_strfreev (parts);
+
+	return priv->tlevel;
 }
 
 /**

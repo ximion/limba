@@ -80,6 +80,7 @@ GQuark li_keyring_error_quark (void);
 /**
  * LiTrustLevel:
  * @LI_TRUST_LEVEL_NONE:	We don't trust that software at all (usually means no signature was found)
+ * @LI_TRUST_LEVEL_INVALID:	The package could not be validated, its signature might be broken.
  * @LI_TRUST_LEVEL_LOW:		Low trust level (signed and validated, but no trusted author)
  * @LI_TRUST_LEVEL_MEDIUM:	Medium trust level (we already have software by this author installed and auto-trust him)
  * @LI_TRUST_LEVEL_HIGH:	High trust level (The software author is in our trusted database)
@@ -88,6 +89,7 @@ GQuark li_keyring_error_quark (void);
  **/
 typedef enum {
 	LI_TRUST_LEVEL_NONE,
+	LI_TRUST_LEVEL_INVALID,
 	LI_TRUST_LEVEL_LOW,
 	LI_TRUST_LEVEL_MEDIUM,
 	LI_TRUST_LEVEL_HIGH,
