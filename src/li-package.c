@@ -511,6 +511,14 @@ li_package_install (LiPackage *pkg, GError **error)
 		return FALSE;
 	}
 
+	if (!li_pkg_info_matches_current_arch (priv->info)) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_WRONG_ARCHITECTURE,
+				_("The package was built for a different architecture."));
+		return FALSE;
+	}
+
 	/* create a new exporter to integrate the new software into the system */
 	exp = li_exporter_new ();
 	li_exporter_set_pkg_info (exp, priv->info);

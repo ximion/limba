@@ -41,13 +41,14 @@ G_BEGIN_DECLS
 
 /**
  * LiPackageError:
- * @LI_PACKAGE_ERROR_FAILED:			Generic failure
- * @LI_PACKAGE_ERROR_NOT_FOUND:			A required file or entity was not found
- * @LI_PACKAGE_ERROR_ARCHIVE:			Error in the archive structure
- * @LI_PACKAGE_ERROR_DATA_MISSING:		Some data is missing in the archive
- * @LI_PACKAGE_ERROR_OVERRIDE:			Could not override file
- * @LI_PACKAGE_ERROR_EXTRACT:			Could not extract data
- * @LI_PACKAGE_ERROR_CHECKSUM_MISMATCH:	A checksum did not match
+ * @LI_PACKAGE_ERROR_FAILED:				Generic failure
+ * @LI_PACKAGE_ERROR_NOT_FOUND:				A required file or entity was not found
+ * @LI_PACKAGE_ERROR_ARCHIVE:				Error in the archive structure
+ * @LI_PACKAGE_ERROR_DATA_MISSING:			Some data is missing in the archive
+ * @LI_PACKAGE_ERROR_OVERRIDE:				Could not override file
+ * @LI_PACKAGE_ERROR_EXTRACT:				Could not extract data
+ * @LI_PACKAGE_ERROR_CHECKSUM_MISMATCH:		A checksum did not match
+ * @LI_PACKAGE_ERROR_WRONG_ARCHITECTURE:	The package was built for a different architecture
  *
  * The error type.
  **/
@@ -59,6 +60,7 @@ typedef enum {
 	LI_PACKAGE_ERROR_OVERRIDE,
 	LI_PACKAGE_ERROR_EXTRACT,
 	LI_PACKAGE_ERROR_CHECKSUM_MISMATCH,
+	LI_PACKAGE_ERROR_WRONG_ARCHITECTURE,
 	/*< private >*/
 	LI_PACKAGE_ERROR_LAST
 } LiPackageError;

@@ -31,6 +31,7 @@
 #include <appstream.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <errno.h>
 
 /**
@@ -444,6 +445,35 @@ li_get_prefixdir (void)
 	} else {
 		return PREFIXDIR;
 	}
+}
+
+/**
+ * li_get_current_arch_h:
+ *
+ * Get the current architecture in a human-friendly form
+ * (e.g. "amd64" instead of "x86_64").
+ *
+ * Returns: (transfer full): The current OS architecture as string
+ */
+gchar*
+li_get_current_arch_h (void)
+{
+	gchar *arch;
+	struct utsname uts;
+
+	uname (&uts);
+
+	if (g_strcmp0 (uts.machine, "x86_64") == 0) {
+		arch = g_strdup ("amd64");
+	} else if (g_pattern_match_simple ("i?86", uts.machine)) {
+		arch = g_strdup ("ia32");
+	} else if (g_strcmp0 (uts.machine, "aarch64")) {
+		arch = g_strdup ("arm64");
+	} else {
+		arch = g_strdup (uts.machine);
+	}
+
+	return arch;
 }
 
 /**

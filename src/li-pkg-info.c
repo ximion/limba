@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "li-utils.h"
+#include "li-utils-private.h"
 #include "li-pkg-info.h"
 #include "li-config-data.h"
 
@@ -32,6 +33,7 @@ typedef struct _LiPkgInfoPrivate	LiPkgInfoPrivate;
 struct _LiPkgInfoPrivate
 {
 	gchar *format_version;
+	gchar *arch;
 	gchar *id; /* auto-generated */
 	gchar *version;
 	gchar *name;
@@ -54,7 +56,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiPkgInfo, li_pkg_info, G_TYPE_OBJECT)
 static inline gboolean
 li_str_to_bool (const gchar *str)
 {
-		return g_strcmp0 (str, "true") == 0;
+	return g_strcmp0 (str, "true") == 0;
 }
 
 /**
@@ -72,6 +74,9 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 	g_free (priv->name);
 	priv->name = li_config_data_get_value (cdata, "PkgName");
 
+	g_free (priv->arch);
+	priv->arch = li_config_data_get_value (cdata, "Architecture");
+
 	g_free (priv->app_name);
 	priv->app_name = li_config_data_get_value (cdata, "Name");
 
@@ -88,6 +93,10 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 	if (li_str_to_bool (str))
 		li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_AUTOMATIC);
 	g_free (str);
+
+	/* a package with a %NULL architecture should never happen - assume the current one in that case */
+	if (priv->arch == NULL)
+		priv->arch = li_get_current_arch_h ();
 }
 
 /**
@@ -100,6 +109,9 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 
 	if (priv->name != NULL)
 		li_config_data_set_value (cdata, "PkgName", priv->name);
+
+	if (priv->arch != NULL)
+		li_config_data_set_value (cdata, "Architecture", priv->arch);
 
 	if (priv->app_name != NULL)
 		li_config_data_set_value (cdata, "Name", priv->app_name);
@@ -127,6 +139,7 @@ li_pkg_info_finalize (GObject *object)
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 
 	g_free (priv->id);
+	g_free (priv->arch);
 	g_free (priv->name);
 	g_free (priv->app_name);
 	g_free (priv->version);
@@ -148,6 +161,7 @@ li_pkg_info_init (LiPkgInfo *pki)
 	priv->version = NULL;
 	priv->flags = LI_PACKAGE_FLAG_NONE;
 	priv->vrel = LI_VERSION_UNKNOWN;
+	priv->arch = li_get_current_arch_h ();
 }
 
 /**
@@ -440,6 +454,44 @@ li_pkg_info_get_version_relation (LiPkgInfo *pki)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 	return priv->vrel;
+}
+
+/**
+ * li_pkg_info_get_architecture:
+ *
+ * Get the architecture this package was built for.
+ */
+const gchar*
+li_pkg_info_get_architecture (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->arch;
+}
+
+/**
+ * li_pkg_info_set_architecture:
+ */
+void
+li_pkg_info_set_architecture (LiPkgInfo *pki, const gchar *arch)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	g_free (priv->arch);
+	priv->arch = g_strdup (arch);
+}
+
+/**
+ * li_pkg_info_matches_current_arch:
+ *
+ * Returns: %TRUE if package is suitable for the current system architecture
+ */
+gboolean
+li_pkg_info_matches_current_arch (LiPkgInfo *pki)
+{
+	_cleanup_free_ gchar *c_arch = NULL;
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+
+	c_arch = li_get_current_arch_h ();
+	return (g_strcmp0 (priv->arch, "all") == 0) || (g_strcmp0 (priv->arch, c_arch) == 0);
 }
 
 /**

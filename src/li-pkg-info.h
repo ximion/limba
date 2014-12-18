@@ -138,6 +138,11 @@ void			li_pkg_info_set_version_relation (LiPkgInfo *pki,
 												LiVersionFlags vrel);
 LiVersionFlags	li_pkg_info_get_version_relation (LiPkgInfo *pki);
 
+const gchar		*li_pkg_info_get_architecture (LiPkgInfo *pki);
+void			li_pkg_info_set_architecture (LiPkgInfo *pki,
+										const gchar *arch);
+gboolean		li_pkg_info_matches_current_arch (LiPkgInfo *pki);
+
 G_END_DECLS
 
 #endif /* __LI_PKG_INFO_H */
