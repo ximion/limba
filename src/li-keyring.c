@@ -100,7 +100,7 @@ li_keyring_init (LiKeyring *kr)
 gpgme_ctx_t
 li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 {
-	const gchar *home;
+	const gchar *home = NULL;
 	gpgme_error_t err;
 	gpgme_ctx_t ctx;
 	LiKeyringPrivate *priv = GET_PRIVATE (kr);
@@ -109,8 +109,14 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 		home = priv->gpg_home_user;
 	else if (kind == LI_KEYRING_KIND_AUTOMATIC)
 		home = priv->gpg_home_automatic;
-	else
-		g_critical ("Invalid keyring kind passed to create_context!");
+
+	err = gpgme_new (&ctx);
+	g_assert (err == 0);
+	gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
+
+	if (home == NULL) {
+		return ctx;
+	}
 
 	if ((li_utils_is_root () || li_get_unittestmode ()) &&
 		(!g_file_test (home, G_FILE_TEST_IS_DIR)))  {
@@ -129,10 +135,6 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 		g_file_set_contents (gpgconf_fname, gpg_conf, -1, NULL);
 		g_free (gpgconf_fname);
 	}
-
-	err = gpgme_new (&ctx);
-	g_assert (err == 0);
-	gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
 	gpgme_ctx_set_engine_info (ctx, LI_GPG_PROTOCOL, NULL, home);
 
 	return ctx;
@@ -142,7 +144,7 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
  * li_keyring_lookup_key:
  */
 static gpgme_key_t
-li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, GError **error)
+li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, gboolean remote, GError **error)
 {
 	_cleanup_free_ gchar *full_fpr = NULL;
 	gpgme_error_t err;
@@ -154,12 +156,19 @@ li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, GError **error)
 	else
 		full_fpr = g_strdup_printf ("0x%s", fpr);
 
-	mode = gpgme_get_keylist_mode(ctx);
+	mode = gpgme_get_keylist_mode (ctx);
 	/* using LOCAL and EXTERN together doesn't work for GPG 1.X. Ugh. */
-	mode &= ~GPGME_KEYLIST_MODE_LOCAL;
-	mode |= GPGME_KEYLIST_MODE_EXTERN;
+	if (remote) {
+		mode &= ~GPGME_KEYLIST_MODE_LOCAL;
+		mode |= GPGME_KEYLIST_MODE_EXTERN;
+		g_debug ("Remote lookup for GPG key: %s", full_fpr);
+	} else {
+		mode &= ~GPGME_KEYLIST_MODE_EXTERN;
+		mode |= GPGME_KEYLIST_MODE_LOCAL;
+		g_debug ("Local lookup for GPG key: %s", full_fpr);
+	}
 
-	err = gpgme_set_keylist_mode(ctx, mode);
+	err = gpgme_set_keylist_mode (ctx, mode);
 	if (err != 0) {
 		g_set_error (error,
 				LI_KEYRING_ERROR,
@@ -169,13 +178,9 @@ li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, GError **error)
 		return NULL;
 	}
 
-	g_debug ("Remote lookup for GPG key: %s", full_fpr);
 	err = gpgme_get_key (ctx, full_fpr, &key, 0);
 	if(gpg_err_code (err) == GPG_ERR_EOF) {
-		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_KEY_UNKNOWN,
-				_("Key lookup failed, could not find remote key."));
+		/* we couldn't find the key */
 		return NULL;
 	}
 	if (err != 0) {
@@ -211,9 +216,31 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 
 	ctx = li_keyring_get_context (kr, kind);
 
-	key = li_keyring_lookup_key (ctx, fpr, &tmp_error);
+	/* check if we already have that key */
+	key = li_keyring_lookup_key (ctx, fpr, FALSE, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+	if (key != NULL) {
+		/* we already have that key! */
+		g_debug ("Key '%s' is already in the keyring.", fpr);
+		gpgme_key_unref (key);
+		gpgme_release (ctx);
+		return TRUE;
+	}
+
+	key = li_keyring_lookup_key (ctx, fpr, TRUE, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+	if (key == NULL) {
+		g_set_error (error,
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_KEY_UNKNOWN,
+			_("Key lookup failed, could not find remote key."));
+		gpgme_release (ctx);
 		return FALSE;
 	}
 
@@ -268,7 +295,7 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 	gpgme_verify_result_t result;
 	gpgme_signature_t sig;
 
-	ctx = li_keyring_get_context (kr, LI_KEYRING_KIND_USER);
+	ctx = li_keyring_get_context (kr, LI_KEYRING_KIND_NONE);
 
 	err = gpgme_data_new_from_mem (&sigdata, sigtext, strlen (sigtext), 1);
 	if (err != 0) {
@@ -337,6 +364,77 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 	return g_string_free (str, FALSE);
 }
 
+/**
+ * li_keyring_process_pkg_signature:
+ *
+ * Validate the signature of an IPK package and check the trusted keyrings
+ * to determine a trust-level for this package.
+ */
+LiTrustLevel
+li_keyring_process_pkg_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_data, gchar **out_fpr, GError **error)
+{
+	gchar *sdata;
+	gchar *fpr = NULL;
+	LiTrustLevel level;
+	gpgme_ctx_t ctx = NULL;
+	gpgme_key_t key = NULL;
+	GError *tmp_error = NULL;
+
+	sdata = li_keyring_verify_clear_signature (kr, sigtext, &fpr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return LI_TRUST_LEVEL_NONE;
+	}
+
+	if (out_data != NULL)
+		*out_data = sdata;
+	else
+		g_free (sdata);
+
+	if (out_fpr != NULL)
+		*out_fpr = g_strdup (fpr);
+
+	/* if we are here, we have at least low trust, since the signature is valid */
+	level = LI_TRUST_LEVEL_LOW;
+
+	/* do we have that key in our trusted database? */
+	ctx = li_keyring_get_context (kr, LI_KEYRING_KIND_USER);
+	key = li_keyring_lookup_key (ctx, fpr, FALSE, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+	if (key != NULL) {
+		/* the key is highly trusted */
+		level = LI_TRUST_LEVEL_HIGH;
+		goto out;
+	}
+
+	gpgme_release (ctx);
+
+	/* do we implicitly trust that key? */
+	ctx = li_keyring_get_context (kr, LI_KEYRING_KIND_AUTOMATIC);
+	key = li_keyring_lookup_key (ctx, fpr, FALSE, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+	if (key != NULL) {
+		/* the key has a medium trust level */
+		level = LI_TRUST_LEVEL_MEDIUM;
+		goto out;
+	}
+
+out:
+	if (key != NULL)
+		gpgme_key_unref (key);
+	if (ctx != NULL)
+		gpgme_release (ctx);
+	if (fpr != NULL)
+		g_free (fpr);
+
+	return level;
+}
 
 /**
  * li_keyring_error_quark:

@@ -38,16 +38,18 @@ G_BEGIN_DECLS
 
 /**
  * LiKeyringKind:
- * @LI_KEYRING_KIND_ALL:		Peek all keyrings
+ * @LI_KEYRING_KIND_NONE:		No specific keyring should be used
  * @LI_KEYRING_KIND_USER:		Use the manual keyring, containing explicitly trusted keys
  * @LI_KEYRING_KIND_AUTOMATIC:	Use the automatic keyring, containing automatically added keys
+ * @LI_KEYRING_KIND_ALL:		Peek all keyrings
  *
  * Type of the keyring to validate against.
  **/
 typedef enum {
-	LI_KEYRING_KIND_ALL,
+	LI_KEYRING_KIND_NONE,
 	LI_KEYRING_KIND_USER,
 	LI_KEYRING_KIND_AUTOMATIC,
+	LI_KEYRING_KIND_ALL,
 	/*< private >*/
 	LI_KEYRING_LAST
 } LiKeyringKind;
@@ -124,6 +126,12 @@ gboolean		li_keyring_import_key (LiKeyring *kr,
 									GError **error);
 gchar			*li_keyring_verify_clear_signature (LiKeyring *kr,
 									const gchar *sigtext,
+									gchar **out_fpr,
+									GError **error);
+
+LiTrustLevel	li_keyring_process_pkg_signature (LiKeyring *kr,
+									const gchar *sigtext,
+									gchar **out_data,
 									gchar **out_fpr,
 									GError **error);
 

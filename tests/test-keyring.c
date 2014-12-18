@@ -58,21 +58,32 @@ const gchar *sig_message = "d0bb8a23da064efb222b1c8407711f231655460c6ed643b3ff31
 void
 test_keyring () {
 	LiKeyring *kr;
+	LiTrustLevel level;
 	GError *error = NULL;
 	gchar *tmp;
 	gchar *fpr = NULL;
 
 	kr = li_keyring_new ();
 
-	tmp = li_keyring_verify_clear_signature (kr, sig_signature, &fpr, &error);
+	/* validate signature */
+	level = li_keyring_process_pkg_signature (kr, sig_signature, &tmp, &fpr, &error);
 	g_assert_no_error (error);
 	g_assert_cmpstr (sig_message, ==, tmp);
 	g_assert_cmpstr (fpr, ==, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB");
 	g_free (tmp);
+	g_assert (level == LI_TRUST_LEVEL_LOW);
 
+	/* import that kley to the high-trust database */
 	li_keyring_import_key (kr, fpr, LI_KEYRING_KIND_USER, &error);
 	g_assert_no_error (error);
 	g_free (fpr);
+
+	/* check if we have a higher trust level now */
+	level = li_keyring_process_pkg_signature (kr, sig_signature, NULL, NULL, &error);
+	g_assert_no_error (error);
+
+	//! We can't trust this yet, since GPGMe sometimes silently fails to import a key
+	//! g_assert (level == LI_TRUST_LEVEL_HIGH);
 
 	g_object_unref (kr);
 }
