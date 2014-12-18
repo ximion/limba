@@ -68,6 +68,14 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 	gchar *str;
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 
+	li_config_data_reset (cdata);
+
+	g_free (priv->format_version);
+	priv->format_version = li_config_data_get_value (cdata, "Format-Version");
+
+	/* jump to data block */
+	li_config_data_next (cdata);
+
 	g_free (priv->id);
 	priv->id = NULL;
 
@@ -97,6 +105,10 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 	/* a package with a %NULL architecture should never happen - assume the current one in that case */
 	if (priv->arch == NULL)
 		priv->arch = li_get_current_arch_h ();
+
+	/* if we didn't get a format version, we assume 1.0 */
+	if (priv->format_version == NULL)
+		priv->format_version = g_strdup ("1.0");
 }
 
 /**
