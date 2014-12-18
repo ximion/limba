@@ -85,6 +85,10 @@ gboolean		li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder,
 													const gchar *out_fname,
 													GError **error);
 
+gboolean		li_pkg_builder_get_sign_package (LiPkgBuilder *builder);
+void			li_pkg_builder_set_sign_package (LiPkgBuilder *builder,
+												gboolean sign);
+
 G_END_DECLS
 
 #endif /* __LI_PKGBUILDER_H */

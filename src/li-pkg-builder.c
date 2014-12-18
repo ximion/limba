@@ -80,6 +80,7 @@ li_pkg_builder_init (LiPkgBuilder *builder)
 	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
 
 	priv->gpg_key = NULL;
+	priv->sign_package = TRUE;
 
 	/* initialize GPGMe */
 	gpgme_check_version (NULL);
@@ -652,6 +653,26 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 	li_delete_dir_recursive (tmp_dir);
 
 	return TRUE;
+}
+
+/**
+ * li_pkg_builder_get_sign_package:
+ */
+gboolean
+li_pkg_builder_get_sign_package (LiPkgBuilder *builder)
+{
+	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
+	return priv->sign_package;
+}
+
+/**
+ * li_pkg_builder_set_sign_package:
+ */
+void
+li_pkg_builder_set_sign_package (LiPkgBuilder *builder, gboolean sign)
+{
+	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
+	priv->sign_package = sign;
 }
 
 /**

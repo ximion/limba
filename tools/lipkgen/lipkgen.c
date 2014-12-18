@@ -29,6 +29,7 @@
 static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
+static gboolean optn_no_signature = FALSE;
 
 /**
  * li_print_stderr:
@@ -82,6 +83,10 @@ pkgen_build_package (const gchar *dir, const gchar *out_fname)
 	}
 
 	builder = li_pkg_builder_new ();
+	li_pkg_builder_set_sign_package (builder, TRUE);
+	if (optn_no_signature)
+		li_pkg_builder_set_sign_package (builder, FALSE);
+
 	li_pkg_builder_create_package_from_dir (builder, dir, out_fname, &error);
 	if (error != NULL) {
 		li_print_stderr ("Failed to create package: %s", error->message);
@@ -342,6 +347,7 @@ main (int argc, char *argv[])
 		{ "version", 0, 0, G_OPTION_ARG_NONE, &optn_show_version, _("Show the program version"), NULL },
 		{ "verbose", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_verbose_mode, _("Show extra debugging information"), NULL },
 		{ "no-fancy", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_fancy, _("Don't show \"fancy\" output"), NULL },
+		{ "no-signature", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_signature, _("Do not sign the package"), NULL },
 		{ NULL }
 	};
 

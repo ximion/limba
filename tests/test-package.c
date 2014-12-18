@@ -97,6 +97,8 @@ test_package_build ()
 	test_compile_foobar ();
 
 	builder = li_pkg_builder_new ();
+	/* don't sign packages for now, this feature needs some more work */
+	li_pkg_builder_set_sign_package (builder, FALSE);
 
 	/* ****** */
 	/* build application package */
