@@ -500,19 +500,26 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 	_cleanup_free_ gchar *payload_file = NULL;
 	_cleanup_free_ gchar *pkg_fname = NULL;
 	_cleanup_free_ gchar *sig_fname = NULL;
+	_cleanup_object_unref_ GFile *ctlfile = NULL;
+	_cleanup_object_unref_ LiPkgInfo *ctl = NULL;
 	_cleanup_ptrarray_unref_ GPtrArray *files = NULL;
 	_cleanup_ptrarray_unref_ GPtrArray *sign_files = NULL;
 	GError *tmp_error = NULL;
+	gchar *tmp;
 	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
 
-	ctl_fname = g_build_filename (dir, "control", NULL);
-	if (!g_file_test (ctl_fname, G_FILE_TEST_IS_REGULAR)) {
+	tmp = g_build_filename (dir, "control", NULL);
+	ctlfile = g_file_new_for_path (tmp);
+	g_free (tmp);
+	if (!g_file_query_exists (ctlfile, NULL)) {
 		g_set_error (error,
 				LI_BUILDER_ERROR,
 				LI_BUILDER_ERROR_NOT_FOUND,
 				_("Could not find control file for the archive!"));
 		return FALSE;
 	}
+	ctl = li_pkg_info_new ();
+	li_pkg_info_load_file (ctl, ctlfile);
 
 	payload_root = g_build_filename (dir, "inst_target", NULL);
 	if (!g_file_test (payload_root, G_FILE_TEST_IS_DIR)) {
@@ -600,6 +607,18 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		/* we need to sign the repo file */
 		g_ptr_array_add (sign_files, repo_fname);
 	}
+
+	/* handle arch:any notation (resolve to current arch) */
+	if (g_strcmp0 (li_pkg_info_get_architecture (ctl), "any") == 0) {
+		gchar *arch;
+		arch = li_get_current_arch_h ();
+		li_pkg_info_set_architecture (ctl, arch);
+		g_free (arch);
+	}
+
+	/* safe our new control metadata */
+	ctl_fname = g_build_filename (tmp_dir, "control", NULL);
+	li_pkg_info_save_to_file (ctl, ctl_fname);
 
 	/* we want these files in the package */
 	g_ptr_array_add (files, g_strdup (ctl_fname));
