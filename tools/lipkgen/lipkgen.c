@@ -280,6 +280,11 @@ pkgen_unpack_pkg (const gchar *fname, const gchar *dir)
 	gchar *dest_dir;
 	GError *error = NULL;
 
+	if (fname == NULL) {
+		li_print_stderr (_("No package file given for extraction."));
+		goto out;
+	}
+
 	pkg = li_package_new ();
 	li_package_open_file (pkg, fname, &error);
 	if (error != NULL) {
