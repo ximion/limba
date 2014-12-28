@@ -79,17 +79,26 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 	g_free (priv->id);
 	priv->id = NULL;
 
-	g_free (priv->name);
-	priv->name = li_config_data_get_value (cdata, "PkgName");
+	str = li_config_data_get_value (cdata, "PkgName");
+	if (str != NULL) {
+		g_free (priv->name);
+		priv->name = str;
+	}
+
+	str = li_config_data_get_value (cdata, "Name");
+	if (str != NULL) {
+		g_free (priv->app_name);
+		priv->app_name = str;
+	}
+
+	str = li_config_data_get_value (cdata, "Version");
+	if (str != NULL) {
+		g_free (priv->version);
+		priv->version = str;
+	}
 
 	g_free (priv->arch);
 	priv->arch = li_config_data_get_value (cdata, "Architecture");
-
-	g_free (priv->app_name);
-	priv->app_name = li_config_data_get_value (cdata, "Name");
-
-	g_free (priv->version);
-	priv->version = li_config_data_get_value (cdata, "Version");
 
 	g_free (priv->dependencies);
 	priv->dependencies = li_config_data_get_value (cdata, "Requires");
