@@ -381,8 +381,11 @@ li_pkg_info_get_id (LiPkgInfo *pki)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 
-	if ((priv->name == NULL) || (priv->version == NULL))
+	if ((priv->name == NULL) || (priv->version == NULL)) {
+		/* an empty package-id is a serious issue and usually a bug */
+		g_warning ("Queried empty package-id.");
 		return NULL;
+	}
 
 	/* re-generate id if necessary */
 	if (priv->id == NULL)
