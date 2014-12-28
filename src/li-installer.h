@@ -87,6 +87,7 @@ gboolean		li_installer_install (LiInstaller *inst,
 
 LiPkgInfo		*li_installer_get_package_info (LiInstaller *inst);
 gchar			*li_installer_get_appstream_data (LiInstaller *inst);
+LiTrustLevel	li_installer_get_package_trust_level (LiInstaller *inst);
 
 G_END_DECLS
 

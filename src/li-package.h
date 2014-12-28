@@ -27,7 +27,6 @@
 
 #include <glib-object.h>
 #include "li-pkg-info.h"
-#include "li-keyring.h"
 
 #define LI_TYPE_PACKAGE			(li_package_get_type())
 #define LI_PACKAGE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PACKAGE, LiPackage))
@@ -71,6 +70,28 @@ typedef enum {
 #define	LI_PACKAGE_ERROR li_package_error_quark ()
 GQuark li_package_error_quark (void);
 
+/**
+ * LiTrustLevel:
+ * @LI_TRUST_LEVEL_NONE:	We don't trust that software at all (usually means no signature was found)
+ * @LI_TRUST_LEVEL_INVALID:	The package could not be validated, its signature might be broken.
+ * @LI_TRUST_LEVEL_LOW:		Low trust level (signed and validated, but no trusted author)
+ * @LI_TRUST_LEVEL_MEDIUM:	Medium trust level (we already have software by this author installed and auto-trust him)
+ * @LI_TRUST_LEVEL_HIGH:	High trust level (The software author is in our trusted database)
+ *
+ * A simple indicator on how much we trust a software package.
+ **/
+typedef enum {
+	LI_TRUST_LEVEL_NONE,
+	LI_TRUST_LEVEL_INVALID,
+	LI_TRUST_LEVEL_LOW,
+	LI_TRUST_LEVEL_MEDIUM,
+	LI_TRUST_LEVEL_HIGH,
+	/*< private >*/
+	LI_TRUST_LEVEL_LAST
+} LiTrustLevel;
+
+const gchar	*li_trust_level_to_text (LiTrustLevel level);
+
 typedef struct _LiPackage		LiPackage;
 typedef struct _LiPackageClass	LiPackageClass;
 
@@ -101,8 +122,9 @@ gboolean		li_package_open_file (LiPackage *pkg,
 										GError **error);
 gboolean		li_package_install (LiPackage *pkg,
 										GError **error);
+
 LiTrustLevel	li_package_verify_signature (LiPackage *pkg,
-											GError **error);
+										GError **error);
 
 const gchar		*li_package_get_install_root (LiPackage *pkg);
 void			li_package_set_install_root (LiPackage *pkg,

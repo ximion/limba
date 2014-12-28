@@ -1074,6 +1074,30 @@ li_package_error_quark (void)
 }
 
 /**
+ * li_trust_level_to_text:
+ *
+ * Returns: A localized explanatory text for the #LiTrustLevel value.
+ */
+const gchar*
+li_trust_level_to_text (LiTrustLevel level)
+{
+	switch (level) {
+		case LI_TRUST_LEVEL_NONE:
+			return _("This package can not be trusted. It likely is not signed.");
+		case LI_TRUST_LEVEL_INVALID:
+			return _("The signature on this package is broken.");
+		case LI_TRUST_LEVEL_LOW:
+			return _("The package is signed, but not explicitly trusted.");
+		case LI_TRUST_LEVEL_MEDIUM:
+			return _("The package is signed with a trusted key.");
+		case LI_TRUST_LEVEL_HIGH:
+			return _("The package is signed with a known, trusted key.");
+		default:
+			return "";
+	}
+}
+
+/**
  * li_package_class_init:
  **/
 static void

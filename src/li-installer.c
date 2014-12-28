@@ -560,6 +560,18 @@ li_installer_get_package_info (LiInstaller *inst)
 }
 
 /**
+ * li_installer_get_package_trust_level:
+ *
+ * Returns: The trust-level for the to-be-installed package
+ */
+LiTrustLevel
+li_installer_get_package_trust_level (LiInstaller *inst)
+{
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+	return	li_package_verify_signature (priv->pkg, NULL);
+}
+
+/**
  * li_installer_get_appstream_data:
  *
  * Dump of AppStream XML data describing the software which will be installed.

@@ -26,6 +26,7 @@
 #define __LI_KEYRING_H
 
 #include <glib-object.h>
+#include "li-package.h"
 
 #define LI_TYPE_KEYRING			(li_keyring_get_type())
 #define LI_KEYRING(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_KEYRING, LiKeyring))
@@ -76,26 +77,6 @@ typedef enum {
 
 #define	LI_KEYRING_ERROR li_keyring_error_quark ()
 GQuark li_keyring_error_quark (void);
-
-/**
- * LiTrustLevel:
- * @LI_TRUST_LEVEL_NONE:	We don't trust that software at all (usually means no signature was found)
- * @LI_TRUST_LEVEL_INVALID:	The package could not be validated, its signature might be broken.
- * @LI_TRUST_LEVEL_LOW:		Low trust level (signed and validated, but no trusted author)
- * @LI_TRUST_LEVEL_MEDIUM:	Medium trust level (we already have software by this author installed and auto-trust him)
- * @LI_TRUST_LEVEL_HIGH:	High trust level (The software author is in our trusted database)
- *
- * A simple indicator on how much we trust a software package.
- **/
-typedef enum {
-	LI_TRUST_LEVEL_NONE,
-	LI_TRUST_LEVEL_INVALID,
-	LI_TRUST_LEVEL_LOW,
-	LI_TRUST_LEVEL_MEDIUM,
-	LI_TRUST_LEVEL_HIGH,
-	/*< private >*/
-	LI_TRUST_LEVEL_LAST
-} LiTrustLevel;
 
 typedef struct _LiKeyring		LiKeyring;
 typedef struct _LiKeyringClass	LiKeyringClass;
