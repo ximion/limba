@@ -159,12 +159,13 @@ mount_overlay (const gchar *pkgid)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION (3,18,0)
 		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", LI_SW_ROOT_PREFIX, rt_path, wdir);
-#else
-		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, rt_path);
-#endif
-
 		res = mount ("overlay", LI_SW_ROOT_PREFIX,
 					"overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
+#else
+		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, rt_path);
+		res = mount ("overlayfs", LI_SW_ROOT_PREFIX,
+					"overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
+#endif
 
 		g_free (tmp);
 		g_free (rt_path);
@@ -177,12 +178,14 @@ mount_overlay (const gchar *pkgid)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION (3,18,0)
 	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", LI_SW_ROOT_PREFIX, main_data_path, wdir);
-#else
-	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, main_data_path);
-#endif
-
 	res = mount ("overlay", LI_SW_ROOT_PREFIX,
 				 "overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
+#else
+	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, main_data_path);
+	res = mount ("overlayfs", LI_SW_ROOT_PREFIX,
+				 "overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
+#endif
+
 	g_free (tmp);
 	if (res != 0) {
 		fprintf (stderr, "Unable to mount directory. %s\n", strerror (errno));
