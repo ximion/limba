@@ -318,26 +318,41 @@ li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname, GError *
 	fclose (fp);
 }
 
+/**
+ * li_print_gpgsign_result:
+ */
 static void
-print_result (gpgme_sign_result_t result, gpgme_sig_mode_t type)
+li_print_gpgsign_result (gpgme_ctx_t ctx, gpgme_sign_result_t result, gpgme_sig_mode_t type)
 {
-  gpgme_invalid_key_t invkey;
-  gpgme_new_signature_t sig;
+	gpgme_invalid_key_t invkey;
+	gpgme_new_signature_t sig;
+	_cleanup_free_ gchar *short_fpr = NULL;
+	gpgme_key_t key;
 
-  for (invkey = result->invalid_signers; invkey; invkey = invkey->next)
-    printf ("Signing key `%s' not used: %s <%s>\n",
-            invkey->fpr,
-            gpg_strerror (invkey->reason), gpg_strsource (invkey->reason));
+	for (invkey = result->invalid_signers; invkey; invkey = invkey->next)
+		g_debug ("Signing key `%s' not used: %s <%s>",
+				invkey->fpr, gpg_strerror (invkey->reason), gpg_strsource (invkey->reason));
 
-  for (sig = result->signatures; sig; sig = sig->next)
-    {
-      printf ("Key fingerprint: %s\n", sig->fpr);
-      printf ("Signature type : %d\n", sig->type);
-      printf ("Public key algo: %d\n", sig->pubkey_algo);
-      printf ("Hash algo .....: %d\n", sig->hash_algo);
-      printf ("Creation time .: %ld\n", sig->timestamp);
-      printf ("Sig class .....: 0x%u\n", sig->sig_class);
-    }
+	for (sig = result->signatures; sig; sig = sig->next) {
+		g_debug ("Key fingerprint: %s", sig->fpr);
+		g_debug ("Signature type : %d", sig->type);
+		g_debug ("Public key algo: %d", sig->pubkey_algo);
+		g_debug ("Hash algo .....: %d", sig->hash_algo);
+		g_debug ("Creation time .: %ld", sig->timestamp);
+		g_debug ("Sig class .....: 0x%u", sig->sig_class);
+
+		if (short_fpr != NULL)
+			g_free (short_fpr);
+		short_fpr = g_strdup (&sig->fpr[strlen(sig->fpr)-8]);
+
+		if (gpgme_get_key (ctx, sig->fpr, &key, 0) == 0) {
+			if (key->uids != NULL)
+				g_print(_("Package signed for \"%s\" [0x%s]\n"), key->uids->uid, short_fpr);
+			gpgme_key_unref (key);
+		} else {
+			g_print(_("Package signed for 0x%s\n"), short_fpr);
+		}
+	}
 }
 
 /**
@@ -349,7 +364,6 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 	guint i;
 	GString *index_str;
 	_cleanup_free_ gchar *indexdata = NULL;
-
 	gpgme_error_t err;
 	gpgme_ctx_t ctx;
 	gpgme_sig_mode_t sigmode = GPGME_SIG_MODE_NORMAL;
@@ -397,7 +411,7 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 		g_set_error (error,
 				LI_BUILDER_ERROR,
 				LI_BUILDER_ERROR_SIGN,
-				_("Signing package failed: %s"),
+				_("Signing of package failed: %s"),
 				gpgme_strsource (err));
 		return NULL;
 	}
@@ -413,7 +427,7 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 			g_set_error (error,
 					LI_BUILDER_ERROR,
 					LI_BUILDER_ERROR_SIGN,
-					_("Signing package failed: %s"),
+					_("Signing of package failed: %s"),
 					gpgme_strsource (err));
 			return NULL;
 		}
@@ -423,10 +437,11 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 			g_set_error (error,
 					LI_BUILDER_ERROR,
 					LI_BUILDER_ERROR_SIGN,
-					_("Signing package failed: %s"),
+					_("Signing of package failed: %s"),
 					gpgme_strsource (err));
 			return NULL;
 		}
+
 		gpgme_key_unref (akey);
 	}
 
@@ -435,7 +450,7 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 		g_set_error (error,
 				LI_BUILDER_ERROR,
 				LI_BUILDER_ERROR_SIGN,
-				_("Signing package failed: %s"),
+				_("Signing of package failed: %s"),
 				gpgme_strsource (err));
 		return NULL;
 	}
@@ -445,7 +460,7 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 		g_set_error (error,
 				LI_BUILDER_ERROR,
 				LI_BUILDER_ERROR_SIGN,
-				_("Signing package failed: %s"),
+				_("Signing of package failed: %s"),
 				gpgme_strsource (err));
 		return NULL;
 	}
@@ -453,12 +468,13 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 	err = gpgme_op_sign (ctx, din, dout, sigmode);
 	sig_res = gpgme_op_sign_result (ctx);
 	if (sig_res)
-		print_result (sig_res, sigmode);
+		li_print_gpgsign_result (ctx, sig_res, sigmode);
+
 	if (err != 0) {
 		g_set_error (error,
 				LI_BUILDER_ERROR,
 				LI_BUILDER_ERROR_SIGN,
-				_("Signing package failed: %s"),
+				_("Signing of package failed: %s"),
 				gpgme_strsource (err));
 		return NULL;
 	}
