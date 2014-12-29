@@ -352,7 +352,18 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 		gpgme_release (ctx);
 		return NULL;
 	}
+
 	sig = result->signatures;
+	if (sig == NULL) {
+		g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_VERIFY,
+				_("Signature validation failed. Signature is invalid or not a signature."));
+		gpgme_data_release (sigdata);
+		gpgme_data_release (data);
+		gpgme_release (ctx);
+		return NULL;
+	}
 
 	if (sig->status != GPG_ERR_NO_ERROR) {
 		g_set_error (error,
