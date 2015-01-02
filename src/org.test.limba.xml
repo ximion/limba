@@ -11,9 +11,9 @@
         @fname: Absolute path to a package file
         @since: 0.4
 
-        Install a Limba package.
+        Install a local Limba package file.
       -->
-    <method name="Install">
+    <method name="LocalInstall">
       <arg direction="in" type="s" name="fname"/>
     </method>
   </interface>

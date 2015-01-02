@@ -18,32 +18,59 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <polkit/polkit.h>
+
 #include "limba-dbus-interface.h"
 #include "limba.h"
 
 /* ---------------------------------------------------------------------------------------------------- */
 
 static GDBusObjectManagerServer *obj_manager = NULL;
+static PolkitAuthority *authority = NULL;
 
 /**
- * on_installer_install:
+ * on_installer_local_install:
  */
 static gboolean
-on_installer_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *invocation, const gchar *fname, gpointer user_data)
+on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *fname, gpointer user_data)
 {
 	GError *error = NULL;
 	LiInstaller *inst = NULL;
+	PolkitAuthorizationResult *pres = NULL;
+	PolkitSubject *subject;
+	const gchar *sender;
 
-	// TODO: Reject callers using PolicyKit
+	sender = g_dbus_method_invocation_get_sender (context);
+
+	subject = polkit_system_bus_name_new (sender);
+	pres = polkit_authority_check_authorization_sync (authority,
+													subject,
+													"org.test.limba.install-package-local",
+													NULL,
+													POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+													NULL,
+													&error);
+	g_object_unref (subject);
+
+	if (error != NULL) {
+		g_dbus_method_invocation_take_error (context, error);
+		goto out;
+	}
+
+	if (!polkit_authorization_result_get_is_authorized (pres)) {
+		g_dbus_method_invocation_return_dbus_error (context, "org.test.Limba.Installer.Error.NotAuthorized",
+													"Authorization failed.");
+		goto out;
+	}
 
 	if (fname == NULL) {
-		g_dbus_method_invocation_return_dbus_error (invocation, "org.test.Limba.Installer.Error.Failed",
+		g_dbus_method_invocation_return_dbus_error (context, "org.test.Limba.Installer.Error.Failed",
 													"The filename must not be NULL.");
 		goto out;
 	}
 
 	if (!g_str_has_prefix (fname, "/")) {
-		g_dbus_method_invocation_return_dbus_error (invocation, "org.test.Limba.Installer.Error.Failed",
+		g_dbus_method_invocation_return_dbus_error (context, "org.test.Limba.Installer.Error.Failed",
 													"The path to the IPK package to install must be absolute.");
 		goto out;
 	}
@@ -52,21 +79,23 @@ on_installer_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *invocatio
 
 	li_installer_open_file (inst, fname, &error);
 	if (error != NULL) {
-		g_dbus_method_invocation_take_error (invocation, error);
+		g_dbus_method_invocation_take_error (context, error);
 		goto out;
 	}
 
 	li_installer_install (inst, &error);
 	if (error != NULL) {
-		g_dbus_method_invocation_take_error (invocation, error);
+		g_dbus_method_invocation_take_error (context, error);
 		goto out;
 	}
 
-	limba_installer_complete_install (inst_bus, invocation);
+	limba_installer_complete_local_install (inst_bus, context);
 
  out:
 	if (inst != NULL)
 		g_object_unref (inst);
+	if (pres != NULL)
+		g_object_unref (pres);
 
 	return TRUE;
 }
@@ -80,8 +109,12 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, gpointer user_d
 	LimbaObjectSkeleton *object;
 	LimbaInstaller *inst_bus;
 	LimbaManager *mgr_bus;
+	GError *error = NULL;
 
 	g_print ("Acquired a message bus connection\n");
+
+	authority = polkit_authority_get_sync (NULL, &error);
+	g_assert_no_error (error); /* TODO: Meh... Needs smart error handling. */
 
 	obj_manager = g_dbus_object_manager_server_new ("/org/test/Limba");
 
@@ -93,8 +126,8 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, gpointer user_d
 	g_object_unref (inst_bus);
 
 	g_signal_connect (inst_bus,
-					"handle-install",
-					G_CALLBACK (on_installer_install),
+					"handle-local-install",
+					G_CALLBACK (on_installer_local_install),
 					NULL);
 
 	/* export the object */
@@ -157,6 +190,9 @@ main (gint argc, gchar *argv[])
 
 	g_bus_unown_name (id);
 	g_main_loop_unref (loop);
+
+	if (authority != NULL)
+		g_object_unref (authority);
 
 	return 0;
 }

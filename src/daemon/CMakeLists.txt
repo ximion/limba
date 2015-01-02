@@ -11,10 +11,12 @@ include_directories(${CMAKE_BINARY_DIR}
 			${CMAKE_SOURCE_DIR}/src
 			${CMAKE_CURRENT_SOURCE_DIR}
 			${GLIB_INCLUDE_DIRS}
+			${POLKIT_INCLUDE_DIRS}
 )
 
 target_link_libraries(limba-daemon
 		${GLIB_LIBRARIES}
+		${POLKIT_LIBRARIES}
 		limba
 )
 
