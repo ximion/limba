@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.test.Limba
+Exec=@CMAKE_INSTALL_FULL_LIBDIR@/limba/limba-daemon
+User=root

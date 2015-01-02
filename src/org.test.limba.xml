@@ -1,0 +1,40 @@
+<node>
+  <!-- org.test.Limba.Installer:
+       @short_description: Install Limba packages
+       @since: 0.4
+
+       Allows an unprivileged application to install a software package.
+    -->
+  <interface name="org.test.Limba.Installer">
+    <!--
+        Install:
+        @fname: Absolute path to a package file
+        @since: 0.4
+
+        Install a Limba package.
+      -->
+    <method name="Install">
+      <arg direction="in" type="s" name="fname"/>
+    </method>
+  </interface>
+
+  <!-- org.test.Limba.Manager:
+       @short_description: Manage Limba packages
+       @since: 0.4
+
+       Allows an unprivileged application to manage Limba packages,
+       e.g. remove them.
+    -->
+  <interface name="org.test.Limba.Manager">
+    <!--
+        Remove:
+        @pkid: A package identifier
+        @since: 0.4
+
+        Remove a Limba package.
+      -->
+    <method name="Remove">
+      <arg direction="in" type="s" name="pkid"/>
+    </method>
+  </interface>
+</node>

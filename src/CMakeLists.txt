@@ -5,6 +5,12 @@ set(INTROSPECTION_GIRS)
 set(INTROSPECTION_SCANNER_ARGS "--identifier-prefix=Li" "--symbol-prefix=li" "--warn-all" "--add-include-path=${CMAKE_CURRENT_SOURCE_DIR}")
 set(INTROSPECTION_COMPILER_ARGS "--includedir=${CMAKE_CURRENT_SOURCE_DIR}")
 
+find_program (GDBUS_CODEGEN gdbus-codegen)
+mark_as_advanced (GDBUS_CODEGEN)
+if (GDBUS_CODEGEN STREQUAL "")
+	message (FATAL_ERROR "The GDBus code generator was not found. Please install gdbus-codegen.")
+endif (GDBUS_CODEGEN STREQUAL "")
+
 set(LIBLIMBA_SRC
 	li-utils.c
 	li-config-data.c
@@ -52,8 +58,17 @@ if (NOT INTROSPECTION_FOUND)
   message(FATAL_ERROR "GObject-Introspection was not found! Please install it to continue.")
 endif()
 
-add_library(limba SHARED ${LIBLIMBA_SRC} ${LIBLIMBA_PUBLIC_HEADERS} ${LIBLIMBA_PRIVATE_HEADERS})
+add_library(limba SHARED ${LIBLIMBA_SRC} ${LIBLIMBA_PUBLIC_HEADERS} ${LIBLIMBA_PRIVATE_HEADERS} ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.c)
 set_target_properties(limba PROPERTIES VERSION ${LILIB_VERSION} SOVERSION ${LIMBA_API_LEVEL})
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.h ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.c
+	MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/org.test.limba.xml
+	COMMAND ${GDBUS_CODEGEN} --interface-prefix org.test.Limba --generate-c-code limba-dbus-interface
+		--c-namespace Limba --c-generate-object-manager ${CMAKE_CURRENT_SOURCE_DIR}/org.test.limba.xml
+	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.h)
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.c)
 
 include_directories(${CMAKE_BINARY_DIR}
 			${CMAKE_CURRENT_BINARY_DIR}
@@ -101,6 +116,8 @@ set(Limba_1_0_gir_EXPORT_PACKAGES limba)
 list(APPEND INTROSPECTION_GIRS Limba-1.0.gir)
 gir_add_introspections(INTROSPECTION_GIRS)
 ####
+
+add_subdirectory(daemon)
 
 install(TARGETS limba DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES ${LIBLIMBA_PUBLIC_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Limba)
