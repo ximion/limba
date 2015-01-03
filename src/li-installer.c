@@ -33,6 +33,7 @@
 #include "li-manager.h"
 #include "li-runtime.h"
 #include "li-package-graph.h"
+#include "li-dbus-interface.h"
 
 typedef struct _LiInstallerPrivate	LiInstallerPrivate;
 struct _LiInstallerPrivate
@@ -41,6 +42,8 @@ struct _LiInstallerPrivate
 	LiPkgInfo *pki;
 	LiPackageGraph *pg;
 	LiPackage *pkg;
+
+	gchar *fname;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
@@ -62,6 +65,7 @@ li_installer_finalize (GObject *object)
 	g_object_unref (priv->pg);
 	if (priv->pkg != NULL)
 		g_object_unref (priv->pkg);
+	g_free (priv->fname);
 
 	G_OBJECT_CLASS (li_installer_parent_class)->finalize (object);
 }
@@ -490,7 +494,33 @@ li_installer_install (LiInstaller *inst, GError **error)
 	gboolean ret = FALSE;
 	GError *tmp_error = NULL;
 	GNode *root;
+	LimbaInstaller *inst_bus = NULL;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	if ((!li_utils_is_root ()) && (!li_get_unittestmode ())) {
+		/* we do not have root privileges - call the helper daemon to install the package */
+		g_debug ("Calling Limba DBus service.");
+
+		inst_bus = limba_installer_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+											G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+											"org.test.Limba",
+											"/org/test/Limba/Installer",
+											NULL,
+											&tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+
+		limba_installer_call_local_install_sync (inst_bus, priv->fname, NULL, &tmp_error);
+
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+
+		goto out;
+	}
 
 	root = li_package_graph_get_root (priv->pg);
 	if (root->data == NULL) {
@@ -519,6 +549,8 @@ li_installer_install (LiInstaller *inst, GError **error)
 out:
 	/* teardown current dependency tree */
 	li_package_graph_reset (priv->pg);
+	if (inst_bus != NULL)
+		g_object_unref (inst_bus);
 
 	return ret;
 }
@@ -533,6 +565,7 @@ li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error
 {
 	LiPackage *pkg;
 	GError *tmp_error = NULL;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	pkg = li_package_new ();
 	li_package_open_file (pkg, filename, &tmp_error);
@@ -543,6 +576,11 @@ li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error
 	}
 	li_installer_set_package (inst, pkg);
 	g_object_unref (pkg);
+
+	/* set filename, in case we need it for a DBus call later */
+	if (priv->fname != NULL)
+		g_free (priv->fname);
+	priv->fname = g_strdup (filename);
 
 	return TRUE;
 }

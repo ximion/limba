@@ -58,17 +58,17 @@ if (NOT INTROSPECTION_FOUND)
   message(FATAL_ERROR "GObject-Introspection was not found! Please install it to continue.")
 endif()
 
-add_library(limba SHARED ${LIBLIMBA_SRC} ${LIBLIMBA_PUBLIC_HEADERS} ${LIBLIMBA_PRIVATE_HEADERS} ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.c)
+add_library(limba SHARED ${LIBLIMBA_SRC} ${LIBLIMBA_PUBLIC_HEADERS} ${LIBLIMBA_PRIVATE_HEADERS} ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.c)
 set_target_properties(limba PROPERTIES VERSION ${LILIB_VERSION} SOVERSION ${LIMBA_API_LEVEL})
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.h ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.c
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.h ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.c
 	MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/org.test.limba.xml
-	COMMAND ${GDBUS_CODEGEN} --interface-prefix org.test.Limba --generate-c-code limba-dbus-interface
+	COMMAND ${GDBUS_CODEGEN} --interface-prefix org.test.Limba --generate-c-code li-dbus-interface
 		--c-namespace Limba --c-generate-object-manager ${CMAKE_CURRENT_SOURCE_DIR}/org.test.limba.xml
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.h)
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_BINARY_DIR}/limba-dbus-interface.c)
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.h)
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.c)
 
 include_directories(${CMAKE_BINARY_DIR}
 			${CMAKE_CURRENT_BINARY_DIR}

@@ -20,7 +20,7 @@
 
 #include <polkit/polkit.h>
 
-#include "limba-dbus-interface.h"
+#include "li-dbus-interface.h"
 #include "limba.h"
 
 /* ---------------------------------------------------------------------------------------------------- */
