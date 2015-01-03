@@ -29,6 +29,7 @@
 #include <glib/gi18n-lib.h>
 
 #include "li-utils.h"
+#include "li-utils-private.h"
 #include "li-pkg-info.h"
 #include "li-manager.h"
 #include "li-runtime.h"
@@ -502,7 +503,7 @@ li_installer_install (LiInstaller *inst, GError **error)
 		g_debug ("Calling Limba DBus service.");
 
 		inst_bus = limba_installer_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
-											G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+											G_DBUS_PROXY_FLAGS_NONE,
 											"org.test.Limba",
 											"/org/test/Limba/Installer",
 											NULL,
