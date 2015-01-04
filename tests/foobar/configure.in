@@ -23,5 +23,5 @@ Makefile
 foo/Makefile
 libfoo/Makefile
 doc/Makefile
-pkginstall/Makefile
+lipkg/Makefile
 ])

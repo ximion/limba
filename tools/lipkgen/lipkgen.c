@@ -133,7 +133,7 @@ pkgen_make_template (const gchar *dir)
 
 	if (dir == NULL) {
 		tmp = g_get_current_dir ();
-		res_dir = g_build_filename (tmp, "pkginstall", NULL);
+		res_dir = g_build_filename (tmp, "lipkg", NULL);
 		g_free (tmp);
 	} else {
 		res_dir = g_strdup (dir);
@@ -258,10 +258,10 @@ pkgen_make_template (const gchar *dir)
 "Please edit the files in that directory, e.g. add a long description to your\n" \
 "application and specify its run-time dependencies.\n" \
 "When you are done with this, build your software with --prefix=%s\n" \
-"and install it into the inst_target subdirectory of your 'pkginstall' directory.\n" \
-"Then run 'lipkgen build pkginstall/' to create your package. \n" \
+"and install it into the inst_target subdirectory of your 'lipkg' directory.\n" \
+"Then run 'lipkgen build lipkg/' to create your package. \n" \
 "If you want to embed dependencies, place their IPK packages in the 'repo/'\n" \
-"subdirectory of 'pkginstall/'"), res_dir, LI_SW_ROOT_PREFIX);
+"subdirectory of 'lipkg/'"), res_dir, LI_SW_ROOT_PREFIX);
 	li_print_stdout ("========\n");
 
 out:

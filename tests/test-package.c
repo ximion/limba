@@ -39,9 +39,9 @@ test_compile_foobar ()
 	/* TODO: This is duty for the appcompile helper... */
 
 	dirname = g_build_filename (datadir, "..", "foobar", NULL);
-	inst_dir_all = g_build_filename (dirname, "pkginstall", "inst_target", NULL);
-	inst_dir_app = g_build_filename (dirname, "foo", "pkginstall", "inst_target", NULL);
-	inst_dir_lib = g_build_filename (dirname, "libfoo", "pkginstall", "inst_target", NULL);
+	inst_dir_all = g_build_filename (dirname, "lipkg", "inst_target", NULL);
+	inst_dir_app = g_build_filename (dirname, "foo", "lipkg", "inst_target", NULL);
+	inst_dir_lib = g_build_filename (dirname, "libfoo", "lipkg", "inst_target", NULL);
 	chdir (dirname);
 
 	if (g_file_test ("Makefile", G_FILE_TEST_EXISTS))
@@ -102,7 +102,7 @@ test_package_build ()
 
 	/* ****** */
 	/* build application package */
-	foo_dirname = g_build_filename (datadir, "..", "foobar", "foo", "pkginstall", NULL);
+	foo_dirname = g_build_filename (datadir, "..", "foobar", "foo", "lipkg", NULL);
 	repo_path = g_build_filename (foo_dirname, "repo", NULL);
 	/* ensure we don't accidentially embed a package */
 	li_delete_dir_recursive (repo_path);
@@ -116,7 +116,7 @@ test_package_build ()
 
 	/* ****** */
 	/* build library package */
-	libfoo_dirname = g_build_filename (datadir, "..", "foobar", "libfoo", "pkginstall", NULL);
+	libfoo_dirname = g_build_filename (datadir, "..", "foobar", "libfoo", "lipkg", NULL);
 	pkgname = g_build_filename (datadir, "libfoo.ipk", NULL);
 
 	li_pkg_builder_create_package_from_dir (builder, libfoo_dirname, pkgname, &error);
