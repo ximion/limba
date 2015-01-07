@@ -40,11 +40,13 @@ G_BEGIN_DECLS
 /**
  * LiRepositoryError:
  * @LI_REPOSITORY_ERROR_FAILED:		Generic failure
+ * @LI_REPOSITORY_ERROR_NO_REPO:	The directory is no Limba repository
  *
  * The error type.
  **/
 typedef enum {
 	LI_REPOSITORY_ERROR_FAILED,
+	LI_REPOSITORY_ERROR_NO_REPO,
 	/*< private >*/
 	LI_REPOSITORY_ERROR_LAST
 } LiRepositoryError;
@@ -74,6 +76,13 @@ struct _LiRepositoryClass
 
 GType			li_repository_get_type	(void);
 LiRepository	*li_repository_new		(void);
+
+gboolean		li_repository_open (LiRepository *repo,
+									const gchar *directory,
+									GError **error);
+
+gboolean		li_repository_save (LiRepository *repo,
+									GError **error);
 
 G_END_DECLS
 

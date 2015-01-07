@@ -57,6 +57,7 @@ li_repository_finalize (GObject *object)
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	g_object_unref (priv->index);
+	g_free (priv->repo_path);
 
 	G_OBJECT_CLASS (li_repository_parent_class)->finalize (object);
 }
@@ -65,11 +66,75 @@ li_repository_finalize (GObject *object)
  * li_repository_init:
  **/
 static void
-li_repository_init (LiRepository *kr)
+li_repository_init (LiRepository *repo)
 {
-	LiRepositoryPrivate *priv = GET_PRIVATE (kr);
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	priv->index = li_pkg_index_new ();
+}
+
+/**
+ * li_repository_open:
+ */
+gboolean
+li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
+{
+	gchar *fname;
+	GFile *file;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	if (!g_file_test (directory, G_FILE_TEST_IS_DIR)) {
+		g_set_error (error,
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_FAILED,
+				_("Invalid path to directory."));
+		return FALSE;
+	}
+
+	/* load index data if we find it */
+	fname = g_build_filename (directory, "Index", NULL);
+	file = g_file_new_for_path (fname);
+	g_free (fname);
+	if (g_file_query_exists (file, NULL)) {
+		li_pkg_index_load_file (priv->index, file);
+	}
+	g_object_unref (file);
+
+	g_free (priv->repo_path);
+	priv->repo_path = g_strdup (directory);
+
+	return TRUE;
+}
+
+/**
+ * li_repository_save:
+ *
+ * Save the repository metadata and sign it.
+ */
+gboolean
+li_repository_save (LiRepository *repo, GError **error)
+{
+	gchar *dir;
+	gchar *fname;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	/* ensure the basic directory structure is present */
+	dir = g_build_filename (priv->repo_path, "pool", NULL);
+	g_mkdir_with_parents (dir, 0755);
+	g_free (dir);
+
+	dir = g_build_filename (priv->repo_path, "universe", NULL);
+	g_mkdir_with_parents (dir, 0755);
+	g_free (dir);
+
+	/* save index */
+	fname = g_build_filename (priv->repo_path, "Index", NULL);
+	li_pkg_index_save_to_file (priv->index, fname);
+	g_free (fname);
+
+	// TODO: Sign index and AppStream data
+
+	return TRUE;
 }
 
 /**
