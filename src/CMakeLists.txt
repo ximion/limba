@@ -24,6 +24,7 @@ set(LIBLIMBA_SRC
 	li-manager.c
 	li-pkg-builder.c
 	li-keyring.c
+	li-repository.c
 )
 
 set(LIBLIMBA_PUBLIC_HEADERS
@@ -37,6 +38,7 @@ set(LIBLIMBA_PUBLIC_HEADERS
 	li-manager.h
 	li-pkg-builder.h
 	li-keyring.h
+	li-repository.h
 )
 
 set(LIBLIMBA_PRIVATE_HEADERS
