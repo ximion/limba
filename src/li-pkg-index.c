@@ -26,6 +26,7 @@
 #include "config.h"
 #include "li-pkg-index.h"
 #include "li-config-data.h"
+#include "li-utils-private.h"
 
 typedef struct _LiPkgIndexPrivate	LiPkgIndexPrivate;
 struct _LiPkgIndexPrivate
@@ -75,6 +76,10 @@ li_pkg_index_fetch_values_from_cdata (LiPkgIndex *pkidx, LiConfigData *cdata)
 		li_pkg_info_set_checksum_sha256 (pki, str);
 		g_free (str);
 
+		str = li_config_data_get_value (cdata, "Location");
+		li_pkg_info_set_repo_location (pki, str);
+		g_free (str);
+
 		g_ptr_array_add (priv->packages, pki);
 	}
 }
@@ -100,6 +105,7 @@ li_pkg_index_write_cdata_values (LiPkgIndex *pkidx, LiConfigData *cdata)
 		li_config_data_set_value (cdata, "Version", li_pkg_info_get_version (pki));
 		li_config_data_set_value (cdata, "Requires", li_pkg_info_get_dependencies (pki));
 		li_config_data_set_value (cdata, "SHA256", li_pkg_info_get_checksum_sha256 (pki));
+		li_config_data_set_value (cdata, "Location", li_pkg_info_get_repo_location (pki));
 	}
 }
 
@@ -146,14 +152,20 @@ li_pkg_index_load_data (LiPkgIndex *pkidx, const gchar *data)
  * li_pkg_index_load_file:
  */
 void
-li_pkg_index_load_file (LiPkgIndex *pkidx, GFile *file)
+li_pkg_index_load_file (LiPkgIndex *pkidx, GFile *file, GError **error)
 {
-	LiConfigData *cdata;
+	GError *tmp_error = NULL;
+	_cleanup_object_unref_ LiConfigData *cdata = NULL;
 
 	cdata = li_config_data_new ();
-	li_config_data_load_file (cdata, file);
+
+	li_config_data_load_file (cdata, file, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
 	li_pkg_index_fetch_values_from_cdata (pkidx, cdata);
-	g_object_unref (cdata);
 }
 
 /**

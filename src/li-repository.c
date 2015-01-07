@@ -35,6 +35,7 @@
 
 #include "li-utils-private.h"
 #include "li-pkg-index.h"
+#include "li-package.h"
 
 typedef struct _LiRepositoryPrivate	LiRepositoryPrivate;
 struct _LiRepositoryPrivate
@@ -81,6 +82,7 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 {
 	gchar *fname;
 	GFile *file;
+	GError *tmp_error = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	if (!g_file_test (directory, G_FILE_TEST_IS_DIR)) {
@@ -96,9 +98,13 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 	file = g_file_new_for_path (fname);
 	g_free (fname);
 	if (g_file_query_exists (file, NULL)) {
-		li_pkg_index_load_file (priv->index, file);
+		li_pkg_index_load_file (priv->index, file, &tmp_error);
 	}
 	g_object_unref (file);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
 
 	g_free (priv->repo_path);
 	priv->repo_path = g_strdup (directory);
@@ -133,6 +139,65 @@ li_repository_save (LiRepository *repo, GError **error)
 	g_free (fname);
 
 	// TODO: Sign index and AppStream data
+
+	return TRUE;
+}
+
+/**
+ * li_repository_add_package:
+ */
+gboolean
+li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **error)
+{
+	GError *tmp_error = NULL;
+	_cleanup_object_unref_ LiPackage *pkg = NULL;
+	LiPkgInfo *pki;
+	const gchar *pkgname;
+	const gchar *pkgversion;
+	gchar *tmp;
+	char c;
+	guint i;
+	_cleanup_free_ gchar *dest_path = NULL;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	pkg = li_package_new ();
+	li_package_open_file (pkg, pkg_fname, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	pki = li_package_get_info (pkg);
+
+	/* build destination path and directory */
+	pkgname = li_pkg_info_get_name (pki);
+	pkgversion = li_pkg_info_get_version (pki);
+	tmp = g_str_to_ascii (pkgname, NULL);
+
+	for (i = 0; tmp[i] != '\0'; i++) {
+		c = tmp[i];
+		if (g_ascii_isalnum (c))
+			break;
+	}
+	g_free (tmp);
+
+	dest_path = g_strdup_printf ("pool/%c/%s-%s.ipk", c, pkgname, pkgversion);
+	tmp = g_strdup_printf ("%s/pool/%c/", priv->repo_path, c);
+	g_mkdir_with_parents (tmp, 0755);
+	g_free (tmp);
+
+	li_pkg_info_set_repo_location (pki, dest_path);
+
+	/* now copy the file */
+	tmp = g_build_filename (priv->repo_path, dest_path, NULL);
+	li_copy_file (pkg_fname, tmp, &tmp_error);
+	if (tmp_error != NULL) {
+		g_free (tmp);
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	li_pkg_index_add_package (priv->index, pki);
 
 	return TRUE;
 }

@@ -64,7 +64,8 @@ GType			li_pkg_index_get_type	(void);
 LiPkgIndex		*li_pkg_index_new		(void);
 
 void			li_pkg_index_load_file (LiPkgIndex *pkidx,
-											GFile *file);
+										GFile *file,
+										GError **error);
 void 			li_pkg_index_load_data (LiPkgIndex *pkidx,
 										const gchar *data);
 gboolean		li_pkg_index_save_to_file (LiPkgIndex *pkidx,

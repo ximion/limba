@@ -95,7 +95,8 @@ GType			li_pkg_info_get_type	(void);
 LiPkgInfo	*li_pkg_info_new		(void);
 
 void			li_pkg_info_load_file (LiPkgInfo *pki,
-											GFile *file);
+										GFile *file,
+										GError **error);
 void 			li_pkg_info_load_data (LiPkgInfo *pki,
 										const gchar *data);
 gboolean		li_pkg_info_save_to_file (LiPkgInfo *pki,
@@ -142,6 +143,10 @@ const gchar		*li_pkg_info_get_architecture (LiPkgInfo *pki);
 void			li_pkg_info_set_architecture (LiPkgInfo *pki,
 										const gchar *arch);
 gboolean		li_pkg_info_matches_current_arch (LiPkgInfo *pki);
+
+const gchar		*li_pkg_info_get_repo_location (LiPkgInfo *pki);
+void			li_pkg_info_set_repo_location (LiPkgInfo *pki,
+										const gchar *location);
 
 G_END_DECLS
 

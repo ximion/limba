@@ -84,6 +84,10 @@ gboolean		li_repository_open (LiRepository *repo,
 gboolean		li_repository_save (LiRepository *repo,
 									GError **error);
 
+gboolean		li_repository_add_package (LiRepository *repo,
+									const gchar *pkg_fname,
+									GError **error);
+
 G_END_DECLS
 
 #endif /* __LI_REPOSITORY_H */

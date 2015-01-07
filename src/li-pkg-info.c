@@ -41,6 +41,7 @@ struct _LiPkgInfoPrivate
 	gchar *runtime_uuid;
 	gchar *dependencies;
 	gchar *hash_sha256;
+	gchar *repo_location;
 
 	LiPackageFlags flags;
 	LiVersionFlags vrel;
@@ -174,6 +175,7 @@ li_pkg_info_finalize (GObject *object)
 	g_free (priv->dependencies);
 	g_free (priv->runtime_uuid);
 	g_free (priv->format_version);
+	g_free (priv->repo_location);
 
 	G_OBJECT_CLASS (li_pkg_info_parent_class)->finalize (object);
 }
@@ -212,14 +214,20 @@ li_pkg_info_load_data (LiPkgInfo *pki, const gchar *data)
  * li_pkg_info_load_file:
  */
 void
-li_pkg_info_load_file (LiPkgInfo *pki, GFile *file)
+li_pkg_info_load_file (LiPkgInfo *pki, GFile *file, GError **error)
 {
-	LiConfigData *cdata;
+	GError *tmp_error = NULL;
+	_cleanup_object_unref_ LiConfigData *cdata = NULL;
 
 	cdata = li_config_data_new ();
-	li_config_data_load_file (cdata, file);
+
+	li_config_data_load_file (cdata, file, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
 	li_pkg_info_fetch_values_from_cdata (pki, cdata);
-	g_object_unref (cdata);
 }
 
 /**
@@ -525,6 +533,29 @@ li_pkg_info_matches_current_arch (LiPkgInfo *pki)
 
 	c_arch = li_get_current_arch_h ();
 	return (g_strcmp0 (priv->arch, "all") == 0) || (g_strcmp0 (priv->arch, c_arch) == 0);
+}
+
+/**
+ * li_pkg_info_get_repo_location:
+ *
+ * Get the location of this package in the pool of a repository.
+ */
+const gchar*
+li_pkg_info_get_repo_location (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->repo_location;
+}
+
+/**
+ * li_pkg_info_set_repo_location:
+ */
+void
+li_pkg_info_set_repo_location (LiPkgInfo *pki, const gchar *location)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	g_free (priv->repo_location);
+	priv->repo_location = g_strdup (location);
 }
 
 /**

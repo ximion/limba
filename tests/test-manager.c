@@ -98,13 +98,48 @@ test_installer ()
 void
 test_manager ()
 {
+	GPtrArray *pkgs;
 	LiManager *mgr;
 
 	mgr = li_manager_new ();
 
-	li_manager_get_installed_software (mgr);
+	pkgs = li_manager_get_installed_software (mgr);
+	g_assert (pkgs != NULL);
+
+	g_ptr_array_unref (pkgs);
 
 	g_object_unref (mgr);
+}
+
+void
+test_repository ()
+{
+	_cleanup_free_ gchar *rdir;
+	_cleanup_free_ gchar *fname_app = NULL;
+	_cleanup_free_ gchar *fname_lib = NULL;
+	LiRepository *repo;
+	GError *error = NULL;
+
+	rdir = li_utils_get_tmp_dir ("repo");
+	repo = li_repository_new ();
+
+	li_repository_open (repo, rdir, &error);
+	g_assert_no_error (error);
+
+	/* add packages */
+	fname_app = g_build_filename (datadir, "foobar.ipk", NULL);
+	li_repository_add_package (repo, fname_app, &error);
+	g_assert_no_error (error);
+
+	fname_lib = g_build_filename (datadir, "libfoo.ipk", NULL);
+	li_repository_add_package (repo, fname_lib, &error);
+	g_assert_no_error (error);
+
+	li_repository_save (repo, &error);
+	g_assert_no_error (error);
+
+	li_delete_dir_recursive (rdir);
+	g_object_unref (repo);
 }
 
 int
@@ -135,6 +170,7 @@ main (int argc, char **argv)
 
 	g_test_add_func ("/Limba/InstallRemove", test_installer);
 	g_test_add_func ("/Limba/Manager", test_manager);
+	g_test_add_func ("/Limba/Repository", test_repository);
 
 	ret = g_test_run ();
 	g_free (datadir);
