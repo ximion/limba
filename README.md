@@ -9,27 +9,33 @@ of duplicate software components running on a Linux system.
 
 ![Limba logo](data/limba-small.png "Logo")
 
-## User information
-In order to run Limba applications, you will need a Linux kernel supporting OverlayFS.
-This is at least 3.18[1], but many distributions offer it already in their own kernels.
+# Releases
+You can find official release tarballs here: [people.freedesktop.org/~mak/limba/releases](http://people.freedesktop.org/~mak/limba/releases/)
 
-Please keep in mind that this is EXPERIMENTAL software - you may play around with it,
-but don't expect it to work, or work as expected.
-
-[1]: http://lwn.net/Articles/618140/
-
-### Releases
-You can find official release tarballs here: http://people.freedesktop.org/~mak/limba/releases/
 At the current state of development, it makes more sense to clone the Git repository instead, to
 get the latest changes.
 
+# Users
+## Running Limba applications
+In order to run Limba applications, you will need a Linux kernel supporting OverlayFS.
+This is at least 3.18[1], but many distributions already ship their kernels with an OverlayFS
+kernel module.
+
+Applications installed with limber will nicely integrate with your desktop-environment, and should not
+look different from native applications.
+
+[1]: http://lwn.net/Articles/618140/
+
+## Building Limba packages
+We have very brief instructions on how to create new Limba packages
+in the [documentation](http://people.freedesktop.org/~mak/limba/docs/create-package/).
+
 ## Developers
-
 ### Dependencies
-
  * glib2 (>= 2.36)
  * GObject-Introspection
  * AppStream (libappstream)
+ * PolicyKit
  * libarchive
  * GPGMe
  * libuuid
@@ -37,6 +43,7 @@ get the latest changes.
 ### Compilation instructions
 Ensure all build dependencies are installed.
 Then run the following commands to compile (and install) Limba:
+
 ```bash
 mkdir build && cd build
 cmake ..
@@ -63,5 +70,5 @@ If you want to remove the software again, just remove the files in /opt/software
 and the file /usr/share/applications/foobar.desktop, in case it was installed.
 
 ### Contributing
-TODO
-Just drop me a note / pull request.
+Just create a pull request or submit a patch via the issue tracker or email.
+The software is subjected to the LGPLv2+ and GPLv2+ licenses.
