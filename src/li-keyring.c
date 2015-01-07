@@ -139,11 +139,11 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 		const gchar *gpg_conf = "# Options for GnuPG used by Limba \n\n"
 			"no-greeting\n"
 			"no-permission-warning\n"
-			"lock-never\n"
-			"keyserver-options timeout=10\n\n"
+			"lock-multiple\n\n"
+			"keyserver-options timeout=20\n"
+			"keyserver-options auto-key-retrieve\n\n"
 			"keyserver hkp://keys.gnupg.net\n"
-			"#keyserver hkp://keyring.debian.org\n\n"
-			"keyserver-options auto-key-retrieve\n";
+			"#keyserver hkp://keyring.debian.org\n";
 		g_mkdir_with_parents (home, 0755);
 
 		gpgconf_fname = g_build_filename (home, "gpg.conf", NULL);
