@@ -107,6 +107,7 @@ mount_overlay (const gchar *pkgid)
 	GFile *file;
 	const gchar *runtime_uuid;
 	gchar *tmp;
+	GError *error = NULL;
 	LiPkgInfo *pki = NULL;
 
 	/* check if the software exists */
@@ -123,8 +124,13 @@ mount_overlay (const gchar *pkgid)
 	}
 
 	pki = li_pkg_info_new ();
-	li_pkg_info_load_file (pki, file);
+	li_pkg_info_load_file (pki, file, &error);
 	g_object_unref (file);
+	if (error != NULL) {
+		fprintf (stderr, "Unable to read software metadata. %s\n", error->message);
+		g_error_free (error);
+		goto out;
+	}
 
 	runtime_uuid = li_pkg_info_get_runtime_dependency (pki);
 	if (runtime_uuid == NULL) {

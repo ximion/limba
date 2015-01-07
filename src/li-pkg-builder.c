@@ -536,7 +536,11 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		return FALSE;
 	}
 	ctl = li_pkg_info_new ();
-	li_pkg_info_load_file (ctl, ctlfile);
+	li_pkg_info_load_file (ctl, ctlfile, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
 
 	payload_root = g_build_filename (dir, "inst_target", NULL);
 	if (!g_file_test (payload_root, G_FILE_TEST_IS_DIR)) {

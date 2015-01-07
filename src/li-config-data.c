@@ -92,14 +92,20 @@ li_config_data_load_data (LiConfigData *cdata, const gchar *data)
  * li_config_data_load_file:
  */
 void
-li_config_data_load_file (LiConfigData *cdata, GFile *file)
+li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 {
 	gchar *line = NULL;
 	GFileInputStream* ir;
 	GDataInputStream* dis;
+	GError *tmp_error = NULL;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
-	ir = g_file_read (file, NULL, NULL);
+	ir = g_file_read (file, NULL, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
 	dis = g_data_input_stream_new ((GInputStream*) ir);
 	g_object_unref (ir);
 

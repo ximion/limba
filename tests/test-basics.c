@@ -35,6 +35,7 @@ test_configdata ()
 	GFile *file;
 	gboolean ret;
 	gchar *str;
+	GError *error = NULL;
 
 	fname = g_build_filename (datadir, "lidatafile.test", NULL);
 	file = g_file_new_for_path (fname);
@@ -42,8 +43,9 @@ test_configdata ()
 	g_assert (g_file_query_exists (file, NULL));
 
 	cdata = li_config_data_new ();
-	li_config_data_load_file (cdata, file);
+	li_config_data_load_file (cdata, file, &error);
 	g_object_unref (file);
+	g_assert_no_error (error);
 
 	ret = li_config_data_open_block (cdata, "Section", "test1", TRUE);
 	g_assert (ret);
@@ -80,6 +82,7 @@ test_pkgindex ()
 	GPtrArray *pkgs;
 	LiPkgInfo *pki;
 	gchar *str;
+	GError *error = NULL;
 
 	fname = g_build_filename (datadir, "pkg-index", NULL);
 	file = g_file_new_for_path (fname);
@@ -87,8 +90,9 @@ test_pkgindex ()
 	g_assert (g_file_query_exists (file, NULL));
 
 	idx = li_pkg_index_new ();
-	li_pkg_index_load_file (idx, file);
+	li_pkg_index_load_file (idx, file, &error);
 	g_object_unref (file);
+	g_assert_no_error (error);
 
 	pkgs = li_pkg_index_get_packages (idx);
 	g_assert (pkgs->len == 3);

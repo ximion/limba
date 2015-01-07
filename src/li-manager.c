@@ -125,7 +125,15 @@ li_manager_find_installed_software (LiManager *mgr)
 			if (g_file_query_exists (ctlfile, NULL)) {
 				LiPkgInfo *ctl;
 				ctl = li_pkg_info_new ();
-				li_pkg_info_load_file (ctl, ctlfile);
+
+				li_pkg_info_load_file (ctl, ctlfile, &tmp_error);
+				if (tmp_error != NULL) {
+					g_free (path);
+					g_object_unref (ctlfile);
+					g_object_unref (ctl);
+					goto out;
+				}
+
 				g_ptr_array_add (priv->installed_sw, ctl);
 			}
 			g_object_unref (ctlfile);
@@ -380,8 +388,13 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 		return FALSE;
 	}
 	pki = li_pkg_info_new ();
-	li_pkg_info_load_file (pki, ctlfile);
+	li_pkg_info_load_file (pki, ctlfile, &tmp_error);
 	g_object_unref (ctlfile);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		g_object_unref (pki);
+		return FALSE;
+	}
 
 	/* test if a runtime uses this software */
 	pkg_array = g_ptr_array_new_with_free_func (g_object_unref);

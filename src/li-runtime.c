@@ -135,8 +135,9 @@ li_runtime_load_directory (LiRuntime *rt, const gchar *dir, GError **error)
 {
 	gchar *uuid;
 	_cleanup_object_unref_ GFile *ctlfile;
-	_cleanup_free_ gchar *ctlpath;
-	LiConfigData *cdata;
+	_cleanup_free_ gchar *ctlpath = NULL;
+	_cleanup_object_unref_ LiConfigData *cdata = NULL;
+	GError *tmp_error = NULL;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
 	uuid = g_path_get_basename (dir);
@@ -153,13 +154,17 @@ li_runtime_load_directory (LiRuntime *rt, const gchar *dir, GError **error)
 				_("Runtime '%s' is not valid. Could not find control file."), uuid);
 		g_free (uuid);
 		return FALSE;
-
 	}
 
 	cdata = li_config_data_new ();
-	li_config_data_load_file (cdata, ctlfile);
+	li_config_data_load_file (cdata, ctlfile, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		g_free (uuid);
+		return FALSE;
+	}
+
 	li_runtime_fetch_values_from_cdata (rt, cdata);
-	g_object_unref (cdata);
 
 	g_free (priv->uuid);
 	priv->uuid = uuid;

@@ -63,7 +63,8 @@ GType			li_config_data_get_type	(void);
 LiConfigData	*li_config_data_new		(void);
 
 void			li_config_data_load_file (LiConfigData *cdata,
-											GFile *file);
+											GFile *file,
+											GError **error);
 void			li_config_data_load_data (LiConfigData *cdata,
 											const gchar *data);
 gboolean		li_config_data_open_block (LiConfigData *cdata,
