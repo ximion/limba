@@ -23,16 +23,31 @@
 #include "li-dbus-interface.h"
 #include "limba.h"
 
-/* ---------------------------------------------------------------------------------------------------- */
+typedef struct {
+	GMainLoop *loop;
 
-static GDBusObjectManagerServer *obj_manager = NULL;
-static PolkitAuthority *authority = NULL;
+	GDBusObjectManagerServer *obj_manager;
+	PolkitAuthority *authority;
+
+	GTimer *timer;
+	guint exit_idle_time;
+	guint timer_id;
+} LiHelperDaemon;
+
+/**
+ * li_daemon_reset_timer:
+ **/
+static void
+li_daemon_reset_timer (LiHelperDaemon *helper)
+{
+	g_timer_reset (helper->timer);
+}
 
 /**
  * on_installer_local_install:
  */
 static gboolean
-on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *fname, gpointer user_data)
+on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *fname, LiHelperDaemon *helper)
 {
 	GError *error = NULL;
 	LiInstaller *inst = NULL;
@@ -40,10 +55,12 @@ on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *con
 	PolkitSubject *subject;
 	const gchar *sender;
 
+	li_daemon_reset_timer (helper);
+
 	sender = g_dbus_method_invocation_get_sender (context);
 
 	subject = polkit_system_bus_name_new (sender);
-	pres = polkit_authority_check_authorization_sync (authority,
+	pres = polkit_authority_check_authorization_sync (helper->authority,
 													subject,
 													"org.test.limba.install-package-local",
 													NULL,
@@ -104,7 +121,7 @@ on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *con
  * on_bus_acquired:
  */
 static void
-on_bus_acquired (GDBusConnection *connection, const gchar *name, gpointer user_data)
+on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon *helper)
 {
 	LimbaObjectSkeleton *object;
 	LimbaInstaller *inst_bus;
@@ -113,10 +130,10 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, gpointer user_d
 
 	g_print ("Acquired a message bus connection\n");
 
-	authority = polkit_authority_get_sync (NULL, &error);
+	helper->authority = polkit_authority_get_sync (NULL, &error);
 	g_assert_no_error (error); /* TODO: Meh... Needs smart error handling. */
 
-	obj_manager = g_dbus_object_manager_server_new ("/org/test/Limba");
+	helper->obj_manager = g_dbus_object_manager_server_new ("/org/test/Limba");
 
 	/* create the Installer object */
 	object = limba_object_skeleton_new ("/org/test/Limba/Installer");
@@ -131,7 +148,7 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, gpointer user_d
 					NULL);
 
 	/* export the object */
-	g_dbus_object_manager_server_export (obj_manager, G_DBUS_OBJECT_SKELETON (object));
+	g_dbus_object_manager_server_export (helper->obj_manager, G_DBUS_OBJECT_SKELETON (object));
 	g_object_unref (object);
 
 	/* create the Manager object */
@@ -142,28 +159,51 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, gpointer user_d
 	g_object_unref (mgr_bus);
 
 	/* export the object */
-	g_dbus_object_manager_server_export (obj_manager, G_DBUS_OBJECT_SKELETON (object));
+	g_dbus_object_manager_server_export (helper->obj_manager, G_DBUS_OBJECT_SKELETON (object));
 	g_object_unref (object);
 
-	g_dbus_object_manager_server_set_connection (obj_manager, connection);
+	g_dbus_object_manager_server_set_connection (helper->obj_manager, connection);
 }
 
 /**
  * on_name_acquired:
  */
 static void
-on_name_acquired (GDBusConnection *connection, const gchar *name, gpointer user_data)
+on_name_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon *helper)
 {
 	g_print ("Acquired the name %s\n", name);
+	li_daemon_reset_timer (helper);
 }
 
 /**
  * on_name_lost:
  */
 static void
-on_name_lost (GDBusConnection *connection, const gchar *name, gpointer user_data)
+on_name_lost (GDBusConnection *connection, const gchar *name, LiHelperDaemon *helper)
 {
 	g_print ("Lost the name %s\n", name);
+
+	/* quit, we couldn't own the name */
+	g_main_loop_quit (helper->loop);
+}
+
+/**
+ * li_daemon_timeout_check_cb:
+ **/
+static gboolean
+li_daemon_timeout_check_cb (LiHelperDaemon *helper)
+{
+	guint idle;
+	idle = (guint) g_timer_elapsed (helper->timer, NULL);
+	g_debug ("idle is %i", idle);
+
+	if (idle > helper->exit_idle_time) {
+		g_main_loop_quit (helper->loop);
+		helper->timer_id = 0;
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
 /**
@@ -172,27 +212,38 @@ on_name_lost (GDBusConnection *connection, const gchar *name, gpointer user_data
 gint
 main (gint argc, gchar *argv[])
 {
-	GMainLoop *loop;
+	LiHelperDaemon helper;
 	guint id;
 
-	loop = g_main_loop_new (NULL, FALSE);
+	helper.loop = g_main_loop_new (NULL, FALSE);
+
+	helper.exit_idle_time = 20;
+	helper.timer = g_timer_new ();
 
 	id = g_bus_own_name (G_BUS_TYPE_SYSTEM,
 						"org.test.Limba",
 						G_BUS_NAME_OWNER_FLAGS_REPLACE,
-						on_bus_acquired,
-						on_name_acquired,
-						on_name_lost,
-						loop,
+						(GBusAcquiredCallback) on_bus_acquired,
+						(GBusNameAcquiredCallback) on_name_acquired,
+						(GBusNameLostCallback) on_name_lost,
+						&helper,
 						NULL);
 
-	g_main_loop_run (loop);
+	helper.timer_id = g_timeout_add_seconds (5, (GSourceFunc) li_daemon_timeout_check_cb, &helper);
+	g_source_set_name_by_id (helper.timer_id, "[LiDaemon] main poll");
 
+	g_main_loop_run (helper.loop);
+
+	/* cleanup */
 	g_bus_unown_name (id);
-	g_main_loop_unref (loop);
+	g_timer_destroy (helper.timer);
+	g_main_loop_unref (helper.loop);
 
-	if (authority != NULL)
-		g_object_unref (authority);
+	if (helper.timer_id > 0)
+		g_source_remove (helper.timer_id);
+
+	if (helper.authority != NULL)
+		g_object_unref (helper.authority);
 
 	return 0;
 }
