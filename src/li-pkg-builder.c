@@ -586,11 +586,12 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		}
 
 		mdata = as_metadata_new ();
-		cpt = as_metadata_parse_file (mdata, asfile, &tmp_error);
-		g_object_unref (mdata);
+		as_metadata_parse_file (mdata, asfile, &tmp_error);
+		cpt = as_metadata_get_component (mdata);
 		g_object_unref (asfile);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
+			g_object_unref (mdata);
 			return FALSE;
 		}
 
@@ -601,7 +602,7 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		else
 			pkg_fname = g_strdup_printf ("%s/%s.ipk", dir, tmp);
 		g_free (tmp);
-		g_object_unref (cpt);
+		g_object_unref (mdata);
 	} else {
 		pkg_fname = g_strdup (out_fname);
 	}

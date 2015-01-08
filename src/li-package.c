@@ -321,7 +321,8 @@ li_package_read_component_data (LiPackage *pkg, const gchar *data, GError **erro
 		g_object_unref (priv->cpt);
 
 	mdata = as_metadata_new ();
-	priv->cpt = as_metadata_parse_data (mdata, data, &tmp_error);
+	as_metadata_parse_data (mdata, data, &tmp_error);
+	priv->cpt = g_object_ref (as_metadata_get_component (mdata));
 	g_object_unref (mdata);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
@@ -1053,10 +1054,17 @@ li_package_get_embedded_packages (LiPackage *pkg)
 gchar*
 li_package_get_appstream_data (LiPackage *pkg)
 {
+	AsMetadata *metad;
+	gchar *xml;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 	if (priv->cpt == NULL)
 		return NULL;
-	return as_component_to_xml (priv->cpt);
+	metad = as_metadata_new ();
+	as_metadata_add_component (metad, priv->cpt);
+	xml = as_metadata_component_to_upstream_xml (metad);
+	g_object_unref (metad);
+
+	return xml;
 }
 
 /**

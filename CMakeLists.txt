@@ -77,7 +77,7 @@ add_custom_target(uninstall
 #
 find_package(Gettext REQUIRED)
 find_package(GLIB 2.40 REQUIRED COMPONENTS "gio" "gobject" "gio-unix")
-pkg_check_modules(APPSTREAM REQUIRED appstream>=0.7.2)
+pkg_check_modules(APPSTREAM REQUIRED appstream>=0.7.6)
 pkg_check_modules(UUID REQUIRED uuid>=2.0)
 pkg_check_modules (POLKIT REQUIRED polkit-gobject-1>=0.104)
 
