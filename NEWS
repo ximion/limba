@@ -1,3 +1,42 @@
+Version 0.3.0
+~~~~~~~~~~~~~~
+Released: 2015-01-08
+
+Notes:
+ * The Limba package sources are now expected in the lipkg/ subdirectory
+ * Packages are signed by default. Pass the --no-signature option to
+   lipkgen to disable this. Package signing requires a running GPG agent
+   at time.
+
+Features:
+ * Allow installations without setting the suid bit
+ * Improve performance of the config parser
+ * Add initial foundations list
+ * Implement support for signing packages
+ * Handle arch:any notation in package sources
+ * Validate signatures of IPK packages
+ * lipkgen: Allow disabling of package-signing
+ * Expose trust-level in installer
+ * lipkgen: Print better signing result messages
+ * Use PolKit to check for authorization
+ * Call helper for privileged local-install action
+ * Don't use the generic, odd "pkginstall" name for lipkg sources
+ * Time out helper daemon on inactivity
+ * Write improved compiler error output in maintainer mode
+
+Bugfixes:
+ * runapp: overlayfs is called overlay (Harald Hoyer)
+ * runapp: Use "overlayfs" on older Linux kernels
+ * Fix typo in runapp.c (blackout24)
+ * lipkgen: Fix extraction of packages if no destination directory is defined
+ * Check for architecture match when installing
+ * Always create format-versioned packages
+ * Warn about empty package-ids
+ * When loading pkg metadata, do not override metainfo values with NULL
+ * Dont crash if we encounter e.g. a non-armored signature
+ * Increase GPG keyserver timeout
+ * Adjust to AppStream API changes
+
 Version 0.2.0
 ~~~~~~~~~~~~~~
 Released: 2014-12-02

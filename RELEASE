@@ -7,7 +7,7 @@ git shortlog LIMBA_0_2_0.. | grep -i -v trivial | grep -v Merge > NEWS.new
 --------------------------------------------------------------------------------
 Version 0.3.0
 ~~~~~~~~~~~~~~
-Released: 2014-xx-xx
+Released: 2015-xx-xx
 
 Notes:
 
