@@ -32,15 +32,18 @@
 #include <stdlib.h>
 #include <locale.h>
 #include <gpgme.h>
+#include <appstream.h>
 
 #include "li-utils-private.h"
 #include "li-pkg-index.h"
 #include "li-package.h"
+#include "li-package-private.h"
 
 typedef struct _LiRepositoryPrivate	LiRepositoryPrivate;
 struct _LiRepositoryPrivate
 {
 	LiPkgIndex *index;
+	AsMetadata *metad;
 	gchar *repo_path;
 };
 
@@ -57,8 +60,9 @@ li_repository_finalize (GObject *object)
 	LiRepository *repo = LI_REPOSITORY (object);
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
-	g_object_unref (priv->index);
 	g_free (priv->repo_path);
+	g_object_unref (priv->index);
+	g_object_unref (priv->metad);
 
 	G_OBJECT_CLASS (li_repository_parent_class)->finalize (object);
 }
@@ -72,6 +76,7 @@ li_repository_init (LiRepository *repo)
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	priv->index = li_pkg_index_new ();
+	priv->metad = as_metadata_new ();
 }
 
 /**
@@ -93,12 +98,27 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 		return FALSE;
 	}
 
+	as_metadata_clear_components (priv->metad);
+
 	/* load index data if we find it */
 	fname = g_build_filename (directory, "Index", NULL);
 	file = g_file_new_for_path (fname);
 	g_free (fname);
 	if (g_file_query_exists (file, NULL)) {
 		li_pkg_index_load_file (priv->index, file, &tmp_error);
+	}
+	g_object_unref (file);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	/* load AppStream metadata (if present) */
+	fname = g_build_filename (directory, "Metadata.xml", NULL);
+	file = g_file_new_for_path (fname);
+	g_free (fname);
+	if (g_file_query_exists (file, NULL)) {
+		as_metadata_parse_file (priv->metad, file, &tmp_error);
 	}
 	g_object_unref (file);
 	if (tmp_error != NULL) {
@@ -122,6 +142,8 @@ li_repository_save (LiRepository *repo, GError **error)
 {
 	gchar *dir;
 	gchar *fname;
+	gchar *xml;
+	GError *tmp_error = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	/* ensure the basic directory structure is present */
@@ -136,6 +158,18 @@ li_repository_save (LiRepository *repo, GError **error)
 	/* save index */
 	fname = g_build_filename (priv->repo_path, "Index", NULL);
 	li_pkg_index_save_to_file (priv->index, fname);
+	g_free (fname);
+
+	/* save AppStream metadata */
+	fname = g_build_filename (priv->repo_path, "Metadata.xml", NULL);
+	xml = as_metadata_components_to_distro_xml (priv->metad);
+	if (xml != NULL) {
+		g_file_set_contents (fname, xml, -1, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+		}
+		g_free (xml);
+	}
 	g_free (fname);
 
 	// TODO: Sign index and AppStream data
@@ -198,6 +232,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	}
 
 	li_pkg_index_add_package (priv->index, pki);
+	as_metadata_add_component (priv->metad, li_package_get_appstream_cpt (pkg));
 
 	return TRUE;
 }
