@@ -189,9 +189,11 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	const gchar *pkgname;
 	const gchar *pkgversion;
 	gchar *tmp;
-	char c;
+	gunichar c;
 	guint i;
 	_cleanup_free_ gchar *dest_path = NULL;
+	gchar **strv;
+	AsComponent *cpt;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	pkg = li_package_new ();
@@ -214,6 +216,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 			break;
 	}
 	g_free (tmp);
+	c = g_unichar_tolower (c);
 
 	dest_path = g_strdup_printf ("pool/%c/%s-%s.ipk", c, pkgname, pkgversion);
 	tmp = g_strdup_printf ("%s/pool/%c/", priv->repo_path, c);
@@ -222,8 +225,18 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 
 	li_pkg_info_set_repo_location (pki, dest_path);
 
-	/* now copy the file */
+	/* check if we can copy the file */
 	tmp = g_build_filename (priv->repo_path, dest_path, NULL);
+	if (g_file_test (tmp, G_FILE_TEST_EXISTS)) {
+		g_free (tmp);
+		g_set_error (error,
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_FAILED,
+				_("A package with the same name and version has already been installed into this repository."));
+		return FALSE;
+	}
+
+	/* now copy the file */
 	li_copy_file (pkg_fname, tmp, &tmp_error);
 	if (tmp_error != NULL) {
 		g_free (tmp);
@@ -231,8 +244,16 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 		return FALSE;
 	}
 
+	/* set a unique AppStream package name */
+	cpt = li_package_get_appstream_cpt (pkg);
+	strv = g_new0 (gchar*, 2);
+	strv[0] = g_strdup_printf ("limba::%s", pkgname);
+	as_component_set_pkgnames (cpt, strv);
+	g_strfreev (strv);
+
+	/* add to indices */
 	li_pkg_index_add_package (priv->index, pki);
-	as_metadata_add_component (priv->metad, li_package_get_appstream_cpt (pkg));
+	as_metadata_add_component (priv->metad, cpt);
 
 	return TRUE;
 }

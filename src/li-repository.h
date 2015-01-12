@@ -41,12 +41,14 @@ G_BEGIN_DECLS
  * LiRepositoryError:
  * @LI_REPOSITORY_ERROR_FAILED:		Generic failure
  * @LI_REPOSITORY_ERROR_NO_REPO:	The directory is no Limba repository
+ * @LI_REPOSITORY_ERROR_PKG_EXISTS:	Package was already in the repository and can not be added again.
  *
  * The error type.
  **/
 typedef enum {
 	LI_REPOSITORY_ERROR_FAILED,
 	LI_REPOSITORY_ERROR_NO_REPO,
+	LI_REPOSITORY_ERROR_PKG_EXISTS,
 	/*< private >*/
 	LI_REPOSITORY_ERROR_LAST
 } LiRepositoryError;

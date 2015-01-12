@@ -112,9 +112,46 @@ out:
 static gint
 lirepo_add_package (const gchar *fname, const gchar *repodir)
 {
-	/* FIXME: Not implemented yet */
-	g_print ("STUB\n");
-	return 4;
+	gint res = 0;
+	gchar *rdir;
+	GError *error = NULL;
+	LiRepository *repo;
+
+	if (repodir == NULL)
+		rdir = g_get_current_dir ();
+	else
+		rdir = g_strdup (repodir);
+
+	repo = li_repository_new ();
+
+	li_repository_open (repo, rdir, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Failed to open repository: %s"), error->message);
+		res = 1;
+		goto out;
+	}
+
+	li_repository_add_package (repo, fname, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Failed to add package: %s"), error->message);
+		res = 1;
+		goto out;
+	}
+
+	li_repository_save (repo, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Failed to initialize repository: %s"), error->message);
+		res = 1;
+		goto out;
+	}
+
+out:
+	g_free (rdir);
+	g_object_unref (repo);
+	if (error != NULL)
+		g_error_free (error);
+
+	return res;
 }
 
 /**
