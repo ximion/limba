@@ -189,7 +189,7 @@ pkgen_make_template (const gchar *dir)
 			g_print ("%s ", _("Define a software name (human readable):"));
 			tmp = li_get_stdin ();
 			if (tmp != NULL) {
-				as_component_set_name (cpt, tmp);
+				as_component_set_name (cpt, tmp, NULL);
 				g_free (tmp);
 				break;
 			}
@@ -213,7 +213,7 @@ pkgen_make_template (const gchar *dir)
 			g_print ("%s ", _("Write a short summary (one sentence) about your software:"));
 			tmp = li_get_stdin ();
 			if (tmp != NULL) {
-				as_component_set_summary (cpt, tmp);
+				as_component_set_summary (cpt, tmp, NULL);
 				g_free (tmp);
 				break;
 			}
