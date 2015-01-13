@@ -203,6 +203,21 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 		return FALSE;
 	}
 
+	if (li_package_has_embedded_packages (pkg)) {
+		/* We do not support packages with embedded other packages in repositories.
+		 * Allowing it would needlessly duplicate data, and would also confuse the
+		 * dependency resolver. Embedded dependencies are really just for package-only
+		 * distribution.
+		 * We can also not just splt out embedded package copies, since that would break
+		 * the packages signature and make it invalid.
+		 */
+		g_set_error (error,
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_EMBEDDED_COPY,
+				_("The package contains embedded dependencies. Packages with that property are not allowed in repositories, please add dependencies separately."));
+		return FALSE;
+	}
+
 	pki = li_package_get_info (pkg);
 
 	/* build destination path and directory */

@@ -1047,6 +1047,18 @@ li_package_get_embedded_packages (LiPackage *pkg)
 }
 
 /**
+ * li_package_has_embedded_packages:
+ *
+ * Returns: %TRUE if this package has other packages embedded.
+ */
+gboolean
+li_package_has_embedded_packages (LiPackage *pkg)
+{
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+	return (priv->embedded_packages != NULL ) && (priv->embedded_packages->len > 0);
+}
+
+/**
  * li_package_get_appstream_data:
  *
  * Returns AppStream XML data
