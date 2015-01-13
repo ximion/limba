@@ -101,7 +101,7 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 	as_metadata_clear_components (priv->metad);
 
 	/* load index data if we find it */
-	fname = g_build_filename (directory, "Index", NULL);
+	fname = g_build_filename (directory, "Index.gz", NULL);
 	file = g_file_new_for_path (fname);
 	g_free (fname);
 	if (g_file_query_exists (file, NULL)) {
@@ -156,7 +156,7 @@ li_repository_save (LiRepository *repo, GError **error)
 	g_free (dir);
 
 	/* save index */
-	fname = g_build_filename (priv->repo_path, "Index", NULL);
+	fname = g_build_filename (priv->repo_path, "Index.gz", NULL);
 	li_pkg_index_save_to_file (priv->index, fname);
 	g_free (fname);
 

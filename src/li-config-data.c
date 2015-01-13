@@ -25,6 +25,8 @@
 
 #include "li-config-data.h"
 
+#include <string.h>
+
 #include "li-utils.h"
 #include "li-utils-private.h"
 
@@ -95,36 +97,78 @@ void
 li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 {
 	gchar *line = NULL;
-	GFileInputStream* ir;
-	GDataInputStream* dis;
 	GError *tmp_error = NULL;
+	GFileInfo *info = NULL;
+	const gchar *content_type = NULL;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
-	ir = g_file_read (file, NULL, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return;
-	}
+	info = g_file_query_info (file,
+				G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE,
+				G_FILE_QUERY_INFO_NONE,
+				NULL, NULL);
+	if (info != NULL)
+		content_type = g_file_info_get_attribute_string (info, G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
 
-	dis = g_data_input_stream_new ((GInputStream*) ir);
-	g_object_unref (ir);
+	if ((g_strcmp0 (content_type, "application/gzip") == 0) || (g_strcmp0 (content_type, "application/x-gzip") == 0)) {
+		GFileInputStream* fistream;
+		GMemoryOutputStream* mem_os;
+		GInputStream *conv_stream;
+		GZlibDecompressor* zdecomp;
 
-	/* clear the array */
-	if (priv->content != NULL) {
-		g_list_free_full (priv->content, g_free);
-		priv->content = NULL;
-	}
+		guint8* data;
+		gchar **strv;
+		guint i;
 
-	while (TRUE) {
-		line = g_data_input_stream_read_line (dis, NULL, NULL, NULL);
-		if (line == NULL) {
-			break;
+		/* load a GZip compressed file */
+
+		fistream = g_file_read (file, NULL, NULL);
+		mem_os = (GMemoryOutputStream*) g_memory_output_stream_new (NULL, 0, g_realloc, g_free);
+		zdecomp = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_GZIP);
+		conv_stream = g_converter_input_stream_new (G_INPUT_STREAM (fistream), G_CONVERTER (zdecomp));
+		g_object_unref (zdecomp);
+
+		g_output_stream_splice (G_OUTPUT_STREAM (mem_os), conv_stream, 0, NULL, NULL);
+		data = g_memory_output_stream_get_data (mem_os);
+		strv = g_strsplit ((const gchar*) data, "\n", -1);
+
+		for (i = 0; strv[i] != NULL; i++) {
+			priv->content = g_list_append (priv->content, g_strdup (strv[i]));
 		}
 
-		priv->content = g_list_append (priv->content, line);
-	}
+		g_strfreev (strv);
+		g_object_unref (conv_stream);
+		g_object_unref (mem_os);
+		g_object_unref (fistream);
+	} else {
+		GFileInputStream* ir;
+		GDataInputStream* dis;
 
-	g_object_unref (dis);
+		ir = g_file_read (file, NULL, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+
+		dis = g_data_input_stream_new ((GInputStream*) ir);
+		g_object_unref (ir);
+
+		/* clear the array */
+		if (priv->content != NULL) {
+			g_list_free_full (priv->content, g_free);
+			priv->content = NULL;
+		}
+
+		while (TRUE) {
+			line = g_data_input_stream_read_line (dis, NULL, NULL, NULL);
+			if (line == NULL) {
+				break;
+			}
+
+			priv->content = g_list_append (priv->content, line);
+		}
+
+		g_object_unref (dis);
+	}
 }
 
 /**
@@ -483,36 +527,75 @@ gboolean
 li_config_data_save_to_file (LiConfigData *cdata, const gchar *filename, GError **error)
 {
 	GFile *file;
-	GDataOutputStream *dos = NULL;
-	GFileOutputStream *fos;
 	GError *tmp_error = NULL;
 	gboolean ret = FALSE;
 	gchar *data = NULL;
 
 	file = g_file_new_for_path (filename);
-	if (g_file_query_exists (file, NULL)) {
-		fos = g_file_replace (file,
+
+	data = li_config_data_get_data (cdata);
+
+	if (g_str_has_suffix (filename, ".gz")) {
+		_cleanup_object_unref_ GOutputStream *out2 = NULL;
+		_cleanup_object_unref_ GOutputStream *out = NULL;
+		_cleanup_object_unref_ GZlibCompressor *compressor = NULL;
+
+		/* write a gzip compressed file */
+		compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_GZIP, -1);
+		out = g_memory_output_stream_new_resizable ();
+		out2 = g_converter_output_stream_new (out, G_CONVERTER (compressor));
+
+		if (!g_output_stream_write_all (out2, data, strlen (data),
+					NULL, NULL, &tmp_error)) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+
+		g_output_stream_close (out2, NULL, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+
+		if (!g_file_replace_contents (file,
+			g_memory_output_stream_get_data (G_MEMORY_OUTPUT_STREAM (out)),
+						g_memory_output_stream_get_data_size (G_MEMORY_OUTPUT_STREAM (out)),
+						NULL,
+						FALSE,
+						G_FILE_CREATE_NONE,
+						NULL,
+						NULL,
+						&tmp_error)) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+
+	} else {
+		_cleanup_object_unref_ GFileOutputStream *fos = NULL;
+		_cleanup_object_unref_ GDataOutputStream *dos = NULL;
+
+		/* write uncompressed file */
+		if (g_file_query_exists (file, NULL)) {
+			fos = g_file_replace (file,
 							NULL,
 							FALSE,
 							G_FILE_CREATE_REPLACE_DESTINATION,
 							NULL,
 							&tmp_error);
-	} else {
-		fos = g_file_create (file, G_FILE_CREATE_REPLACE_DESTINATION, NULL, &tmp_error);
-	}
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		goto out;
-	}
+		} else {
+			fos = g_file_create (file, G_FILE_CREATE_REPLACE_DESTINATION, NULL, &tmp_error);
+		}
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
 
-	dos = g_data_output_stream_new (G_OUTPUT_STREAM (fos));
-	g_object_unref (fos);
-
-	data = li_config_data_get_data (cdata);
-	g_data_output_stream_put_string (dos, data, NULL, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		goto out;
+		dos = g_data_output_stream_new (G_OUTPUT_STREAM (fos));
+		g_data_output_stream_put_string (dos, data, NULL, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
 	}
 
 	ret = TRUE;
@@ -520,8 +603,6 @@ out:
 	g_object_unref (file);
 	if (data != NULL)
 		g_free (data);
-	if (dos != NULL)
-		g_object_unref (dos);
 
 	return ret;
 }
