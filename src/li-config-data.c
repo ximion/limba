@@ -96,7 +96,6 @@ li_config_data_load_data (LiConfigData *cdata, const gchar *data)
 void
 li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 {
-	gchar *line = NULL;
 	GError *tmp_error = NULL;
 	GFileInfo *info = NULL;
 	const gchar *content_type = NULL;
@@ -110,12 +109,12 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 		content_type = g_file_info_get_attribute_string (info, G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
 
 	if ((g_strcmp0 (content_type, "application/gzip") == 0) || (g_strcmp0 (content_type, "application/x-gzip") == 0)) {
-		GFileInputStream* fistream;
-		GMemoryOutputStream* mem_os;
+		GFileInputStream *fistream;
+		GMemoryOutputStream *mem_os;
 		GInputStream *conv_stream;
-		GZlibDecompressor* zdecomp;
+		GZlibDecompressor *zdecomp;
 
-		guint8* data;
+		guint8 *data;
 		gchar **strv;
 		guint i;
 
@@ -140,6 +139,7 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 		g_object_unref (mem_os);
 		g_object_unref (fistream);
 	} else {
+		gchar *line = NULL;
 		GFileInputStream* ir;
 		GDataInputStream* dis;
 

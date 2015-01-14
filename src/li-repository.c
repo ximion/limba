@@ -114,7 +114,7 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 	}
 
 	/* load AppStream metadata (if present) */
-	fname = g_build_filename (directory, "Metadata.xml", NULL);
+	fname = g_build_filename (directory, "Metadata.xml.gz", NULL);
 	file = g_file_new_for_path (fname);
 	g_free (fname);
 	if (g_file_query_exists (file, NULL)) {
@@ -142,7 +142,6 @@ li_repository_save (LiRepository *repo, GError **error)
 {
 	gchar *dir;
 	gchar *fname;
-	gchar *xml;
 	GError *tmp_error = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
@@ -161,16 +160,12 @@ li_repository_save (LiRepository *repo, GError **error)
 	g_free (fname);
 
 	/* save AppStream metadata */
-	fname = g_build_filename (priv->repo_path, "Metadata.xml", NULL);
-	xml = as_metadata_components_to_distro_xml (priv->metad);
-	if (xml != NULL) {
-		g_file_set_contents (fname, xml, -1, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
-		}
-		g_free (xml);
-	}
+	fname = g_build_filename (priv->repo_path, "Metadata.xml.gz", NULL);
+	as_metadata_save_distro_xml (priv->metad, fname, &tmp_error);
 	g_free (fname);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+	}
 
 	// TODO: Sign index and AppStream data
 
