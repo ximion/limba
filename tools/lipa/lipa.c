@@ -28,6 +28,7 @@
 static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
+static gboolean optn_no_fail = FALSE;
 
 /**
  * li_print_stderr:
@@ -243,6 +244,7 @@ main (int argc, char *argv[])
 		{ "version", 0, 0, G_OPTION_ARG_NONE, &optn_show_version, _("Show the program version"), NULL },
 		{ "verbose", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_verbose_mode, _("Show extra debugging information"), NULL },
 		{ "no-fancy", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_fancy, _("Don't show \"fancy\" output"), NULL },
+		{ "no-fail", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_fail, _("Do not fail action with an error code."), NULL },
 		{ NULL }
 	};
 
@@ -307,6 +309,10 @@ out:
 	g_option_context_free (opt_context);
 	if (options_help != NULL)
 		g_free (options_help);
+
+	/* we should not emit an error code */
+	if (optn_no_fail)
+		return 0;
 
 	return exit_code;
 }

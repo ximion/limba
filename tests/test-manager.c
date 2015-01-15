@@ -148,7 +148,7 @@ void
 test_pkg_cache ()
 {
 	LiPkgCache *cache;
-	GError *error = NULL;
+	// GError *error = NULL;
 
 	cache = li_pkg_cache_new ();
 
