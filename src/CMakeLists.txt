@@ -25,6 +25,7 @@ set(LIBLIMBA_SRC
 	li-pkg-builder.c
 	li-keyring.c
 	li-repository.c
+	li-pkg-cache.c
 )
 
 set(LIBLIMBA_PUBLIC_HEADERS
@@ -47,6 +48,7 @@ set(LIBLIMBA_PRIVATE_HEADERS
 	li-config-data.h
 	li-exporter.h
 	li-package-graph.h
+	li-pkg-cache.h
 )
 
 add_definitions("-DLI_COMPILATION"

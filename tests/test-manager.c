@@ -20,6 +20,8 @@
 
 #include <glib.h>
 #include "limba.h"
+
+#include "li-pkg-cache.h"
 #include "li-utils-private.h"
 
 static gchar *datadir = NULL;
@@ -142,6 +144,20 @@ test_repository ()
 	g_object_unref (repo);
 }
 
+void
+test_pkg_cache ()
+{
+	LiPkgCache *cache;
+	GError *error = NULL;
+
+	cache = li_pkg_cache_new ();
+
+	li_pkg_cache_update (cache, &error);
+	g_assert_no_error (error);
+
+	g_object_unref (cache);
+}
+
 int
 main (int argc, char **argv)
 {
@@ -171,6 +187,7 @@ main (int argc, char **argv)
 	g_test_add_func ("/Limba/InstallRemove", test_installer);
 	g_test_add_func ("/Limba/Manager", test_manager);
 	g_test_add_func ("/Limba/Repository", test_repository);
+	g_test_add_func ("/Limba/PackageCache", test_pkg_cache);
 
 	ret = g_test_run ();
 	g_free (datadir);
