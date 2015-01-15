@@ -43,12 +43,15 @@ struct _LiPkgCachePrivate
 {
 	LiPkgIndex *index;
 	AsMetadata *metad;
-	gchar *repo_path;
+
+	GPtrArray *repo_urls;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPkgCache, li_pkg_cache, G_TYPE_OBJECT)
 
 #define GET_PRIVATE(o) (li_pkg_cache_get_instance_private (o))
+
+#define LIMBA_CACHE "/var/cache/limba/"
 
 /**
  * li_pkg_cache_finalize:
@@ -56,26 +59,65 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiPkgCache, li_pkg_cache, G_TYPE_OBJECT)
 static void
 li_pkg_cache_finalize (GObject *object)
 {
-	LiPkgCache *pkgcache = LI_PKG_CACHE (object);
-	LiPkgCachePrivate *priv = GET_PRIVATE (pkgcache);
+	LiPkgCache *cache = LI_PKG_CACHE (object);
+	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
-	g_free (priv->repo_path);
 	g_object_unref (priv->index);
 	g_object_unref (priv->metad);
+	g_ptr_array_unref (priv->repo_urls);
 
 	G_OBJECT_CLASS (li_pkg_cache_parent_class)->finalize (object);
+}
+
+static void
+li_pkg_cache_load_repolist (LiPkgCache *cache, const gchar *fname)
+{
+	gchar *content = NULL;
+	gchar **lines;
+	guint i;
+	gboolean ret;
+	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
+
+	/* Load repo list - failure to open it is no error, since it might simply be nonexistent.
+	 * That could e.g. happen after a stateless system reset */
+	ret = g_file_get_contents (fname, &content, NULL, NULL);
+	if (!ret)
+		return;
+
+	lines = g_strsplit (content, "\n", -1);
+	g_free (content);
+
+	for (i = 0; lines[i] != NULL; i++) {
+		g_strstrip (lines[i]);
+
+		/* ignore comments */
+		if (g_str_has_prefix (lines[i], "#"))
+			continue;
+		/* ignore empty lines */
+		if (g_strcmp0 (lines[i], "") == 0)
+			continue;
+
+		g_ptr_array_add (priv->repo_urls, g_strdup (lines[i]));
+	}
+
+	g_strfreev (lines);
 }
 
 /**
  * li_pkg_cache_init:
  **/
 static void
-li_pkg_cache_init (LiPkgCache *pkgcache)
+li_pkg_cache_init (LiPkgCache *cache)
 {
-	LiPkgCachePrivate *priv = GET_PRIVATE (pkgcache);
+	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	priv->index = li_pkg_index_new ();
 	priv->metad = as_metadata_new ();
+	priv->repo_urls = g_ptr_array_new_with_free_func (g_free);
+
+	/* load repository url list */
+	li_pkg_cache_load_repolist (cache, "/etc/limba/sources.list"); /* defined by the user / distributor */
+	li_pkg_cache_load_repolist (cache, "/var/lib/limba/update-sources.list"); /* managed automatically by Limba */
 }
 
 /**
@@ -100,17 +142,17 @@ curl_dl_read_data (gpointer ptr, size_t size, size_t nmemb, FILE *stream)
  * li_pkg_cache_curl_progress_cb:
  */
 gint
-li_pkg_cache_curl_progress_cb (LiPkgCache *pkgcache, double dltotal, double dlnow, double ultotal, double ulnow)
+li_pkg_cache_curl_progress_cb (LiPkgCache *cache, double dltotal, double dlnow, double ultotal, double ulnow)
 {
 	/* TODO */
 	return 0;
 }
 
 /**
- * li_pkg_cache_download_thread:
+ * li_pkg_cache_download_file_sync:
  */
-static gpointer
-li_pkg_cache_download_file_sync (LiPkgCache *pkgcache, const gchar *url, const gchar *dest, GError **error)
+static void
+li_pkg_cache_download_file_sync (LiPkgCache *cache, const gchar *url, const gchar *dest, GError **error)
 {
 	CURL *curl;
 	CURLcode res;
@@ -118,19 +160,32 @@ li_pkg_cache_download_file_sync (LiPkgCache *pkgcache, const gchar *url, const g
 
 	curl = curl_easy_init();
 	if (curl == NULL) {
-		g_warning ("Could not initialize CURL!");
-		return NULL;
+		g_set_error (error,
+				LI_PKG_CACHE_ERROR,
+				LI_PKG_CACHE_ERROR_FAILED,
+				_("Could not initialize CURL!"));
+		return;
 	}
 
 	outfile = fopen (dest, "w");
+	if (outfile == NULL) {
+		g_set_error (error,
+				LI_PKG_CACHE_ERROR,
+				LI_PKG_CACHE_ERROR_FAILED,
+				_("Could not open file '%s' for writing."), dest);
+
+		curl_easy_cleanup (curl);
+		return;
+	}
 
 	curl_easy_setopt (curl, CURLOPT_URL, url);
 	curl_easy_setopt (curl, CURLOPT_WRITEDATA, outfile);
 	curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, curl_dl_write_data);
 	curl_easy_setopt (curl, CURLOPT_READFUNCTION, curl_dl_read_data);
-	curl_easy_setopt (curl, CURLOPT_NOPROGRESS, 0L);
+	curl_easy_setopt (curl, CURLOPT_NOPROGRESS, FALSE);
+	curl_easy_setopt (curl, CURLOPT_FAILONERROR, TRUE);
 	curl_easy_setopt (curl, CURLOPT_PROGRESSFUNCTION, li_pkg_cache_curl_progress_cb);
-	curl_easy_setopt (curl, CURLOPT_PROGRESSDATA, pkgcache);
+	curl_easy_setopt (curl, CURLOPT_PROGRESSDATA, cache);
 
 	res = curl_easy_perform (curl);
 
@@ -143,9 +198,7 @@ li_pkg_cache_download_file_sync (LiPkgCache *pkgcache, const gchar *url, const g
 
 	/* cleanup */
 	fclose (outfile);
-	curl_easy_cleanup(curl);
-
-	return NULL;
+	curl_easy_cleanup (curl);
 }
 
 /**
@@ -154,11 +207,48 @@ li_pkg_cache_download_file_sync (LiPkgCache *pkgcache, const gchar *url, const g
  * Update the package cache by downloading new package indices from the web.
  */
 void
-li_pkg_cache_update (LiPkgCache *pkgcache, GError **error)
+li_pkg_cache_update (LiPkgCache *cache, GError **error)
 {
-	/* TODO */
+	guint i;
+	GError *tmp_error = NULL;
+	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
-	li_pkg_cache_download_file_sync (pkgcache, "http://imgs.xkcd.com/comics/location_sharing.png", "/tmp/xkcd.png", error);
+	for (i = 0; i < priv->repo_urls->len; i++) {
+		const gchar *url;
+		_cleanup_free_ gchar *url_index = NULL;
+		_cleanup_free_ gchar *url_asdata = NULL;
+		_cleanup_free_ gchar *dest = NULL;
+		_cleanup_free_ gchar *dest_index = NULL;
+		_cleanup_free_ gchar *dest_asdata = NULL;
+		gchar *tmp;
+		url = (const gchar*) g_ptr_array_index (priv->repo_urls, i);
+
+		url_index = g_build_filename (url, "Index.gz", NULL);
+		url_asdata = g_build_filename (url, "Metadata.xml.gz", NULL);
+
+		/* prepare cache dir and ensure it exists */
+		tmp = g_compute_checksum_for_string (G_CHECKSUM_MD5, url, -1);
+		dest = g_build_filename (LIMBA_CACHE, tmp, NULL);
+		g_free (tmp);
+		g_mkdir_with_parents (dest, 0755);
+
+		dest_index = g_build_filename (dest, "Index.gz", NULL);
+		dest_asdata = g_build_filename (dest, "Metadata.xml.gz", NULL);
+
+		g_debug ("Updating cached data for repository: %s", url_index);
+		li_pkg_cache_download_file_sync (cache, url_index, dest_index, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+
+		li_pkg_cache_download_file_sync (cache, url_asdata, dest_asdata, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+		g_debug ("Updated data for repository: %s", url_index);
+	}
 }
 
 /**
@@ -196,7 +286,7 @@ li_pkg_cache_class_init (LiPkgCacheClass *klass)
 LiPkgCache *
 li_pkg_cache_new (void)
 {
-	LiPkgCache *pkgcache;
-	pkgcache = g_object_new (LI_TYPE_PKG_CACHE, NULL);
-	return LI_PKG_CACHE (pkgcache);
+	LiPkgCache *cache;
+	cache = g_object_new (LI_TYPE_PKG_CACHE, NULL);
+	return LI_PKG_CACHE (cache);
 }

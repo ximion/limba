@@ -77,7 +77,7 @@ struct _LiPkgCacheClass
 GType			li_pkg_cache_get_type	(void);
 LiPkgCache		*li_pkg_cache_new		(void);
 
-void			li_pkg_cache_update (LiPkgCache *pkgcache,
+void			li_pkg_cache_update (LiPkgCache *cache,
 									GError **error);
 
 G_END_DECLS
