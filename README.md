@@ -39,6 +39,8 @@ in the [documentation](http://people.freedesktop.org/~mak/limba/docs/create-pack
  * libarchive
  * GPGMe
  * libuuid
+ * libcurl
+ * systemd (optional)
 
 ### Compilation instructions
 Ensure all build dependencies are installed.

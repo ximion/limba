@@ -81,6 +81,7 @@ include_directories(${CMAKE_BINARY_DIR}
 			${APPSTREAM_INCLUDE_DIRS}
 			${LibArchive_INCLUDE_DIR}
 			${GPGME_VANILLA_INCLUDE_DIR}
+			${CURL_INCLUDE_DIRS}
 )
 
 target_link_libraries(limba
@@ -93,6 +94,7 @@ target_link_libraries(limba
 		${APPSTREAM_LIBRARIES}
 		${LibArchive_LIBRARIES}
 		${GPGME_VANILLA_LIBRARIES}
+		${CURL_LIBRARIES}
 )
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/limba.pc.in ${CMAKE_CURRENT_BINARY_DIR}/limba.pc @ONLY)

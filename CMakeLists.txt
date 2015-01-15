@@ -84,6 +84,7 @@ pkg_check_modules (POLKIT REQUIRED polkit-gobject-1>=0.104)
 find_package(GI REQUIRED)
 find_package(LibArchive REQUIRED)
 find_package(GPGMe REQUIRED)
+find_package(CURL REQUIRED)
 find_library(M_LIB m)
 
 #
