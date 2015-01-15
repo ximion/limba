@@ -320,10 +320,10 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 	err = gpgme_data_new_from_mem (&sigdata, sigtext, strlen (sigtext), 1);
 	if (err != 0) {
 		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_VERIFY,
-				_("Signature validation failed: %s"),
-				gpgme_strerror (err));
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_VERIFY,
+			_("Signature validation failed: %s"),
+			gpgme_strerror (err));
 		gpgme_release (ctx);
 		return NULL;
 	}
@@ -333,10 +333,10 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 	err = gpgme_op_verify (ctx, sigdata, NULL, data);
 	if (err != 0) {
 		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_VERIFY,
-				_("Signature validation failed: %s"),
-				gpgme_strerror (err));
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_VERIFY,
+			_("Signature validation failed: %s"),
+			gpgme_strerror (err));
 		gpgme_data_release (sigdata);
 		gpgme_release (ctx);
 		return NULL;
@@ -345,10 +345,10 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 	result = gpgme_op_verify_result (ctx);
 	if (result == NULL) {
 		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_VERIFY,
-				_("Signature validation failed: %s"),
-				_("No result received."));
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_VERIFY,
+			_("Signature validation failed: %s"),
+			_("No result received."));
 		gpgme_data_release (sigdata);
 		gpgme_release (ctx);
 		return NULL;
@@ -357,9 +357,9 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 	sig = result->signatures;
 	if (sig == NULL) {
 		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_VERIFY,
-				_("Signature validation failed. Signature is invalid or not a signature."));
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_VERIFY,
+			_("Signature validation failed. Signature is invalid or not a signature."));
 		gpgme_data_release (sigdata);
 		gpgme_data_release (data);
 		gpgme_release (ctx);
@@ -367,11 +367,18 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 	}
 
 	if (sig->status != GPG_ERR_NO_ERROR) {
-		g_set_error (error,
+		if (sig->status == GPG_ERR_NO_PUBKEY) {
+			g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_VERIFY,
+				_("Could not verify signature: They key could not be found or downloaded."));
+		} else {
+			g_set_error (error,
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_VERIFY,
 				_("Signature validation failed. Signature is invalid. (%s)"),
 				gpgme_strerror (sig->status));
+		}
 		gpgme_data_release (sigdata);
 		gpgme_data_release (data);
 		gpgme_release (ctx);
