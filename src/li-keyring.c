@@ -142,7 +142,8 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 			"lock-multiple\n\n"
 			"keyserver-options timeout=20\n"
 			"keyserver-options auto-key-retrieve\n\n"
-			"keyserver hkp://keys.gnupg.net\n"
+			"keyserver hkp://hkps.pool.sks-keyservers.net\n"
+			"#keyserver hkp://keys.gnupg.net\n"
 			"#keyserver hkp://keyring.debian.org\n";
 		g_mkdir_with_parents (home, 0755);
 
