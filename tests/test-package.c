@@ -19,9 +19,10 @@
  */
 
 #include <glib.h>
-#include "limba.h"
 #include <stdlib.h>
+#include "limba.h"
 
+#include "common.h"
 #include "li-utils-private.h"
 
 static gchar *datadir = NULL;
@@ -178,7 +179,8 @@ main (int argc, char **argv)
 	datadir = g_build_filename (datadir, "data", NULL);
 	g_assert (g_file_test (datadir, G_FILE_TEST_EXISTS) != FALSE);
 
-	li_set_unittestmode (TRUE);
+	/* don't run with privilieges if we don't need them */
+	li_test_drop_privileges ();
 
 	li_set_verbose_mode (TRUE);
 	g_test_init (&argc, &argv, NULL);

@@ -40,9 +40,6 @@
  * @include: limba.h
  */
 
-/* set to TRUE in case we are running unit tests */
-static gboolean _unittestmode = FALSE;
-
 /**
  * li_str_empty:
  */
@@ -420,13 +417,7 @@ li_get_uuid_string ()
 const gchar*
 li_get_software_root ()
 {
-	if (_unittestmode) {
-		const gchar *tmpdir = "/var/tmp/limba/tests/root/opt/software";
-		g_mkdir_with_parents (tmpdir, 0755);
-		return tmpdir;
-	} else {
-		return LI_SU_SOFTWARE_ROOT;
-	}
+	return LI_SU_SOFTWARE_ROOT;
 }
 
 /**
@@ -437,14 +428,7 @@ li_get_software_root ()
 const gchar*
 li_get_prefixdir (void)
 {
-	if (_unittestmode) {
-		#define tmpdir "/var/tmp/limba/tests/root/usr"
-		g_mkdir_with_parents (tmpdir "/share/applications", 0755);
-		g_mkdir_with_parents (tmpdir "/local/bin", 0755);
-		return tmpdir;
-	} else {
-		return PREFIXDIR;
-	}
+	return PREFIXDIR;
 }
 
 /**
@@ -474,24 +458,6 @@ li_get_current_arch_h (void)
 	}
 
 	return arch;
-}
-
-/**
- * li_set_unittestmode:
- */
-void
-li_set_unittestmode (gboolean testmode)
-{
-	_unittestmode = testmode;
-}
-
-/**
- * li_get_unittestmode:
- */
-gboolean
-li_get_unittestmode (void)
-{
-	return _unittestmode;
 }
 
 /**

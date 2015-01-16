@@ -498,7 +498,7 @@ li_installer_install (LiInstaller *inst, GError **error)
 	LimbaInstaller *inst_bus = NULL;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	if ((!li_utils_is_root ()) && (!li_get_unittestmode ())) {
+	if (!li_utils_is_root ()) {
 		/* we do not have root privileges - call the helper daemon to install the package */
 		g_debug ("Calling Limba DBus service.");
 

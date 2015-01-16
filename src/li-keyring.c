@@ -78,26 +78,20 @@ static void
 li_keyring_init (LiKeyring *kr)
 {
 	gpgme_error_t err;
-	gchar *keyring_root;
 	LiKeyringPrivate *priv = GET_PRIVATE (kr);
 
 	gpgme_check_version (NULL);
 	setlocale (LC_ALL, "");
 	gpgme_set_locale (NULL, LC_CTYPE, setlocale (LC_CTYPE, NULL));
 	err = gpgme_engine_check_version (LI_GPG_PROTOCOL);
-	g_assert (err == 0);
-
-	/* use a temporary keyring for unit-tests */
-	if (li_get_unittestmode ()) {
-		keyring_root = g_strdup ("/var/tmp/limba/tests/localstate/keyring");
-	} else {
-		keyring_root = g_strdup (LI_KEYRING_ROOT);
+	if (err != 0) {
+		g_critical ("GPGMe engine version check failed: %s", gpgme_strerror (err));
+		g_assert (err == 0);
 	}
 
-	priv->gpg_home_user = g_build_filename (keyring_root, "trusted", NULL);
-	priv->gpg_home_automatic = g_build_filename (keyring_root, "automatic", NULL);
+	priv->gpg_home_user = g_build_filename (LI_KEYRING_ROOT, "trusted", NULL);
+	priv->gpg_home_automatic = g_build_filename (LI_KEYRING_ROOT, "automatic", NULL);
 	priv->gpg_home_tmp = NULL;
-	g_free (keyring_root);
 }
 
 /**
@@ -133,8 +127,7 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 		tmpdir = TRUE;
 	}
 
-	if ((tmpdir) || ((li_utils_is_root () || li_get_unittestmode ()) &&
-		(!g_file_test (home, G_FILE_TEST_IS_DIR))))  {
+	if ((tmpdir) || (li_utils_is_root () && (!g_file_test (home, G_FILE_TEST_IS_DIR))))  {
 		gchar *gpgconf_fname;
 		const gchar *gpg_conf = "# Options for GnuPG used by Limba \n\n"
 			"no-greeting\n"

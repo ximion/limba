@@ -114,8 +114,6 @@ gchar			*li_get_uuid_string (void);
 const gchar		*li_get_last_version_from_component (AsComponent *cpt);
 
 const gchar		*li_get_prefixdir (void);
-void			li_set_unittestmode (gboolean testmode);
-gboolean		li_get_unittestmode (void);
 
 G_END_DECLS
 

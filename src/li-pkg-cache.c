@@ -19,8 +19,8 @@
  */
 
 /**
- * SECTION:li-repository
- * @short_description: A local Limba package repository
+ * SECTION:li-pkg-cache
+ * @short_description: Download information about available packages from remote sources.
  *
  */
 

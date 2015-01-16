@@ -19,11 +19,11 @@
  */
 
 #include <glib.h>
-#include "limba.h"
 #include <stdlib.h>
+#include "limba.h"
 
+#include "common.h"
 #include "li-config-data.h"
-#include "li-utils-private.h"
 
 static gchar *datadir = NULL;
 
@@ -154,13 +154,11 @@ main (int argc, char **argv)
 	datadir = g_build_filename (datadir, "data", NULL);
 	g_assert (g_file_test (datadir, G_FILE_TEST_EXISTS) != FALSE);
 
-	li_set_unittestmode (TRUE);
+	/* don't run with privilieges if we don't need them */
+	li_test_drop_privileges ();
 
 	li_set_verbose_mode (TRUE);
 	g_test_init (&argc, &argv, NULL);
-
-	/* clean up test directory */
-	li_delete_dir_recursive ("/var/tmp/limba/tests");
 
 	/* critical, error and warnings are fatal */
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);
@@ -171,5 +169,6 @@ main (int argc, char **argv)
 
 	ret = g_test_run ();
 	g_free (datadir);
+
 	return ret;
 }
