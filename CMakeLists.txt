@@ -87,6 +87,30 @@ find_package(GPGMe REQUIRED)
 find_package(CURL REQUIRED)
 find_library(M_LIB m)
 
+# we want to use systemd, if possible
+include(${CMAKE_SOURCE_DIR}/data/cmake/systemdservice.cmake)
+
+# perform some basic checks on the kernel.
+# very old kernels are a problem, so don't build Limba on these.
+execute_process(
+	COMMAND uname -r
+	OUTPUT_VARIABLE KERNEL_RELEASE
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+	COMMAND uname -o
+	OUTPUT_VARIABLE OS_NAME
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+if (KERNEL_RELEASE VERSION_LESS 3.12)
+	message("Your kernel version is way too old, and we have no idea if Limba will work with it even if an older version of OverlayFS was compiled for it.")
+	message(FATAL_ERROR "Kernel is too old. If you want to continue anyway, remove this check.")
+endif()
+
+message(STATUS "Found ${OS_NAME} ${KERNEL_RELEASE}")
+
 #
 # Configure files
 #
