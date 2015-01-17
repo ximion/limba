@@ -151,6 +151,12 @@ test_pkg_cache ()
 	LiPkgCache *cache;
 	GError *error = NULL;
 
+	/* write sample repository file */
+	g_mkdir_with_parents ("/etc/limba/", 0755);
+	g_file_set_contents ("/etc/limba/sources.list", "# Limba Unit Tests\n\n# Test Repo\nhttp://people.freedesktop.org/~mak/stuff/limba-repo/\n", -1, &error);
+	g_assert_no_error (error);
+
+	/* run a cache update */
 	cache = li_pkg_cache_new ();
 
 	li_pkg_cache_update (cache, &error);

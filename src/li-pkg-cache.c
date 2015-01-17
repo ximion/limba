@@ -34,6 +34,7 @@
 #include <gpgme.h>
 #include <appstream.h>
 #include <curl/curl.h>
+#include <errno.h>
 
 #include "li-utils-private.h"
 #include "li-pkg-index.h"
@@ -51,7 +52,8 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiPkgCache, li_pkg_cache, G_TYPE_OBJECT)
 
 #define GET_PRIVATE(o) (li_pkg_cache_get_instance_private (o))
 
-#define LIMBA_CACHE "/var/cache/limba/"
+#define LIMBA_CACHE_DIR "/var/cache/limba/"
+#define APPSTREAM_CACHE "/var/cache/app-info/xmls"
 
 /**
  * li_pkg_cache_finalize:
@@ -213,13 +215,18 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 	GError *tmp_error = NULL;
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
+	/* ensure AppStream cache exists */
+	g_mkdir_with_parents (APPSTREAM_CACHE, 0755);
+
 	for (i = 0; i < priv->repo_urls->len; i++) {
 		const gchar *url;
+		gint res;
 		_cleanup_free_ gchar *url_index = NULL;
 		_cleanup_free_ gchar *url_asdata = NULL;
 		_cleanup_free_ gchar *dest = NULL;
 		_cleanup_free_ gchar *dest_index = NULL;
 		_cleanup_free_ gchar *dest_asdata = NULL;
+		_cleanup_free_ gchar *dest_ascache = NULL;
 		gchar *tmp;
 		url = (const gchar*) g_ptr_array_index (priv->repo_urls, i);
 
@@ -228,7 +235,8 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 		/* prepare cache dir and ensure it exists */
 		tmp = g_compute_checksum_for_string (G_CHECKSUM_MD5, url, -1);
-		dest = g_build_filename (LIMBA_CACHE, tmp, NULL);
+		dest = g_build_filename (LIMBA_CACHE_DIR, tmp, NULL);
+		dest_ascache = g_strdup_printf ("%s/limba-%s.xml.gz", APPSTREAM_CACHE, tmp);
 		g_free (tmp);
 		g_mkdir_with_parents (dest, 0755);
 
@@ -247,6 +255,16 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 			g_propagate_error (error, tmp_error);
 			return;
 		}
+
+		/* create symbolic link in the AppStream cache, to make data known to SCs */
+		res = symlink (dest_asdata, dest_ascache);
+		if ((res != 0) && (res != EEXIST)) {
+			g_set_error (error,
+				LI_PKG_CACHE_ERROR,
+				LI_PKG_CACHE_ERROR_WRITE,
+				_("Unable to write symbolic link to AppStream cache: %s."), g_strerror (errno));
+		}
+
 		g_debug ("Updated data for repository: %s", url_index);
 	}
 }

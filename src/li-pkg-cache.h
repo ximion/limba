@@ -41,12 +41,14 @@ G_BEGIN_DECLS
  * LiPkgCacheError:
  * @LI_PKG_CACHE_ERROR_FAILED:				Generic failure
  * @LI_PKG_CACHE_ERROR_DOWNLOAD_FAILED:		Failed to download a file
+ * @LI_PKG_CACHE_ERROR_WRITE:				Writing to cache was not possible
  *
  * The error type.
  **/
 typedef enum {
 	LI_PKG_CACHE_ERROR_FAILED,
 	LI_PKG_CACHE_ERROR_DOWNLOAD_FAILED,
+	LI_PKG_CACHE_ERROR_WRITE,
 	/*< private >*/
 	LI_PKG_CACHE_ERROR_LAST
 } LiPkgCacheError;
