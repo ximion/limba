@@ -88,8 +88,6 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 #define _cleanup_ptrarray_unref_ __attribute__ ((cleanup(gs_local_ptrarray_unref)))
 #define _cleanup_variant_unref_ __attribute__ ((cleanup(gs_local_variant_unref)))
 
-#define	LI_PREFIXDIR li_get_prefixdir ()
-
 gboolean		li_str_empty (const gchar* str);
 gchar**			li_ptr_array_to_strv (GPtrArray *array);
 gchar			*li_str_replace (const gchar* str,

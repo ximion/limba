@@ -122,7 +122,7 @@ li_exporter_process_desktop_file (LiExporter *exp, const gchar *disk_location, G
 		return FALSE;
 
 	tmp = g_path_get_basename (disk_location);
-	dest = g_build_filename (LI_PREFIXDIR, "share", "applications", tmp, NULL);
+	dest = g_build_filename (PREFIXDIR, "share", "applications", tmp, NULL);
 	g_free (tmp);
 
 	li_exporter_copy_file (exp, disk_location, dest, &tmp_error);
@@ -211,7 +211,7 @@ li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError 
 	tmp = g_strdup_printf ("%s-%s",
 						exec_cmd,
 						li_pkg_info_get_version (priv->pki));
-	dest = g_build_filename (LI_PREFIXDIR, "local", "bin", tmp, NULL);
+	dest = g_build_filename (PREFIXDIR, "local", "bin", tmp, NULL);
 	g_free (tmp);
 
 	if ((!priv->override) && (g_file_test (dest, G_FILE_TEST_EXISTS))) {

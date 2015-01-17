@@ -25,8 +25,6 @@
 
 G_BEGIN_DECLS
 
-#define	LI_SOFTWARE_ROOT li_get_software_root ()
-
 const gchar		*li_get_software_root (void);
 void			li_set_verbose_mode (gboolean verbose);
 gchar			*li_get_current_arch_h (void);

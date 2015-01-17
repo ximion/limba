@@ -417,18 +417,7 @@ li_get_uuid_string ()
 const gchar*
 li_get_software_root ()
 {
-	return LI_SU_SOFTWARE_ROOT;
-}
-
-/**
- * li_get_prefixdir:
- *
- * A hack to support unit-tests running as non-root.
- */
-const gchar*
-li_get_prefixdir (void)
-{
-	return PREFIXDIR;
+	return LI_SOFTWARE_ROOT;
 }
 
 /**
