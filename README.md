@@ -1,6 +1,5 @@
 Limba
 ==============
-[![Build Status](https://travis-ci.org/ximion/limba.svg?branch=master)](https://travis-ci.org/ximion/limba)
 
 Limba is a new project which allows 3rd-party software installations on Linux.
 It is based on ideas of Glick2 and Listaller, and uses modern Linux kernel features
