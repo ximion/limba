@@ -145,6 +145,7 @@ li_test_finalize_chroot ()
 	umount (TEST_ROOT "/bin");
 	umount (TEST_ROOT "/lib64");
 	umount (TEST_ROOT "/lib32");
+	umount (TEST_ROOT "/run");
 
 	/* writeable */
 	umount (TEST_ROOT "/var");
@@ -211,6 +212,7 @@ li_test_enter_chroot ()
 	test_env_mkdir ("/home");
 	test_env_mkdir ("/tmp");
 	test_env_mkdir ("/bin");
+	test_env_mkdir ("/run");
 	test_env_mkdir ("/var/lib");
 	test_env_mkdir ("/var/cache");
 	test_env_mkdir ("/opt/software");
@@ -223,14 +225,15 @@ li_test_enter_chroot ()
 	/* populate /dev */
 	test_env_mount_devproc ();
 
-	/* mount some host system dirs */
+	/* mount some host system dirs, most of them non-writeable */
 	ofsmount_sys ("/usr", FALSE); /* installer writes into /usr */
-	ofsmount_sys ("/etc", TRUE);
+	ofsmount_sys ("/etc", FALSE);
 	ofsmount_sys ("/lib", TRUE);
 	ofsmount_sys ("/home", TRUE);
 	ofsmount_sys ("/bin", TRUE);
+	ofsmount_sys ("/run", TRUE); /* sometimes needed for network access - we can mount in non-writeable here */
 
-	/* mount volatile dirs */
+	/* mount dirs with writeable overlay */
 	ofsmount_tmp ("/var");
 	ofsmount_tmp ("/opt");
 	ofsmount_tmp ("/tmp");
