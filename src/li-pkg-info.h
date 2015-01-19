@@ -56,17 +56,21 @@ typedef enum  {
 /**
  * LiPackageFlags:
  * @LI_PACKAGE_FLAG_NONE:			No package flag is set
- * @LI_PACKAGE_FLAG_NEEDS_RUNTIME:	This package needs a runtime
+ * @LI_PACKAGE_FLAG_APPLICATION:	This package needs a runtime
  * @LI_PACKAGE_FLAG_AUTOMATIC:		This package has been installed automatically
- * @LI_PACKAGE_FLAG_REMOVE:			Remove this package automatically, if it is no longer in use
+ * @LI_PACKAGE_FLAG_FADED:			Remove this package automatically, if it is no longer in use
+ * @LI_PACKAGE_FLAG_AVAILABLE:		Package is available in a repository
+ * @LI_PACKAGE_FLAG_INSTALLED:		Package is installed
  *
  * Flags defining version requirements on other #LiPkgInfo instances.
  **/
 typedef enum  {
 	LI_PACKAGE_FLAG_NONE = 0,
-	LI_PACKAGE_FLAG_NEEDS_RUNTIME = 1 << 0,
+	LI_PACKAGE_FLAG_APPLICATION = 1 << 0,
 	LI_PACKAGE_FLAG_AUTOMATIC = 1 << 1,
-	LI_PACKAGE_FLAG_REMOVE = 1 << 2
+	LI_PACKAGE_FLAG_FADED = 1 << 2,
+	LI_PACKAGE_FLAG_AVAILABLE = 1 << 3,
+	LI_PACKAGE_FLAG_INSTALLED = 1 << 4,
 } LiPackageFlags;
 
 typedef struct _LiPkgInfo		LiPkgInfo;
@@ -132,6 +136,8 @@ void			li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki,
 void			li_pkg_info_set_flags (LiPkgInfo *pki,
 									   LiPackageFlags flags);
 void			li_pkg_info_add_flag (LiPkgInfo *pki,
+									LiPackageFlags flag);
+gboolean		li_pkg_info_has_flag (LiPkgInfo *pki,
 									LiPackageFlags flag);
 LiPackageFlags	li_pkg_info_get_flags (LiPkgInfo *pki);
 

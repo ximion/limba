@@ -204,8 +204,8 @@ li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError 
 	if (stat (disk_location, &sb) == 0 && !(sb.st_mode & S_IXUSR))
 		return TRUE;
 
-	/* we have an executable file - this means we need a runtime */
-	li_pkg_info_add_flag (priv->pki, LI_PACKAGE_FLAG_NEEDS_RUNTIME);
+	/* we have an executable file - this means we are an application and need a runtime */
+	li_pkg_info_add_flag (priv->pki, LI_PACKAGE_FLAG_APPLICATION);
 
 	exec_cmd = g_path_get_basename (disk_location);
 	tmp = g_strdup_printf ("%s-%s",

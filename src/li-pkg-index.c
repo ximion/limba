@@ -80,6 +80,8 @@ li_pkg_index_fetch_values_from_cdata (LiPkgIndex *pkidx, LiConfigData *cdata)
 		li_pkg_info_set_repo_location (pki, str);
 		g_free (str);
 
+		/* mark package as available for installation */
+		li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_AVAILABLE);
 		g_ptr_array_add (priv->packages, pki);
 	}
 }

@@ -101,15 +101,17 @@ test_installer ()
 void
 test_manager ()
 {
-	GPtrArray *pkgs;
+	GList *pkgs;
+	GError *error = NULL;
 	LiManager *mgr;
 
 	mgr = li_manager_new ();
 
-	pkgs = li_manager_get_installed_software (mgr);
+	pkgs = li_manager_get_software_list (mgr, &error);
+	g_assert_no_error (error);
 	g_assert (pkgs != NULL);
 
-	g_ptr_array_unref (pkgs);
+	g_list_free (pkgs);
 
 	g_object_unref (mgr);
 }

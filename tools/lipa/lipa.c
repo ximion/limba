@@ -90,28 +90,46 @@ static gint
 lipa_list_software (void)
 {
 	LiManager *mgr;
-	GPtrArray *sw;
-	guint i;
+	GList *sw = NULL;
+	GList *l;
+	gint exit_code = 0;
+	GError *error = NULL;
 
 	mgr = li_manager_new ();
 
-	sw = li_manager_get_installed_software (mgr);
-	if (sw == NULL) {
-		li_print_stderr ("An error occured while fetching the list of installed software.");
-		g_object_unref (mgr);
-		return 2;
+	sw = li_manager_get_software_list (mgr, &error);
+	if (error != NULL) {
+		li_print_stderr ("An error occured while fetching the software-list: %s", error->message);
+		exit_code = 2;
+		goto out;
 	}
 
-	for (i = 0; i < sw->len; i++) {
-		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (sw, i));
-		g_print ("[%s] %s %s\n",
+	for (l = sw; l != NULL; l = l->next) {
+		gchar *state;
+		LiPkgInfo *pki = LI_PKG_INFO (l->data);
+
+		if (li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_INSTALLED))
+			state = g_strdup ("i");
+		else if (li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_AVAILABLE))
+			state = g_strdup ("a");
+		else
+			state = g_strdup ("?");
+
+		g_print ("[%s]...%s:\t\t%s %s\n",
+				state,
 				li_pkg_info_get_id (pki),
 				li_pkg_info_get_appname (pki),
 				li_pkg_info_get_version (pki));
+		g_free (state);
 	}
 
+out:
+	g_list_free (sw);
 	g_object_unref (mgr);
-	return 0;
+	if (error != NULL)
+		g_error_free (error);
+
+	return exit_code;
 }
 
 /**
@@ -210,6 +228,32 @@ lipa_cleanup (void)
 }
 
 /**
+ * lipa_refresh:
+ */
+static gint
+lipa_refresh (void)
+{
+	LiManager *mgr;
+	gint res = 0;
+	GError *error = NULL;
+
+	if (!lipa_check_su ())
+		return 2;
+
+	mgr = li_manager_new ();
+
+	li_manager_refresh_cache (mgr, &error);
+	if (error != NULL) {
+		li_print_stderr ("Could not refresh cache: %s", error->message);
+		g_error_free (error);
+		res = 1;
+	}
+	g_object_unref (mgr);
+
+	return res;
+}
+
+/**
  * lipa_get_summary:
  **/
 static gchar *
@@ -226,6 +270,7 @@ lipa_get_summary ()
 	g_string_append_printf (string, "  %s - %s\n", "list", _("List installed software"));
 	g_string_append_printf (string, "  %s - %s\n", "install [FILENAME]", _("Install a local software package"));
 	g_string_append_printf (string, "  %s - %s\n", "remove  [PKGID]", _("Remove an installed software package"));
+	g_string_append_printf (string, "  %s - %s\n", "refresh", _("Refresh the cache of available packages"));
 	g_string_append_printf (string, "  %s - %s\n", "cleanup", _("Cleanup cruft packages"));
 
 	return g_string_free (string, FALSE);
@@ -303,6 +348,8 @@ main (int argc, char *argv[])
 		exit_code = lipa_install_package (value1);
 	} else if ((g_strcmp0 (command, "remove") == 0) || (g_strcmp0 (command, "r") == 0)) {
 		exit_code = lipa_remove_software (value1);
+	} else if (g_strcmp0 (command, "refresh") == 0) {
+		exit_code = lipa_refresh ();
 	} else if (g_strcmp0 (command, "cleanup") == 0) {
 		exit_code = lipa_cleanup ();
 	} else {

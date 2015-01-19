@@ -163,9 +163,9 @@ li_installer_parse_dependency_string (const gchar *depstr)
  * li_installed_dep_is_installed:
  */
 static LiPkgInfo*
-li_installer_find_satisfying_pkg (GPtrArray *pkglist, LiPkgInfo *dep)
+li_installer_find_satisfying_pkg (GList *pkglist, LiPkgInfo *dep)
 {
-	guint i;
+	GList *l;
 	const gchar *dep_name;
 	const gchar *dep_version;
 	LiVersionFlags dep_vrel;
@@ -176,9 +176,10 @@ li_installer_find_satisfying_pkg (GPtrArray *pkglist, LiPkgInfo *dep)
 	dep_name = li_pkg_info_get_name (dep);
 	dep_version = li_pkg_info_get_version (dep);
 	dep_vrel = li_pkg_info_get_version_relation (dep);
-	for (i = 0; i < pkglist->len; i++) {
+
+	for (l = pkglist; l != NULL; l = l->next) {
 		const gchar *pname;
-		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (pkglist, i));
+		LiPkgInfo *pki = LI_PKG_INFO (l->data);
 
 		pname = li_pkg_info_get_name (pki);
 		if (g_strcmp0 (dep_name, pname) == 0) {
@@ -219,7 +220,7 @@ li_installer_find_dependency_embedded_single (LiInstaller *inst, GNode *root, Li
 {
 	LiPkgInfo *epki;
 	LiPackage *epkg;
-	GPtrArray *embedded;
+	GList *embedded;
 	GError *tmp_error = NULL;
 	GNode *node;
 	LiPkgInfo *pki = LI_PKG_INFO (root->data);
@@ -333,12 +334,12 @@ li_installer_find_dependency_embedded (LiInstaller *inst, GNode *child, LiPkgInf
 static void
 li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 {
-	guint i;
-	GPtrArray *installed_sw;
+	_cleanup_list_free_ GList *all_pkgs = NULL;
 	GError *tmp_error = NULL;
 	LiPackage *pkg;
 	LiPkgInfo *pki;
 	GPtrArray *deps;
+	guint i;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	pki = LI_PKG_INFO (root->data);
@@ -354,14 +355,19 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 	if (deps == NULL)
 		return;
 
-	installed_sw = li_manager_get_installed_software (priv->mgr);
+	all_pkgs = li_manager_get_software_list (priv->mgr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
 	for (i = 0; i < deps->len; i++) {
 		LiPkgInfo *ipki;
 		LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, i));
 
 		/* test if this package is already in the installed set */
-		ipki = li_installer_find_satisfying_pkg (installed_sw, dep);
-		if (ipki == NULL) {
+		ipki = li_installer_find_satisfying_pkg (all_pkgs, dep);
+		if ((ipki == NULL) || (!li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_INSTALLED))) {
 			/* maybe we find this dependency as embedded copy? */
 			li_installer_find_dependency_embedded (inst, root, dep, &tmp_error);
 			if (tmp_error != NULL) {
@@ -438,7 +444,7 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 
 	/* create runtime for this software, if one is required */
 	full_deps = li_package_graph_branch_to_array (node);
-	if ((li_pkg_info_get_flags (info) & LI_PACKAGE_FLAG_NEEDS_RUNTIME) && (full_deps != NULL)) {
+	if ((li_pkg_info_get_flags (info) & LI_PACKAGE_FLAG_APPLICATION) && (full_deps != NULL)) {
 		LiRuntime *rt;
 
 		/* now get the runtime-env id for the new application */

@@ -305,6 +305,9 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 			_cleanup_free_ gchar *new_url = NULL;
 			LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (pkgs, j));
 
+			/* mark package as available for installation */
+			li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_AVAILABLE);
+
 			new_url = g_build_filename (url, li_pkg_info_get_repo_location (pki), NULL);
 			li_pkg_info_set_repo_location (pki, new_url);
 
@@ -335,7 +338,6 @@ li_pkg_cache_open (LiPkgCache *cache, GError **error)
 	/* TODO: Implement li_pkg_index_clear() */
 	g_object_unref (priv->index);
 	priv->index = li_pkg_index_new ();
-
 
 	file = g_file_new_for_path (priv->cache_index_fname);
 

@@ -478,6 +478,19 @@ li_pkg_info_get_flags (LiPkgInfo *pki)
 }
 
 /**
+ * li_pkg_info_has_flag:
+ * @flag: #LiPackageFlag to check for.
+ *
+ * Returns: %TRUE if the flag is assigned.
+ */
+gboolean
+li_pkg_info_has_flag (LiPkgInfo *pki, LiPackageFlags flag)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->flags & flag;
+}
+
+/**
  * li_pkg_info_set_version_relation:
  */
 void

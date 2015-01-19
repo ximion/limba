@@ -83,7 +83,8 @@ struct _LiManagerClass
 GType			li_manager_get_type	(void);
 LiManager		*li_manager_new		(void);
 
-GPtrArray		*li_manager_get_installed_software (LiManager *mgr);
+GList			*li_manager_get_software_list (LiManager *mgr,
+											GError **error);
 GPtrArray		*li_manager_get_installed_runtimes (LiManager *mgr);
 
 LiRuntime		*li_manager_find_runtime_with_members (LiManager *mgr,
@@ -97,6 +98,9 @@ gboolean		li_manager_package_is_installed (LiManager *mgr,
 												LiPkgInfo *pki);
 
 gboolean		li_manager_cleanup (LiManager *mgr,
+									GError **error);
+
+void			li_manager_refresh_cache (LiManager *mgr,
 									GError **error);
 
 G_END_DECLS

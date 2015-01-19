@@ -32,12 +32,13 @@
 #include "li-utils.h"
 #include "li-utils-private.h"
 #include "li-pkg-info.h"
+#include "li-pkg-cache.h"
 
 typedef struct _LiManagerPrivate	LiManagerPrivate;
 struct _LiManagerPrivate
 {
-	GPtrArray *installed_sw; /* of LiPkgInfo */
-	GPtrArray *installed_rt; /* of LiRuntime */
+	GHashTable *pkgs; /* key:utf8;value:LiPkgInfo */
+	GPtrArray *rts; /* of LiRuntime */
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiManager, li_manager, G_TYPE_OBJECT)
@@ -53,8 +54,8 @@ li_manager_finalize (GObject *object)
 	LiManager *mgr = LI_MANAGER (object);
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
-	g_ptr_array_unref (priv->installed_sw);
-	g_ptr_array_unref (priv->installed_rt);
+	g_hash_table_unref (priv->pkgs);
+	g_ptr_array_unref (priv->rts);
 
 	G_OBJECT_CLASS (li_manager_parent_class)->finalize (object);
 }
@@ -67,8 +68,8 @@ li_manager_init (LiManager *mgr)
 {
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
-	priv->installed_sw = g_ptr_array_new_with_free_func (g_object_unref);
-	priv->installed_rt = g_ptr_array_new_with_free_func (g_object_unref);
+	priv->pkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	priv->rts = g_ptr_array_new_with_free_func (g_object_unref);
 }
 
 /**
@@ -79,17 +80,17 @@ li_manager_reset_cached_data (LiManager *mgr)
 {
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
-	g_ptr_array_unref (priv->installed_sw);
-	g_ptr_array_unref (priv->installed_rt);
-	priv->installed_sw = g_ptr_array_new_with_free_func (g_object_unref);
-	priv->installed_rt = g_ptr_array_new_with_free_func (g_object_unref);
+	g_hash_table_unref (priv->pkgs);
+	g_ptr_array_unref (priv->rts);
+	priv->pkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	priv->rts = g_ptr_array_new_with_free_func (g_object_unref);
 }
 
 /**
  * li_manager_find_installed_software:
  **/
 static gboolean
-li_manager_find_installed_software (LiManager *mgr)
+li_manager_find_installed_software (LiManager *mgr, GError **error)
 {
 	GError *tmp_error = NULL;
 	GFile *fdir;
@@ -123,18 +124,23 @@ li_manager_find_installed_software (LiManager *mgr)
 			GFile *ctlfile;
 			ctlfile = g_file_new_for_path (path);
 			if (g_file_query_exists (ctlfile, NULL)) {
-				LiPkgInfo *ctl;
-				ctl = li_pkg_info_new ();
+				LiPkgInfo *pki;
 
-				li_pkg_info_load_file (ctl, ctlfile, &tmp_error);
+				/* create new LiPkgInfo for an installed package */
+				pki = li_pkg_info_new ();
+				li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_INSTALLED);
+
+				li_pkg_info_load_file (pki, ctlfile, &tmp_error);
 				if (tmp_error != NULL) {
 					g_free (path);
 					g_object_unref (ctlfile);
-					g_object_unref (ctl);
+					g_object_unref (pki);
 					goto out;
 				}
 
-				g_ptr_array_add (priv->installed_sw, ctl);
+				g_hash_table_insert (priv->pkgs,
+									g_strdup (li_pkg_info_get_id (pki)),
+									pki);
 			}
 			g_object_unref (ctlfile);
 		}
@@ -147,7 +153,9 @@ out:
 	if (enumerator != NULL)
 		g_object_unref (enumerator);
 	if (tmp_error != NULL) {
-		g_printerr ("Error while searching for installed software: %s\n", tmp_error->message);
+		g_propagate_prefixed_error (error,
+						tmp_error,
+						"Error while searching for installed software:");
 		return FALSE;
 	}
 
@@ -155,23 +163,54 @@ out:
 }
 
 /**
- * li_manager_get_installed_software:
+ * li_manager_get_software_list:
  *
- * Returns: (transfer none) (element-type LiPkgInfo): A list of installed software
+ * Returns: (transfer container) (element-type LiPkgInfo): A list of installed and available software
  **/
-GPtrArray*
-li_manager_get_installed_software (LiManager *mgr)
+GList*
+li_manager_get_software_list (LiManager *mgr, GError **error)
 {
+	_cleanup_object_unref_ LiPkgCache *cache = NULL;
+	GPtrArray *apkgs;
+	guint i;
+	GError *tmp_error = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
-	if (priv->installed_sw->len == 0) {
-		/* in case no software was found or we never searched for it, we
-		 * do this again
-		 */
-		li_manager_find_installed_software (mgr);
+	if (g_hash_table_size (priv->pkgs) > 0) {
+		/* we have cached data, so no need to search for it again */
+		goto out;
 	}
 
-	return priv->installed_sw;
+	cache = li_pkg_cache_new ();
+
+	li_pkg_cache_open (cache, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+
+	/* populate table with installed packages */
+	li_manager_find_installed_software (mgr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+
+	/* get available packages */
+	apkgs = li_pkg_cache_get_packages (cache);
+	for (i = 0; i < apkgs->len; i++) {
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (apkgs, i));
+
+		/* add packages to the global list, if they are not already installed */
+		if (g_hash_table_lookup (priv->pkgs, li_pkg_info_get_id (pki)) == NULL) {
+			g_hash_table_insert (priv->pkgs,
+								g_strdup (li_pkg_info_get_id (pki)),
+								g_object_ref (pki));
+		}
+	}
+
+out:
+	return g_hash_table_get_values (priv->pkgs);
 }
 
 /**
@@ -220,7 +259,7 @@ li_manager_find_installed_runtimes (LiManager *mgr)
 			rt = li_runtime_new ();
 			ret = li_runtime_load_directory (rt, rt_path, &tmp_error);
 			if (ret)
-				g_ptr_array_add (priv->installed_rt, g_object_ref (rt));
+				g_ptr_array_add (priv->rts, g_object_ref (rt));
 
 			g_free (rt_path);
 			g_object_unref (rt);
@@ -251,14 +290,14 @@ li_manager_get_installed_runtimes (LiManager *mgr)
 {
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
-	if (priv->installed_rt->len == 0) {
+	if (priv->rts->len == 0) {
 		/* in case no runtime was found or we never searched for it, we
 		 * do this again
 		 */
 		li_manager_find_installed_runtimes (mgr);
 	}
 
-	return priv->installed_rt;
+	return priv->rts;
 }
 
 /**
@@ -283,10 +322,10 @@ li_manager_find_runtime_with_members (LiManager *mgr, GPtrArray *members)
 	li_manager_get_installed_runtimes (mgr);
 
 	/* NOTE: If we ever have more frameworks with more members, we need a more efficient implementation here */
-	for (i = 0; i < priv->installed_rt->len; i++) {
+	for (i = 0; i < priv->rts->len; i++) {
 		GPtrArray *test_members;
 		gboolean ret = FALSE;
-		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (priv->installed_rt, i));
+		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (priv->rts, i));
 
 		test_members = li_runtime_get_members (rt);
 		for (j = 0; j < members->len; j++) {
@@ -401,13 +440,23 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	g_ptr_array_add (pkg_array, pki);
 	rt = li_manager_find_runtime_with_members (mgr, pkg_array);
 	if (rt != NULL) {
-		GPtrArray *sw;
-		guint i;
+		_cleanup_list_free_ GList *sw = NULL;
+		GList *l;
 		gboolean dependency_found = FALSE;
-		/* this software is in use somewhere */
-		sw = li_manager_get_installed_software (mgr);
-		for (i = 0; i < sw->len; i++) {
-			LiPkgInfo *pki2 = LI_PKG_INFO (g_ptr_array_index (sw, i));
+
+		/* check if this software is in use somewhere */
+		sw = li_manager_get_software_list (mgr, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return FALSE;
+		}
+
+		for (l = sw; l != NULL; l = l->next) {
+			LiPkgInfo *pki2 = LI_PKG_INFO (l->data);
+
+			/* check if the package is actually installed */
+			if (!li_pkg_info_has_flag (pki2, LI_PACKAGE_FLAG_INSTALLED))
+				continue;
 
 			if (g_strcmp0 (li_pkg_info_get_runtime_dependency (pki2), li_runtime_get_uuid (rt)) == 0) {
 				/* TODO: Emit broken packages here, don't misuse GError */
@@ -419,6 +468,7 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 				break;
 			}
 		}
+
 		if (dependency_found) {
 			g_object_unref (rt);
 			return FALSE;
@@ -492,19 +542,30 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 	GHashTable *sws;
 	GHashTable *rts;
 	GPtrArray *rt_array;
-	GPtrArray *sw_array;
+	GList *sw_list = NULL;
 	guint i;
 	GList *l;
 	GList *list = NULL;
+	GError *tmp_error = NULL;
 	gboolean ret = FALSE;
 
 	rts = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	sws = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
 	/* build hash tables */
-	sw_array = li_manager_get_installed_software (mgr);
-	for (i = 0; i < sw_array->len; i++) {
-		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (sw_array, i));
+	sw_list = li_manager_get_software_list (mgr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	for (l = sw_list; l != NULL; l = l->next) {
+		LiPkgInfo *pki = LI_PKG_INFO (l->data);
+
+		/* check if the package is actually installed */
+		if (!li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_INSTALLED))
+			continue;
+
 		g_hash_table_insert (sws,
 							g_strdup (li_pkg_info_get_id (pki)),
 							g_object_ref (pki));
@@ -527,15 +588,15 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 							g_object_ref (rt));
 	}
 
-	/* re-add every software which references a runtime */
-	for (i = 0; i < sw_array->len; i++) {
-		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (sw_array, i));
+	/* remove every software from the kill-list which references a valid runtime */
+	list = g_hash_table_get_values (sws);
+	for (l = list; l != NULL; l = l->next) {
+		LiPkgInfo *pki = LI_PKG_INFO (l->data);
 
 		if (g_hash_table_lookup (rts, li_pkg_info_get_runtime_dependency (pki)) != NULL)
-			g_hash_table_insert (sws,
-								g_strdup (li_pkg_info_get_id (pki)),
-								g_object_ref (pki));
+			g_hash_table_remove (sws, li_pkg_info_get_id (pki));
 	}
+	g_list_free (list);
 
 	list = g_hash_table_get_values (sws);
 	for (l = list; l != NULL; l = l->next) {
@@ -543,6 +604,7 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 		if (error != NULL)
 			goto out;
 	}
+	g_list_free (list);
 
 	/* cleanup tmp dir */
 	li_delete_dir_recursive ("/var/tmp/limba");
@@ -554,10 +616,37 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 out:
 	if (list != NULL)
 		g_list_free (list);
+	g_list_free (sw_list);
+
 	g_hash_table_unref (sws);
 	g_hash_table_unref (rts);
 
 	return ret;
+}
+
+/**
+ * li_manager_refresh_cache:
+ *
+ * Refresh the cache of available packages.
+ */
+void
+li_manager_refresh_cache (LiManager *mgr, GError **error)
+{
+	_cleanup_object_unref_ LiPkgCache *cache = NULL;
+	GError *tmp_error = NULL;
+
+	cache = li_pkg_cache_new ();
+	li_pkg_cache_open (cache, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	li_pkg_cache_update (cache, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
 }
 
 /**

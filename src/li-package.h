@@ -137,7 +137,7 @@ void			li_package_set_id (LiPackage *pkg,
 LiPkgInfo		*li_package_get_info (LiPackage *pkg);
 
 gboolean		li_package_has_embedded_packages (LiPackage *pkg);
-GPtrArray		*li_package_get_embedded_packages (LiPackage *pkg);
+GList			*li_package_get_embedded_packages (LiPackage *pkg);
 LiPackage*		li_package_extract_embedded_package (LiPackage *pkg,
 													LiPkgInfo *pki,
 													GError **error);

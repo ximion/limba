@@ -208,7 +208,7 @@ li_test_enter_chroot ()
 	/* create directory structure */
 	test_env_mkdir ("/usr");
 	test_env_mkdir ("/lib");
-	test_env_mkdir ("/etc");
+	test_env_mkdir ("/etc/limba");
 	test_env_mkdir ("/home");
 	test_env_mkdir ("/tmp");
 	test_env_mkdir ("/bin");
