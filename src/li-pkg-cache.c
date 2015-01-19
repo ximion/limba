@@ -46,6 +46,7 @@ struct _LiPkgCachePrivate
 	AsMetadata *metad;
 
 	GPtrArray *repo_urls;
+	gchar *cache_index_fname;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPkgCache, li_pkg_cache, G_TYPE_OBJECT)
@@ -67,6 +68,7 @@ li_pkg_cache_finalize (GObject *object)
 	g_object_unref (priv->index);
 	g_object_unref (priv->metad);
 	g_ptr_array_unref (priv->repo_urls);
+	g_free (priv->cache_index_fname);
 
 	G_OBJECT_CLASS (li_pkg_cache_parent_class)->finalize (object);
 }
@@ -116,6 +118,7 @@ li_pkg_cache_init (LiPkgCache *cache)
 	priv->index = li_pkg_index_new ();
 	priv->metad = as_metadata_new ();
 	priv->repo_urls = g_ptr_array_new_with_free_func (g_free);
+	priv->cache_index_fname = g_build_filename (LIMBA_CACHE_DIR, "available.index", NULL);
 
 	/* load repository url list */
 	li_pkg_cache_load_repolist (cache, "/etc/limba/sources.list"); /* defined by the user / distributor */
@@ -213,10 +216,15 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 {
 	guint i;
 	GError *tmp_error = NULL;
+	_cleanup_object_unref_ LiPkgIndex *tmp_index = NULL;
+	_cleanup_object_unref_ LiPkgIndex *global_index = NULL;
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	/* ensure AppStream cache exists */
 	g_mkdir_with_parents (APPSTREAM_CACHE, 0755);
+
+	/* create index of available packages */
+	global_index = li_pkg_index_new ();
 
 	for (i = 0; i < priv->repo_urls->len; i++) {
 		const gchar *url;
@@ -227,8 +235,16 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		_cleanup_free_ gchar *dest_index = NULL;
 		_cleanup_free_ gchar *dest_asdata = NULL;
 		_cleanup_free_ gchar *dest_ascache = NULL;
+		_cleanup_free_ gchar *dest_repoconf = NULL;
+		_cleanup_object_unref_ GFile *idxfile = NULL;
+		_cleanup_object_unref_ LiPkgIndex *tmp_index = NULL;
+		GPtrArray *pkgs;
+		guint j;
 		gchar *tmp;
 		url = (const gchar*) g_ptr_array_index (priv->repo_urls, i);
+
+		/* create temporary index */
+		tmp_index = li_pkg_index_new ();
 
 		url_index = g_build_filename (url, "Index.gz", NULL);
 		url_asdata = g_build_filename (url, "Metadata.xml.gz", NULL);
@@ -256,6 +272,14 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 			return;
 		}
 
+		/* write repo hints file */
+		dest_repoconf = g_build_filename (dest, "repo", NULL);
+		g_file_set_contents (dest_repoconf, url, -1, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+
 		/* create symbolic link in the AppStream cache, to make data known to SCs */
 		res = symlink (dest_asdata, dest_ascache);
 		if ((res != 0) && (res != EEXIST)) {
@@ -266,7 +290,74 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		}
 
 		g_debug ("Updated data for repository: %s", url_index);
+
+		/* load index */
+		idxfile = g_file_new_for_path (dest_index);
+		li_pkg_index_load_file (tmp_index, idxfile, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_prefixed_error (error, tmp_error, "Unable to load index for repository: %s", url);
+			return;
+		}
+
+		/* ensure that all locations are set properly */
+		pkgs = li_pkg_index_get_packages (tmp_index);
+		for (j = 0; j < pkgs->len; j++) {
+			_cleanup_free_ gchar *new_url = NULL;
+			LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (pkgs, j));
+
+			new_url = g_build_filename (url, li_pkg_info_get_repo_location (pki), NULL);
+			li_pkg_info_set_repo_location (pki, new_url);
+
+			/* add to pkg cache */
+			li_pkg_index_add_package (global_index, pki);
+		}
+
+
+		g_debug ("Loaded index of repository.");
 	}
+
+	/* save global index file */
+	li_pkg_index_save_to_file (global_index, priv->cache_index_fname);
+}
+
+/**
+ * li_pkg_cache_open:
+ *
+ * Open the package cache and load a list of available packages.
+ */
+void
+li_pkg_cache_open (LiPkgCache *cache, GError **error)
+{
+	GError *tmp_error = NULL;
+	_cleanup_object_unref_ GFile *file = NULL;
+	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
+
+	/* TODO: Implement li_pkg_index_clear() */
+	g_object_unref (priv->index);
+	priv->index = li_pkg_index_new ();
+
+
+	file = g_file_new_for_path (priv->cache_index_fname);
+
+	if (g_file_query_exists (file, NULL)) {
+		li_pkg_index_load_file (priv->index, file, &tmp_error);
+	}
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error, "Unable to load package cache: ");
+		return;
+	}
+}
+
+/**
+ * li_pkg_cache_get_packages:
+ *
+ * Returns: (transfer none) (element-type LiPkgInfo): Packages in the index
+ */
+GPtrArray*
+li_pkg_cache_get_packages (LiPkgCache *cache)
+{
+	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
+	return li_pkg_index_get_packages (priv->index);
 }
 
 /**

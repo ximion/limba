@@ -187,6 +187,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	gunichar c;
 	guint i;
 	_cleanup_free_ gchar *dest_path = NULL;
+	_cleanup_free_ gchar *hash = NULL;
 	gchar **strv;
 	AsComponent *cpt;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
@@ -245,6 +246,10 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 				_("A package with the same name and version has already been installed into this repository."));
 		return FALSE;
 	}
+
+	/* calculate secure checksum to verify the integrity of this package later */
+	hash = li_compute_checksum_for_file (pkg_fname);
+	li_pkg_info_set_checksum_sha256 (pki, hash);
 
 	/* now copy the file */
 	li_copy_file (pkg_fname, tmp, &tmp_error);
