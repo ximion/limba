@@ -62,7 +62,7 @@ on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *con
 	subject = polkit_system_bus_name_new (sender);
 	pres = polkit_authority_check_authorization_sync (helper->authority,
 													subject,
-													"org.test.limba.install-package-local",
+													"org.freedesktop.limba.install-package-local",
 													NULL,
 													POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
 													NULL,
@@ -75,19 +75,19 @@ on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *con
 	}
 
 	if (!polkit_authorization_result_get_is_authorized (pres)) {
-		g_dbus_method_invocation_return_dbus_error (context, "org.test.Limba.Installer.Error.NotAuthorized",
+		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Installer.Error.NotAuthorized",
 													"Authorization failed.");
 		goto out;
 	}
 
 	if (fname == NULL) {
-		g_dbus_method_invocation_return_dbus_error (context, "org.test.Limba.Installer.Error.Failed",
+		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Installer.Error.Failed",
 													"The filename must not be NULL.");
 		goto out;
 	}
 
 	if (!g_str_has_prefix (fname, "/")) {
-		g_dbus_method_invocation_return_dbus_error (context, "org.test.Limba.Installer.Error.Failed",
+		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Installer.Error.Failed",
 													"The path to the IPK package to install must be absolute.");
 		goto out;
 	}
@@ -221,7 +221,7 @@ main (gint argc, gchar *argv[])
 	helper.timer = g_timer_new ();
 
 	id = g_bus_own_name (G_BUS_TYPE_SYSTEM,
-						"org.test.Limba",
+						"org.freedesktop.Limba",
 						G_BUS_NAME_OWNER_FLAGS_REPLACE,
 						(GBusAcquiredCallback) on_bus_acquired,
 						(GBusNameAcquiredCallback) on_name_acquired,

@@ -504,8 +504,8 @@ li_installer_install (LiInstaller *inst, GError **error)
 
 		inst_bus = limba_installer_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
 											G_DBUS_PROXY_FLAGS_NONE,
-											"org.test.Limba",
-											"/org/test/Limba/Installer",
+											"org.freedesktop.Limba",
+											"/org/freedesktop/Limba/Installer",
 											NULL,
 											&tmp_error);
 		if (tmp_error != NULL) {

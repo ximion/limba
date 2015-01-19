@@ -67,9 +67,9 @@ add_library(limba SHARED ${LIBLIMBA_SRC} ${LIBLIMBA_PUBLIC_HEADERS} ${LIBLIMBA_P
 set_target_properties(limba PROPERTIES VERSION ${LILIB_VERSION} SOVERSION ${LIMBA_API_LEVEL})
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.h ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.c
-	MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/org.test.limba.xml
-	COMMAND ${GDBUS_CODEGEN} --interface-prefix org.test.Limba --generate-c-code li-dbus-interface
-		--c-namespace Limba --c-generate-object-manager ${CMAKE_CURRENT_SOURCE_DIR}/org.test.limba.xml
+	MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/org.freedesktop.limba.xml
+	COMMAND ${GDBUS_CODEGEN} --interface-prefix org.freedesktop.Limba --generate-c-code li-dbus-interface
+		--c-namespace Limba --c-generate-object-manager ${CMAKE_CURRENT_SOURCE_DIR}/org.freedesktop.limba.xml
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.h)

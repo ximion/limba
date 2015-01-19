@@ -13,14 +13,14 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/foundations.list
 	COMPONENT data
 )
 
-configure_file(org.test.Limba.service.in ${CMAKE_CURRENT_BINARY_DIR}/org.test.Limba.service @ONLY)
+configure_file(org.freedesktop.Limba.service.in ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.Limba.service @ONLY)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.test.Limba.service
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.Limba.service
 	DESTINATION ${CMAKE_INSTALL_DATADIR}/dbus-1/system-services/
 	COMPONENT data
 )
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/org.test.Limba.conf
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/org.freedesktop.Limba.conf
 	DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/dbus-1/system.d/
 	COMPONENT data
 )

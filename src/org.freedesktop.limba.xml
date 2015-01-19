@@ -1,11 +1,11 @@
 <node>
-  <!-- org.test.Limba.Installer:
+  <!-- org.freedesktop.Limba.Installer:
        @short_description: Install Limba packages
        @since: 0.4
 
        Allows an unprivileged application to install a software package.
     -->
-  <interface name="org.test.Limba.Installer">
+  <interface name="org.freedesktop.Limba.Installer">
     <!--
         Install:
         @fname: Absolute path to a package file
@@ -18,14 +18,14 @@
     </method>
   </interface>
 
-  <!-- org.test.Limba.Manager:
+  <!-- org.freedesktop.Limba.Manager:
        @short_description: Manage Limba packages
        @since: 0.4
 
        Allows an unprivileged application to manage Limba packages,
        e.g. remove them.
     -->
-  <interface name="org.test.Limba.Manager">
+  <interface name="org.freedesktop.Limba.Manager">
     <!--
         Remove:
         @pkid: A package identifier

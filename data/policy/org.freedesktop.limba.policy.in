@@ -8,7 +8,7 @@
   <vendor_url>http://people.freedesktop.org/~mak/limba/</vendor_url>
   <icon_name>package-x-generic</icon_name>
 
-  <action id="org.test.limba.install-package-local">
+  <action id="org.freedesktop.limba.install-package-local">
     <_description>Install a local package file</_description>
     <_message>Authentication is required to install a local package</_message>
     <icon_name>package-x-generic</icon_name>
@@ -19,7 +19,7 @@
     </defaults>
   </action>
 
-  <action id="org.test.limba.remove-package">
+  <action id="org.freedesktop.limba.remove-package">
     <_description>Remove package</_description>
     <_message>Authentication is required to remove software</_message>
     <icon_name>package-x-generic</icon_name>
