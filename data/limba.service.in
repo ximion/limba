@@ -1,0 +1,8 @@
+[Unit]
+Description=Limba helper daemon
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.Limba
+User=root
+ExecStart=@CMAKE_INSTALL_FULL_LIBDIR@/limba/limba-daemon

@@ -27,8 +27,13 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/org.freedesktop.Limba.conf
 
 # Install cleanup service if we have systemd
 if (SYSTEMD_FOUND)
-	configure_file(limba-cleanup.service.in ${CMAKE_CURRENT_BINARY_DIR}/limba-cleanup.service @ONLY)
+	configure_file(limba.service.in ${CMAKE_CURRENT_BINARY_DIR}/limba.service @ONLY)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/limba.service
+		DESTINATION ${SYSTEMD_SERVICES_INSTALL_DIR}
+		COMPONENT data
+	)
 
+	configure_file(limba-cleanup.service.in ${CMAKE_CURRENT_BINARY_DIR}/limba-cleanup.service @ONLY)
 	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/limba-cleanup.service
 		DESTINATION ${SYSTEMD_SERVICES_INSTALL_DIR}
 		COMPONENT data
