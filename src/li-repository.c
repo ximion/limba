@@ -229,7 +229,11 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	g_free (tmp);
 	c = g_unichar_tolower (c);
 
-	dest_path = g_strdup_printf ("pool/%c/%s-%s.ipk", c, pkgname, pkgversion);
+	dest_path = g_strdup_printf ("pool/%c/%s-%s_%s.ipk",
+							c,
+							pkgname,
+							pkgversion,
+							li_pkg_info_get_architecture (pki));
 	tmp = g_strdup_printf ("%s/pool/%c/", priv->repo_path, c);
 	g_mkdir_with_parents (tmp, 0755);
 	g_free (tmp);
