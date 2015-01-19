@@ -122,6 +122,12 @@ lirepo_add_package (const gchar *fname, const gchar *repodir)
 	else
 		rdir = g_strdup (repodir);
 
+	if (fname == NULL) {
+		li_print_stderr (_("You need to specify a package file to add to the repository."));
+		res = 2;
+		goto out;
+	}
+
 	repo = li_repository_new ();
 
 	li_repository_open (repo, rdir, &error);

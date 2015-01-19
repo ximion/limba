@@ -75,6 +75,7 @@ li_copy_file (const gchar *source, const gchar *destination, GError **error)
 				G_FILE_ERROR,
 				G_FILE_ERROR_FAILED,
 				"Could not copy file: %s", g_strerror (errno));
+		fclose (fsrc);
 		return FALSE;
 	}
 
@@ -331,8 +332,8 @@ li_compute_checksum_for_file (const gchar *fname)
 		size = read (fileno (input), (void*) data, (gsize) 4096);
 		g_checksum_update (cs, data, size);
 	} while (size == 4096);
-	close (fileno (input));
 
+	fclose (input);
 	sum = g_checksum_get_string (cs);
 
 	return g_strdup (sum);

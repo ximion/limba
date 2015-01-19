@@ -293,7 +293,7 @@ li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname, GError *
 			g_free (tmp);
 		}
 
-		stat(fname, &st);
+		stat (fname, &st);
 		entry = archive_entry_new ();
 		archive_entry_set_pathname (entry, ar_fname);
 		g_free (ar_fname);

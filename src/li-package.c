@@ -639,7 +639,6 @@ li_package_install (LiPackage *pkg, GError **error)
 				_("Unable to remove existing installation of '%s (%s)'."),
 						 as_component_get_name (priv->cpt),
 						 pkg_id);
-				archive_read_free (payload_ar);
 			return FALSE;
 		}
 

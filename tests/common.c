@@ -252,6 +252,8 @@ li_test_enter_chroot ()
 	res = chroot (TEST_ROOT);
 	g_assert (res == 0);
 
+	chdir ("/");
+
 	return TRUE;
 }
 

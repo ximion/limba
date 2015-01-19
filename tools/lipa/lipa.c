@@ -124,6 +124,12 @@ lipa_install_package (const gchar *fname)
 	GError *error = NULL;
 	gint res = 0;
 
+	if (fname == NULL) {
+		li_print_stderr (_("You need to specify a package to install."));
+		res = 4;
+		goto out;
+	}
+
 	if (!lipa_check_su ())
 		return 2;
 

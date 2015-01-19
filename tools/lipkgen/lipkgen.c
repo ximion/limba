@@ -279,7 +279,7 @@ out:
 static gint
 pkgen_unpack_pkg (const gchar *fname, const gchar *dir)
 {
-	LiPackage *pkg;
+	LiPackage *pkg = NULL;
 	gint res = 1;
 	gchar *dest_dir;
 	GError *error = NULL;
@@ -311,7 +311,9 @@ pkgen_unpack_pkg (const gchar *fname, const gchar *dir)
 
 	res = 0;
 out:
-	g_object_unref (pkg);
+	if (pkg != NULL)
+		g_object_unref (pkg);
+
 	return res;
 }
 
