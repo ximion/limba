@@ -191,7 +191,6 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	guint i;
 	_cleanup_free_ gchar *dest_path = NULL;
 	_cleanup_free_ gchar *hash = NULL;
-	gchar **strv;
 	AsComponent *cpt;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
@@ -268,10 +267,10 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 
 	/* set a unique AppStream package name */
 	cpt = li_package_get_appstream_cpt (pkg);
-	strv = g_new0 (gchar*, 2);
-	strv[0] = g_strdup_printf ("limba::%s", pkgname);
-	as_component_set_pkgnames (cpt, strv);
-	g_strfreev (strv);
+	as_component_add_bundle_id (cpt, AS_BUNDLE_KIND_LIMBA,
+							li_pkg_info_get_id (pki));
+	/* remove all package names - just in case */
+	as_component_set_pkgnames (cpt, NULL);
 
 	/* add to indices */
 	li_pkg_index_add_package (priv->index, pki);
