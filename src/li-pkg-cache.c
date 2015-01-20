@@ -120,6 +120,9 @@ li_pkg_cache_init (LiPkgCache *cache)
 	priv->repo_urls = g_ptr_array_new_with_free_func (g_free);
 	priv->cache_index_fname = g_build_filename (LIMBA_CACHE_DIR, "available.index", NULL);
 
+	/* do not filter languages */
+	as_metadata_set_locale (priv->metad, "ALL");
+
 	/* load repository url list */
 	li_pkg_cache_load_repolist (cache, "/etc/limba/sources.list"); /* defined by the user / distributor */
 	li_pkg_cache_load_repolist (cache, "/var/lib/limba/update-sources.list"); /* managed automatically by Limba */
@@ -218,6 +221,7 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 	GError *tmp_error = NULL;
 	_cleanup_object_unref_ LiPkgIndex *tmp_index = NULL;
 	_cleanup_object_unref_ LiPkgIndex *global_index = NULL;
+	_cleanup_free_ gchar *dest_ascache = NULL;
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	/* ensure AppStream cache exists */
@@ -226,17 +230,20 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 	/* create index of available packages */
 	global_index = li_pkg_index_new ();
 
+	/* clear AppStream metadata list */
+	as_metadata_clear_components (priv->metad);
+	dest_ascache = g_build_filename (APPSTREAM_CACHE, "limba-software.xml.gz", NULL);
+
 	for (i = 0; i < priv->repo_urls->len; i++) {
 		const gchar *url;
-		gint res;
 		_cleanup_free_ gchar *url_index = NULL;
 		_cleanup_free_ gchar *url_asdata = NULL;
 		_cleanup_free_ gchar *dest = NULL;
 		_cleanup_free_ gchar *dest_index = NULL;
 		_cleanup_free_ gchar *dest_asdata = NULL;
-		_cleanup_free_ gchar *dest_ascache = NULL;
 		_cleanup_free_ gchar *dest_repoconf = NULL;
 		_cleanup_object_unref_ GFile *idxfile = NULL;
+		_cleanup_object_unref_ GFile *asfile = NULL;
 		_cleanup_object_unref_ LiPkgIndex *tmp_index = NULL;
 		GPtrArray *pkgs;
 		guint j;
@@ -252,7 +259,6 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		/* prepare cache dir and ensure it exists */
 		tmp = g_compute_checksum_for_string (G_CHECKSUM_MD5, url, -1);
 		dest = g_build_filename (LIMBA_CACHE_DIR, tmp, NULL);
-		dest_ascache = g_strdup_printf ("%s/limba-%s.xml.gz", APPSTREAM_CACHE, tmp);
 		g_free (tmp);
 		g_mkdir_with_parents (dest, 0755);
 
@@ -280,16 +286,15 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 			return;
 		}
 
-		/* create symbolic link in the AppStream cache, to make data known to SCs */
-		res = symlink (dest_asdata, dest_ascache);
-		if ((res != 0) && (res != EEXIST)) {
-			g_set_error (error,
-				LI_PKG_CACHE_ERROR,
-				LI_PKG_CACHE_ERROR_WRITE,
-				_("Unable to write symbolic link to AppStream cache: %s."), g_strerror (errno));
-		}
-
 		g_debug ("Updated data for repository: %s", url_index);
+
+		/* load AppStream metadata */
+		asfile = g_file_new_for_path (dest_asdata);
+		as_metadata_parse_file (priv->metad, asfile, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_prefixed_error (error, tmp_error, "Unable to load AppStream data for: %s", url);
+			return;
+		}
 
 		/* load index */
 		idxfile = g_file_new_for_path (dest_index);
@@ -317,6 +322,13 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 
 		g_debug ("Loaded index of repository.");
+	}
+
+	/* save AppStream XML data */
+	as_metadata_save_distro_xml (priv->metad, dest_ascache, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error, "Unable to save metadata.");
+		return;
 	}
 
 	/* save global index file */
