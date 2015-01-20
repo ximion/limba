@@ -77,6 +77,9 @@ li_repository_init (LiRepository *repo)
 
 	priv->index = li_pkg_index_new ();
 	priv->metad = as_metadata_new ();
+
+	/* we do not want to filter languages */
+	as_metadata_set_locale (priv->metad, "ALL");
 }
 
 /**

@@ -586,6 +586,8 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		}
 
 		mdata = as_metadata_new ();
+		as_metadata_set_locale (mdata, "ALL");
+
 		as_metadata_parse_file (mdata, asfile, &tmp_error);
 		cpt = as_metadata_get_component (mdata);
 		g_object_unref (asfile);
