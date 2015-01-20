@@ -27,6 +27,7 @@
 
 #include <glib-object.h>
 #include "li-pkg-info.h"
+#include "li-package.h"
 
 #define LI_TYPE_PKG_CACHE			(li_pkg_cache_get_type())
 #define LI_PKG_CACHE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_CACHE, LiPkgCache))
@@ -42,6 +43,7 @@ G_BEGIN_DECLS
  * @LI_PKG_CACHE_ERROR_FAILED:				Generic failure
  * @LI_PKG_CACHE_ERROR_DOWNLOAD_FAILED:		Failed to download a file
  * @LI_PKG_CACHE_ERROR_WRITE:				Writing to cache was not possible
+ * @LI_PKG_CACHE_ERROR_NOT_FOUND:			A cache entity was not found
  *
  * The error type.
  **/
@@ -49,6 +51,7 @@ typedef enum {
 	LI_PKG_CACHE_ERROR_FAILED,
 	LI_PKG_CACHE_ERROR_DOWNLOAD_FAILED,
 	LI_PKG_CACHE_ERROR_WRITE,
+	LI_PKG_CACHE_ERROR_NOT_FOUND,
 	/*< private >*/
 	LI_PKG_CACHE_ERROR_LAST
 } LiPkgCacheError;
@@ -85,6 +88,10 @@ void			li_pkg_cache_update (LiPkgCache *cache,
 									GError **error);
 
 GPtrArray		*li_pkg_cache_get_packages (LiPkgCache *cache);
+
+LiPackage		*li_pkg_cache_fetch_remote (LiPkgCache *cache,
+											const gchar *pkgid,
+											GError **error);
 
 G_END_DECLS
 

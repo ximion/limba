@@ -82,6 +82,10 @@ LiInstaller		*li_installer_new		(void);
 gboolean		li_installer_open_file (LiInstaller *inst,
 									const gchar *filename,
 									GError **error);
+gboolean		li_installer_open_remote (LiInstaller *inst,
+									const gchar *pkgid,
+									GError **error);
+
 gboolean		li_installer_install (LiInstaller *inst,
 										GError **error);
 

@@ -47,6 +47,7 @@ struct _LiPkgCachePrivate
 
 	GPtrArray *repo_urls;
 	gchar *cache_index_fname;
+	gchar *tmp_dir;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPkgCache, li_pkg_cache, G_TYPE_OBJECT)
@@ -69,6 +70,10 @@ li_pkg_cache_finalize (GObject *object)
 	g_object_unref (priv->metad);
 	g_ptr_array_unref (priv->repo_urls);
 	g_free (priv->cache_index_fname);
+
+	/* cleanup */
+	li_delete_dir_recursive (priv->tmp_dir);
+	g_free (priv->tmp_dir);
 
 	G_OBJECT_CLASS (li_pkg_cache_parent_class)->finalize (object);
 }
@@ -119,6 +124,9 @@ li_pkg_cache_init (LiPkgCache *cache)
 	priv->metad = as_metadata_new ();
 	priv->repo_urls = g_ptr_array_new_with_free_func (g_free);
 	priv->cache_index_fname = g_build_filename (LIMBA_CACHE_DIR, "available.index", NULL);
+
+	/* get temporary directory */
+	priv->tmp_dir = li_utils_get_tmp_dir ("remote");
 
 	/* do not filter languages */
 	as_metadata_set_locale (priv->metad, "ALL");
@@ -372,6 +380,70 @@ li_pkg_cache_get_packages (LiPkgCache *cache)
 {
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 	return li_pkg_index_get_packages (priv->index);
+}
+
+/**
+ * li_pkg_cache_fetch_remote:
+ * @cache: an instance of #LiPkgCache
+ * @pkgid: id of the package to download
+ *
+ * Download and open a package from a remote source.
+ *
+ * Returns: (transfer full): A new #LiPackage, or %NULL in case of an error
+ */
+LiPackage*
+li_pkg_cache_fetch_remote (LiPkgCache *cache, const gchar *pkgid, GError **error)
+{
+	GPtrArray *pkgs;
+	GError *tmp_error = NULL;
+	guint i;
+	LiPkgInfo *pki = NULL;
+	gchar *tmp;
+	_cleanup_free_ gchar *dest_fname = NULL;
+	LiPackage *pkg;
+	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
+
+	/* find our package metadata */
+	pkgs = li_pkg_cache_get_packages (cache);
+	for (i = 0; i < pkgs->len; i++) {
+		LiPkgInfo *tmp_pki = LI_PKG_INFO (g_ptr_array_index (pkgs, i));
+		if (g_strcmp0 (li_pkg_info_get_id (tmp_pki), pkgid) == 0) {
+			pki = tmp_pki;
+			break;
+		}
+	}
+
+	if (pki == NULL) {
+		g_set_error (error,
+				LI_PKG_CACHE_ERROR,
+				LI_PKG_CACHE_ERROR_NOT_FOUND,
+				_("Could not find package matching id '%s'."), pkgid);
+		return NULL;
+	}
+
+	tmp = g_path_get_basename (li_pkg_info_get_repo_location (pki));
+	dest_fname = g_build_filename (priv->tmp_dir, tmp, NULL);
+	g_free (tmp);
+
+	g_debug ("Fetching remote package from: %s", li_pkg_info_get_repo_location (pki));
+	li_pkg_cache_download_file_sync (cache,
+								li_pkg_info_get_repo_location (pki),
+								dest_fname,
+								&tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+	g_debug ("Package '%s' downloaded from remote.", pkgid);
+
+	pkg = li_package_new ();
+	li_package_open_file (pkg, dest_fname, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+
+	return pkg;
 }
 
 /**

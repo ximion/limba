@@ -34,6 +34,7 @@
 #include "li-manager.h"
 #include "li-runtime.h"
 #include "li-package-graph.h"
+#include "li-pkg-cache.h"
 #include "li-dbus-interface.h"
 
 typedef struct _LiInstallerPrivate	LiInstallerPrivate;
@@ -43,6 +44,7 @@ struct _LiInstallerPrivate
 	LiPkgInfo *pki;
 	LiPackageGraph *pg;
 	LiPackage *pkg;
+	LiPkgCache *cache;
 
 	gchar *fname;
 };
@@ -64,6 +66,7 @@ li_installer_finalize (GObject *object)
 
 	g_object_unref (priv->mgr);
 	g_object_unref (priv->pg);
+	g_object_unref (priv->cache);
 	if (priv->pkg != NULL)
 		g_object_unref (priv->pkg);
 	g_free (priv->fname);
@@ -81,6 +84,7 @@ li_installer_init (LiInstaller *inst)
 
 	priv->mgr = li_manager_new ();
 	priv->pg = li_package_graph_new ();
+	priv->cache = li_pkg_cache_new ();
 }
 
 /**
@@ -210,6 +214,36 @@ li_installer_find_satisfying_pkg (GList *pkglist, LiPkgInfo *dep)
 	}
 
 	return NULL;
+}
+
+/**
+ * li_installer_fetch_dependency_remote:
+ */
+static gboolean
+li_installer_fetch_dependency_remote (LiInstaller *inst, GNode *root, LiPkgInfo *dep_pki, GError **error)
+{
+	GNode *node;
+	LiPackage *pkg;
+	GError *tmp_error = NULL;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	pkg = li_pkg_cache_fetch_remote (priv->cache, li_pkg_info_get_id (dep_pki), &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error, "Unable to download dependency:");
+		return FALSE;
+	}
+
+	node = li_package_graph_add_package_install_todo (priv->pg, root, pkg);
+
+	/* check if we have the dependencies, or can install them */
+	li_installer_check_dependencies (inst, node, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+	g_object_unref (pkg);
+
+	return TRUE;
 }
 
 /**
@@ -377,7 +411,11 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 		} else if (li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_AVAILABLE)) {
 			g_debug ("Hit remote package: %s", li_pkg_info_get_id (ipki));
 
-			/* TODO */
+			li_installer_fetch_dependency_remote (inst, root, dep, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return;
+			}
 		} else {
 			GNode *node;
 
@@ -547,6 +585,13 @@ li_installer_install (LiInstaller *inst, GError **error)
 		return FALSE;
 	}
 
+	/* open the package cache */
+	li_pkg_cache_open (priv->cache, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
 	/* create a dependency tree for this package installation */
 	/* NOTE: The root node is always the to-be-installed package (a LiPackage instance) */
 	li_installer_check_dependencies (inst, root, &tmp_error);
@@ -573,8 +618,9 @@ out:
 
 /**
  * li_installer_open_file:
+ * @filename: The local IPK package filename
  *
- * Open a package file
+ * Open a package file for installation.
  */
 gboolean
 li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error)
@@ -597,6 +643,37 @@ li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error
 	if (priv->fname != NULL)
 		g_free (priv->fname);
 	priv->fname = g_strdup (filename);
+
+	return TRUE;
+}
+
+/**
+ * li_installer_open_remote:
+ * @pkgid: The package/bundle-id of the software to install.
+ *
+ * Install software from a repository.
+ */
+gboolean
+li_installer_open_remote (LiInstaller *inst, const gchar *pkgid, GError **error)
+{
+	LiPackage *pkg;
+	GError *tmp_error = NULL;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	/* open the package cache */
+	li_pkg_cache_open (priv->cache, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	pkg = li_pkg_cache_fetch_remote (priv->cache, pkgid, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+	li_installer_set_package (inst, pkg);
+	g_object_unref (pkg);
 
 	return TRUE;
 }

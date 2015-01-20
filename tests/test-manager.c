@@ -50,17 +50,15 @@ test_remove_software ()
 }
 
 void
-test_installer ()
+test_installer_simple ()
 {
 	LiInstaller *inst;
 	_cleanup_free_ gchar *fname_app = NULL;
 	_cleanup_free_ gchar *fname_lib = NULL;
-	_cleanup_free_ gchar *fname_full = NULL;
 	GError *error = NULL;
 
 	fname_app = g_build_filename (datadir, "foobar.ipk", NULL);
 	fname_lib = g_build_filename (datadir, "libfoo.ipk", NULL);
-	fname_full = g_build_filename (datadir, "FooBar-1.0_full.ipk", NULL);
 
 	inst = li_installer_new ();
 
@@ -85,9 +83,16 @@ test_installer ()
 	g_assert_no_error (error);
 
 	g_object_unref (inst);
+}
 
-	/* now remove all software again */
-	test_remove_software ();
+void
+test_installer_embeddedpkg ()
+{
+	LiInstaller *inst;
+	GError *error = NULL;
+	_cleanup_free_ gchar *fname_full = NULL;
+
+	fname_full = g_build_filename (datadir, "FooBar-1.0_full.ipk", NULL);
 
 	/* test the installation of a package with embedded dependencies */
 	inst = li_installer_new ();
@@ -114,6 +119,25 @@ test_manager ()
 	g_list_free (pkgs);
 
 	g_object_unref (mgr);
+}
+
+void
+test_install_remove ()
+{
+	/* firs test installer */
+	test_installer_simple ();
+
+	/* now remove all software again */
+	test_remove_software ();
+
+	/* test installation of embedded package copy */
+	test_installer_embeddedpkg ();
+
+	/* test with manager if we can read required data */
+	test_manager ();
+
+	/* uninstall once again */
+	test_remove_software ();
 }
 
 void
@@ -148,7 +172,23 @@ test_repository ()
 }
 
 void
-test_pkg_cache ()
+test_install_from_repo ()
+{
+	LiInstaller *inst;
+	GError *error = NULL;
+
+	/* test an installation which fetches stuff from a remote location */
+	inst = li_installer_new ();
+	li_installer_open_remote (inst, "foobar-1.0", &error);
+	g_assert_no_error (error);
+
+	li_installer_install (inst, &error);
+	g_assert_no_error (error);
+	g_object_unref (inst);
+}
+
+void
+test_pkg_cache_setup ()
 {
 	LiPkgCache *cache;
 	GError *error = NULL;
@@ -165,6 +205,16 @@ test_pkg_cache ()
 	g_assert_no_error (error);
 
 	g_object_unref (cache);
+}
+
+void
+test_pkg_cache ()
+{
+	/* set up package cache */
+	test_pkg_cache_setup ();
+
+	/* try to install something from the repository */
+	test_install_from_repo ();
 }
 
 int
@@ -191,8 +241,7 @@ main (int argc, char **argv)
 	/* critical, error and warnings are fatal */
 	g_log_set_fatal_mask (NULL, G_LOG_LEVEL_WARNING | G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL);
 
-	g_test_add_func ("/Limba/InstallRemove", test_installer);
-	g_test_add_func ("/Limba/Manager", test_manager);
+	g_test_add_func ("/Limba/InstallRemove", test_install_remove);
 	g_test_add_func ("/Limba/Repository", test_repository);
 	g_test_add_func ("/Limba/PackageCache", test_pkg_cache);
 
