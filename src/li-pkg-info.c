@@ -464,6 +464,12 @@ void
 li_pkg_info_add_flag (LiPkgInfo *pki, LiPackageFlags flag)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+
+	if ((flag == LI_PACKAGE_FLAG_INSTALLED) && (li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_AVAILABLE)))
+		g_warning ("Trying to set bad package flags: INSTALLED add to package which already has AVAILABLE flag.");
+	if ((flag == LI_PACKAGE_FLAG_AVAILABLE) && (li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_INSTALLED)))
+		g_warning ("Trying to set bad package flags: AVAILABLE add to package which already has INSTALLED flag.");
+
 	priv->flags |= flag;
 }
 

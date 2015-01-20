@@ -367,15 +367,24 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 
 		/* test if this package is already in the installed set */
 		ipki = li_installer_find_satisfying_pkg (all_pkgs, dep);
-		if ((ipki == NULL) || (!li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_INSTALLED))) {
+		if (ipki == NULL) {
 			/* maybe we find this dependency as embedded copy? */
 			li_installer_find_dependency_embedded (inst, root, dep, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				return;
 			}
+		} else if (li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_AVAILABLE)) {
+			g_debug ("Hit remote package: %s", li_pkg_info_get_id (ipki));
+
+			/* TODO */
 		} else {
 			GNode *node;
+
+			if (!li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_INSTALLED))
+				g_warning ("Found package '%s' which should be in INSTALLED state, but actually is not. Ignoring issue and assuming INSTALLED.",
+							li_pkg_info_get_id (ipki));
+
 			/* dependency is already installed, add it as satisfied */
 			node = li_package_graph_add_package (priv->pg, root, ipki);
 
