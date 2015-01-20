@@ -115,7 +115,7 @@ lirepo_add_package (const gchar *fname, const gchar *repodir)
 	gint res = 0;
 	gchar *rdir;
 	GError *error = NULL;
-	LiRepository *repo;
+	LiRepository *repo = NULL;
 
 	if (repodir == NULL)
 		rdir = g_get_current_dir ();

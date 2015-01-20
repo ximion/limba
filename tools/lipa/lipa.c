@@ -138,7 +138,7 @@ out:
 static gint
 lipa_install_package (const gchar *fname)
 {
-	LiInstaller *inst;
+	LiInstaller *inst = NULL;
 	GError *error = NULL;
 	gint res = 0;
 
