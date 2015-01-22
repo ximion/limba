@@ -42,6 +42,7 @@ G_BEGIN_DECLS
  * LiPkgCacheError:
  * @LI_PKG_CACHE_ERROR_FAILED:				Generic failure
  * @LI_PKG_CACHE_ERROR_DOWNLOAD_FAILED:		Failed to download a file
+ * @LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND:	Data could not be found on remote server
  * @LI_PKG_CACHE_ERROR_WRITE:				Writing to cache was not possible
  * @LI_PKG_CACHE_ERROR_NOT_FOUND:			A cache entity was not found
  *
@@ -50,8 +51,9 @@ G_BEGIN_DECLS
 typedef enum {
 	LI_PKG_CACHE_ERROR_FAILED,
 	LI_PKG_CACHE_ERROR_DOWNLOAD_FAILED,
-	LI_PKG_CACHE_ERROR_WRITE,
+	LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND,
 	LI_PKG_CACHE_ERROR_NOT_FOUND,
+	LI_PKG_CACHE_ERROR_WRITE,
 	/*< private >*/
 	LI_PKG_CACHE_ERROR_LAST
 } LiPkgCacheError;

@@ -42,7 +42,7 @@
 typedef struct _LiRepositoryPrivate	LiRepositoryPrivate;
 struct _LiRepositoryPrivate
 {
-	LiPkgIndex *index;
+	GHashTable *indices;
 	AsMetadata *metad;
 	gchar *repo_path;
 };
@@ -61,7 +61,7 @@ li_repository_finalize (GObject *object)
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	g_free (priv->repo_path);
-	g_object_unref (priv->index);
+	g_hash_table_unref (priv->indices);
 	g_object_unref (priv->metad);
 
 	G_OBJECT_CLASS (li_repository_parent_class)->finalize (object);
@@ -75,11 +75,95 @@ li_repository_init (LiRepository *repo)
 {
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
-	priv->index = li_pkg_index_new ();
+	priv->indices = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	priv->metad = as_metadata_new ();
 
 	/* we do not want to filter languages */
 	as_metadata_set_locale (priv->metad, "ALL");
+}
+
+/**
+ * li_repository_get_index:
+ */
+static LiPkgIndex*
+li_repository_get_index (LiRepository *repo, const gchar *arch)
+{
+	LiPkgIndex *index;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	index = g_hash_table_lookup (priv->indices, arch);
+	if (index == NULL) {
+		index = li_pkg_index_new ();
+		g_hash_table_insert (priv->indices, g_strdup (arch), index);
+	}
+
+	return index;
+}
+
+/**
+ * li_repository_load_indices:
+ */
+void
+li_repository_load_indices (LiRepository *repo, const gchar* dir, GError **error)
+{
+	GError *tmp_error = NULL;
+	GFileInfo *file_info;
+	GFileEnumerator *enumerator = NULL;
+	GFile *fdir;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	if (!g_file_test (dir, G_FILE_TEST_EXISTS))
+		return;
+
+	fdir =  g_file_new_for_path (dir);
+	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
+		_cleanup_free_ gchar *path = NULL;
+
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+
+		if (g_file_info_get_is_hidden (file_info))
+			continue;
+		path = g_build_filename (dir,
+								g_file_info_get_name (file_info),
+								NULL);
+
+		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
+			_cleanup_free_ gchar *arch = NULL;
+			_cleanup_free_ gchar *fname = NULL;
+			GFile *file;
+			LiPkgIndex *index;
+
+			/* our directory name is the architecture */
+			arch = g_path_get_basename (path);
+
+			fname = g_build_filename (path, "Index.gz", NULL);
+			file = g_file_new_for_path (fname);
+			if (g_file_query_exists (file, NULL)) {
+				index = li_pkg_index_new ();
+				li_pkg_index_load_file (index, file, &tmp_error);
+				g_hash_table_insert (priv->indices, g_strdup (arch), index);
+			}
+			g_object_unref (file);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
+		}
+	}
+
+out:
+	g_object_unref (fdir);
+	if (enumerator != NULL)
+		g_object_unref (enumerator);
 }
 
 /**
@@ -101,23 +185,21 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 		return FALSE;
 	}
 
+	/* cleanup everything */
 	as_metadata_clear_components (priv->metad);
+	g_hash_table_remove_all (priv->indices);
 
 	/* load index data if we find it */
-	fname = g_build_filename (directory, "Index.gz", NULL);
-	file = g_file_new_for_path (fname);
+	fname = g_build_filename (directory, "indices", NULL);
+	li_repository_load_indices (repo, fname, &tmp_error);
 	g_free (fname);
-	if (g_file_query_exists (file, NULL)) {
-		li_pkg_index_load_file (priv->index, file, &tmp_error);
-	}
-	g_object_unref (file);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
 
 	/* load AppStream metadata (if present) */
-	fname = g_build_filename (directory, "Metadata.xml.gz", NULL);
+	fname = g_build_filename (directory, "indices", "Metadata.xml.gz", NULL);
 	file = g_file_new_for_path (fname);
 	g_free (fname);
 	if (g_file_query_exists (file, NULL)) {
@@ -136,6 +218,28 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 }
 
 /**
+ * li_repository_save_indices:
+ *
+ * Helper function to save the hash-table on disk
+ */
+static void
+li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiRepository *repo)
+{
+	gchar *fname;
+	gchar *dir;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	dir = g_build_filename (priv->repo_path, "indices", arch, NULL);
+	g_mkdir_with_parents (dir, 0755);
+
+	fname = g_build_filename (dir, "Index.gz", NULL);
+	g_free (dir);
+
+	li_pkg_index_save_to_file (index, fname);
+	g_free (fname);
+}
+
+/**
  * li_repository_save:
  *
  * Save the repository metadata and sign it.
@@ -149,6 +253,10 @@ li_repository_save (LiRepository *repo, GError **error)
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	/* ensure the basic directory structure is present */
+	dir = g_build_filename (priv->repo_path, "indices", NULL);
+	g_mkdir_with_parents (dir, 0755);
+	g_free (dir);
+
 	dir = g_build_filename (priv->repo_path, "pool", NULL);
 	g_mkdir_with_parents (dir, 0755);
 	g_free (dir);
@@ -157,13 +265,13 @@ li_repository_save (LiRepository *repo, GError **error)
 	g_mkdir_with_parents (dir, 0755);
 	g_free (dir);
 
-	/* save index */
-	fname = g_build_filename (priv->repo_path, "Index.gz", NULL);
-	li_pkg_index_save_to_file (priv->index, fname);
-	g_free (fname);
+	/* save indices */
+	g_hash_table_foreach (priv->indices,
+						(GHFunc) li_repository_save_indices,
+						repo);
 
 	/* save AppStream metadata */
-	fname = g_build_filename (priv->repo_path, "Metadata.xml.gz", NULL);
+	fname = g_build_filename (priv->repo_path, "indices", "Metadata.xml.gz", NULL);
 	as_metadata_save_distro_xml (priv->metad, fname, &tmp_error);
 	g_free (fname);
 	if (tmp_error != NULL) {
@@ -186,12 +294,14 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	LiPkgInfo *pki;
 	const gchar *pkgname;
 	const gchar *pkgversion;
+	const gchar *pkgarch;
 	gchar *tmp;
 	gunichar c;
 	guint i;
 	_cleanup_free_ gchar *dest_path = NULL;
 	_cleanup_free_ gchar *hash = NULL;
 	AsComponent *cpt;
+	LiPkgIndex *index;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	pkg = li_package_new ();
@@ -221,6 +331,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	/* build destination path and directory */
 	pkgname = li_pkg_info_get_name (pki);
 	pkgversion = li_pkg_info_get_version (pki);
+	pkgarch = li_pkg_info_get_architecture (pki);
 	tmp = g_str_to_ascii (pkgname, NULL);
 
 	for (i = 0; tmp[i] != '\0'; i++) {
@@ -235,7 +346,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 							c,
 							pkgname,
 							pkgversion,
-							li_pkg_info_get_architecture (pki));
+							pkgarch);
 	tmp = g_strdup_printf ("%s/pool/%c/", priv->repo_path, c);
 	g_mkdir_with_parents (tmp, 0755);
 	g_free (tmp);
@@ -273,7 +384,8 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	as_component_set_pkgnames (cpt, NULL);
 
 	/* add to indices */
-	li_pkg_index_add_package (priv->index, pki);
+	index = li_repository_get_index (repo, pkgarch);
+	li_pkg_index_add_package (index, pki);
 	as_metadata_add_component (priv->metad, cpt);
 
 	return TRUE;

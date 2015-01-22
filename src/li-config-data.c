@@ -128,13 +128,18 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 
 		g_output_stream_splice (G_OUTPUT_STREAM (mem_os), conv_stream, 0, NULL, NULL);
 		data = g_memory_output_stream_get_data (mem_os);
-		strv = g_strsplit ((const gchar*) data, "\n", -1);
+		if (data != NULL) {
+			strv = g_strsplit ((const gchar*) data, "\n", -1);
 
-		for (i = 0; strv[i] != NULL; i++) {
-			priv->content = g_list_append (priv->content, g_strdup (strv[i]));
+			for (i = 0; strv[i] != NULL; i++) {
+				priv->content = g_list_append (priv->content, g_strdup (strv[i]));
+			}
+
+			g_strfreev (strv);
+		} else {
+			g_debug ("Control file was empty (data == NULL)");
 		}
 
-		g_strfreev (strv);
 		g_object_unref (conv_stream);
 		g_object_unref (mem_os);
 		g_object_unref (fistream);

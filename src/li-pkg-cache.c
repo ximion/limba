@@ -36,6 +36,7 @@
 #include <curl/curl.h>
 #include <errno.h>
 
+#include "li-utils.h"
 #include "li-utils-private.h"
 #include "li-pkg-index.h"
 
@@ -173,6 +174,7 @@ li_pkg_cache_download_file_sync (LiPkgCache *cache, const gchar *url, const gcha
 	CURL *curl;
 	CURLcode res;
 	FILE *outfile;
+	long http_code = 0;
 
 	curl = curl_easy_init();
 	if (curl == NULL) {
@@ -206,10 +208,21 @@ li_pkg_cache_download_file_sync (LiPkgCache *cache, const gchar *url, const gcha
 	res = curl_easy_perform (curl);
 
 	if (res != CURLE_OK) {
-		g_set_error (error,
-				LI_PKG_CACHE_ERROR,
-				LI_PKG_CACHE_ERROR_DOWNLOAD_FAILED,
-				_("Unable to download data from '%s': %s."), url, curl_easy_strerror (res));
+		curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
+		if (http_code == 404) {
+			/* TODO: Perform the same check for FTP? */
+			g_set_error (error,
+					LI_PKG_CACHE_ERROR,
+					LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND,
+					_("Could not find remote data '%s': %s."), url, curl_easy_strerror (res));
+		} else {
+			g_set_error (error,
+					LI_PKG_CACHE_ERROR,
+					LI_PKG_CACHE_ERROR_DOWNLOAD_FAILED,
+					_("Unable to download data from '%s': %s."), url, curl_easy_strerror (res));
+		}
+
+		g_remove (dest);
 	}
 
 	/* cleanup */
@@ -230,6 +243,7 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 	_cleanup_object_unref_ LiPkgIndex *tmp_index = NULL;
 	_cleanup_object_unref_ LiPkgIndex *global_index = NULL;
 	_cleanup_free_ gchar *dest_ascache = NULL;
+	_cleanup_free_ gchar *current_arch = NULL;
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	/* ensure AppStream cache exists */
@@ -242,17 +256,22 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 	as_metadata_clear_components (priv->metad);
 	dest_ascache = g_build_filename (APPSTREAM_CACHE, "limba-software.xml.gz", NULL);
 
+	current_arch = li_get_current_arch_h ();
+
 	for (i = 0; i < priv->repo_urls->len; i++) {
 		const gchar *url;
-		_cleanup_free_ gchar *url_index = NULL;
+		_cleanup_free_ gchar *url_index_all = NULL;
+		_cleanup_free_ gchar *url_index_arch = NULL;
 		_cleanup_free_ gchar *url_asdata = NULL;
 		_cleanup_free_ gchar *dest = NULL;
-		_cleanup_free_ gchar *dest_index = NULL;
+		_cleanup_free_ gchar *dest_index_all = NULL;
+		_cleanup_free_ gchar *dest_index_arch = NULL;
 		_cleanup_free_ gchar *dest_asdata = NULL;
 		_cleanup_free_ gchar *dest_repoconf = NULL;
 		_cleanup_object_unref_ GFile *idxfile = NULL;
 		_cleanup_object_unref_ GFile *asfile = NULL;
 		_cleanup_object_unref_ LiPkgIndex *tmp_index = NULL;
+		gboolean index_read;
 		GPtrArray *pkgs;
 		guint j;
 		gchar *tmp;
@@ -261,8 +280,9 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		/* create temporary index */
 		tmp_index = li_pkg_index_new ();
 
-		url_index = g_build_filename (url, "Index.gz", NULL);
-		url_asdata = g_build_filename (url, "Metadata.xml.gz", NULL);
+		url_index_all = g_build_filename (url, "indices", "all", "Index.gz", NULL);
+		url_index_arch = g_build_filename (url, "indices", current_arch, "Index.gz", NULL);
+		url_asdata = g_build_filename (url, "indices", "Metadata.xml.gz", NULL);
 
 		/* prepare cache dir and ensure it exists */
 		tmp = g_compute_checksum_for_string (G_CHECKSUM_MD5, url, -1);
@@ -270,14 +290,34 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		g_free (tmp);
 		g_mkdir_with_parents (dest, 0755);
 
-		dest_index = g_build_filename (dest, "Index.gz", NULL);
+		dest_index_all = g_build_filename (dest, "Index-all.gz", NULL);
+		dest_index_arch = g_strdup_printf ("%s/Index-%s.gz", dest, current_arch);
 		dest_asdata = g_build_filename (dest, "Metadata.xml.gz", NULL);
 
-		g_debug ("Updating cached data for repository: %s", url_index);
-		li_pkg_cache_download_file_sync (cache, url_index, dest_index, &tmp_error);
+		g_debug ("Updating cached data for repository: %s", url);
+		li_pkg_cache_download_file_sync (cache, url_index_all, dest_index_all, &tmp_error);
 		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
-			return;
+			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
+				/* we can ignore the error here, this repository is not for us */
+				g_debug ("Skipping arch 'all' for repository: %s", url);
+				g_error_free (tmp_error);
+				tmp_error = NULL;
+			} else {
+				g_propagate_error (error, tmp_error);
+				return;
+			}
+		}
+		li_pkg_cache_download_file_sync (cache, url_index_arch, dest_index_arch, &tmp_error);
+		if (tmp_error != NULL) {
+			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
+				/* we can ignore the error here, this repository is not for us */
+				g_debug ("Skipping arch '%s' for repository: %s", current_arch, url);
+				g_error_free (tmp_error);
+				tmp_error = NULL;
+			} else {
+				g_propagate_error (error, tmp_error);
+				return;
+			}
 		}
 
 		li_pkg_cache_download_file_sync (cache, url_asdata, dest_asdata, &tmp_error);
@@ -294,7 +334,7 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 			return;
 		}
 
-		g_debug ("Updated data for repository: %s", url_index);
+		g_debug ("Updated data for repository: %s", url);
 
 		/* load AppStream metadata */
 		asfile = g_file_new_for_path (dest_asdata);
@@ -305,12 +345,29 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		}
 
 		/* load index */
-		idxfile = g_file_new_for_path (dest_index);
-		li_pkg_index_load_file (tmp_index, idxfile, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_prefixed_error (error, tmp_error, "Unable to load index for repository: %s", url);
-			return;
+		idxfile = g_file_new_for_path (dest_index_all);
+		if (g_file_query_exists (idxfile, NULL)) {
+			li_pkg_index_load_file (tmp_index, idxfile, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_prefixed_error (error, tmp_error, "Unable to load index for repository: %s", url);
+				return;
+			}
+			index_read = TRUE;
 		}
+
+		g_object_unref (idxfile);
+		idxfile = g_file_new_for_path (dest_index_arch);
+		if (g_file_query_exists (idxfile, NULL)) {
+			li_pkg_index_load_file (tmp_index, idxfile, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_prefixed_error (error, tmp_error, "Unable to load index for repository: %s", url);
+				return;
+			}
+			index_read = TRUE;
+		}
+
+		if (!index_read)
+			g_warning ("Repository '%s' does not seem to contain any index file!", url);
 
 		/* ensure that all locations are set properly */
 		pkgs = li_pkg_index_get_packages (tmp_index);
