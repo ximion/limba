@@ -20,6 +20,7 @@
 
 #include <glib.h>
 #include "limba.h"
+#include <stdlib.h>
 
 #include "common.h"
 #include "li-pkg-cache.h"
@@ -221,6 +222,8 @@ int
 main (int argc, char **argv)
 {
 	int ret;
+	gchar *tmp;
+	gchar *cmd;
 
 	if (argc == 0) {
 		g_error ("No test data directory specified!");
@@ -234,6 +237,14 @@ main (int argc, char **argv)
 
 	/* switch to fake root environment */
 	li_test_enter_chroot ();
+
+	/* set fake GPG home */
+	tmp = g_build_filename (argv[1], "gpg", NULL);
+	cmd = g_strdup_printf ("cp -r '%s' /tmp", tmp);
+	system (cmd); /* meh for call to system() - but okay for the testsuite */
+	g_free (tmp);
+	g_free (cmd);
+	g_setenv ("GNUPGHOME", "/tmp/gpg", 1);
 
 	li_set_verbose_mode (TRUE);
 	g_test_init (&argc, &argv, NULL);
