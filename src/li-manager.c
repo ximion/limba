@@ -33,6 +33,7 @@
 #include "li-utils-private.h"
 #include "li-pkg-info.h"
 #include "li-pkg-cache.h"
+#include "li-keyring.h"
 
 typedef struct _LiManagerPrivate	LiManagerPrivate;
 struct _LiManagerPrivate
@@ -647,6 +648,21 @@ li_manager_refresh_cache (LiManager *mgr, GError **error)
 		g_propagate_error (error, tmp_error);
 		return;
 	}
+}
+
+/**
+ * li_manager_receive_key:
+ *
+ * Download a PGP key and add it to the database of highly trusted keys.
+ */
+void
+li_manager_receive_key (LiManager *mgr, const gchar *fpr, GError **error)
+{
+	LiKeyring *kr;
+
+	kr = li_keyring_new ();
+	li_keyring_import_key (kr, fpr, LI_KEYRING_KIND_USER, error);
+	g_object_unref (kr);
 }
 
 /**

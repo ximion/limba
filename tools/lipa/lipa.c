@@ -188,6 +188,11 @@ lipa_remove_software (const gchar *pkgid)
 	if (!lipa_check_su ())
 		return 2;
 
+	if (pkgid == NULL) {
+		li_print_stderr (_("You need to specify a package to remove."));
+		return 4;
+	}
+
 	mgr = li_manager_new ();
 
 	li_manager_remove_software (mgr, pkgid, &error);
@@ -254,6 +259,37 @@ lipa_refresh (void)
 }
 
 /**
+ * lipa_trust_key:
+ */
+static gint
+lipa_trust_key (const gchar *fpr)
+{
+	LiManager *mgr;
+	gint res = 0;
+	GError *error = NULL;
+
+	if (!lipa_check_su ())
+		return 2;
+
+	if (fpr == NULL) {
+		li_print_stderr (_("You need to specify a key fingerprint."));
+		return 4;
+	}
+
+	mgr = li_manager_new ();
+
+	li_manager_receive_key (mgr, fpr, &error);
+	if (error != NULL) {
+		li_print_stderr ("Could not add key: %s", error->message);
+		g_error_free (error);
+		res = 1;
+	}
+
+	g_object_unref (mgr);
+	return res;
+}
+
+/**
  * lipa_get_summary:
  **/
 static gchar *
@@ -272,6 +308,9 @@ lipa_get_summary ()
 	g_string_append_printf (string, "  %s - %s\n", "remove  [PKGID]", _("Remove an installed software package"));
 	g_string_append_printf (string, "  %s - %s\n", "refresh", _("Refresh the cache of available packages"));
 	g_string_append_printf (string, "  %s - %s\n", "cleanup", _("Cleanup cruft packages"));
+	g_string_append (string, "\n");
+
+	g_string_append_printf (string, "  %s - %s\n", "trust-key [FPR]", _("Add a PGP key to the trusted database."));
 
 	return g_string_free (string, FALSE);
 }
@@ -352,6 +391,8 @@ main (int argc, char *argv[])
 		exit_code = lipa_refresh ();
 	} else if (g_strcmp0 (command, "cleanup") == 0) {
 		exit_code = lipa_cleanup ();
+	} else if (g_strcmp0 (command, "trust-key") == 0) {
+		exit_code = lipa_trust_key (value1);
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;

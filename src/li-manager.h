@@ -100,6 +100,10 @@ gboolean		li_manager_package_is_installed (LiManager *mgr,
 gboolean		li_manager_cleanup (LiManager *mgr,
 									GError **error);
 
+void			li_manager_receive_key (LiManager *mgr,
+									const gchar *fpr,
+									GError **error);
+
 void			li_manager_refresh_cache (LiManager *mgr,
 									GError **error);
 

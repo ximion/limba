@@ -25,7 +25,6 @@
 #include "common.h"
 #include "li-pkg-cache.h"
 #include "li-utils-private.h"
-#include "li-keyring.h"
 
 static gchar *datadir = NULL;
 
@@ -193,7 +192,7 @@ void
 test_pkg_cache_setup ()
 {
 	LiPkgCache *cache;
-	LiKeyring *kr;
+	LiManager *mgr;
 	GError *error = NULL;
 
 	/* write sample repository file */
@@ -202,9 +201,10 @@ test_pkg_cache_setup ()
 	g_assert_no_error (error);
 
 	/* we need to trust the sample repository key */
-	kr = li_keyring_new ();
-	li_keyring_import_key (kr, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB", LI_KEYRING_KIND_USER, &error);
+	mgr = li_manager_new ();
+	li_manager_receive_key (mgr, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB", &error);
 	g_assert_no_error (error);
+	g_object_unref (mgr);
 
 	/* run a cache update */
 	cache = li_pkg_cache_new ();
