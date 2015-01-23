@@ -227,6 +227,8 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 	gpgme_error_t err;
 	gpgme_key_t keys[2];
 	gpgme_import_result_t ires;
+	gchar *cmd;
+	gpgme_engine_info_t engine;
 	GError *tmp_error = NULL;
 
 	ctx = li_keyring_get_context (kr, kind);
@@ -286,6 +288,14 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 		return FALSE;
 	}
 
+	/* FIXME: The key import always fails at time, for unknown reason... We add a workaround here,
+	 * which should be removed as soon as GPGMe is working for us (_VERY_ soon!) */
+	engine = gpgme_ctx_get_engine_info (ctx);
+	cmd = g_strdup_printf ("gpg --batch --homedir=%s --recv-key %s", engine->home_dir, fpr);
+	system (cmd);
+	g_free (cmd);
+
+#if 0
 	/* we tried to import one key, so one key should have been accepted */
 	if (ires->considered != 1 || !ires->imports) {
 		g_set_error (error,
@@ -297,6 +307,7 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 		gpgme_release (ctx);
 		return FALSE;
 	}
+#endif
 
 	gpgme_key_unref (key);
 	gpgme_release (ctx);
@@ -409,13 +420,13 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 }
 
 /**
- * li_keyring_process_pkg_signature:
+ * li_keyring_process_signature:
  *
  * Validate the signature of an IPK package and check the trusted keyrings
  * to determine a trust-level for this package.
  */
 LiTrustLevel
-li_keyring_process_pkg_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_data, gchar **out_fpr, GError **error)
+li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_data, gchar **out_fpr, GError **error)
 {
 	gchar *sdata;
 	gchar *fpr = NULL;

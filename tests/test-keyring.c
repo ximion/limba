@@ -67,7 +67,7 @@ test_keyring () {
 	kr = li_keyring_new ();
 
 	/* validate signature */
-	level = li_keyring_process_pkg_signature (kr, sig_signature, &tmp, &fpr, &error);
+	level = li_keyring_process_signature (kr, sig_signature, &tmp, &fpr, &error);
 	g_assert_no_error (error);
 	g_assert_cmpstr (sig_message, ==, tmp);
 	g_assert_cmpstr (fpr, ==, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB");
@@ -76,16 +76,11 @@ test_keyring () {
 
 	/* import that key to the high-trust database */
 	li_keyring_import_key (kr, fpr, LI_KEYRING_KIND_USER, &error);
-	//! g_assert_no_error (error);
-	/* FIXME: This always fails at time, for unknown reason... We add a workaround here,
-	 * which should be removed as soon as GPGMe is working for us */
-	   system("gpg --homedir=/var/lib/limba/keyrings/trusted --recv-key 0xD33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB");
-	   g_error_free (error);
-	   error = NULL;
+	g_assert_no_error (error);
 	g_free (fpr);
 
 	/* check if we have a higher trust level now */
-	level = li_keyring_process_pkg_signature (kr, sig_signature, NULL, NULL, &error);
+	level = li_keyring_process_signature (kr, sig_signature, NULL, NULL, &error);
 	g_assert_no_error (error);
 	g_assert (level == LI_TRUST_LEVEL_HIGH);
 

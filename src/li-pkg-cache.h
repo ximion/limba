@@ -45,6 +45,7 @@ G_BEGIN_DECLS
  * @LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND:	Data could not be found on remote server
  * @LI_PKG_CACHE_ERROR_WRITE:				Writing to cache was not possible
  * @LI_PKG_CACHE_ERROR_NOT_FOUND:			A cache entity was not found
+ * @LI_PKG_CACHE_ERROR_VERIFICATION:		Validation of repository data failed.
  *
  * The error type.
  **/
@@ -54,6 +55,7 @@ typedef enum {
 	LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND,
 	LI_PKG_CACHE_ERROR_NOT_FOUND,
 	LI_PKG_CACHE_ERROR_WRITE,
+	LI_PKG_CACHE_ERROR_VERIFICATION,
 	/*< private >*/
 	LI_PKG_CACHE_ERROR_LAST
 } LiPkgCacheError;

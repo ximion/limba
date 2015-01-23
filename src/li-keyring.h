@@ -112,7 +112,7 @@ gchar			*li_keyring_verify_clear_signature (LiKeyring *kr,
 									gchar **out_fpr,
 									GError **error);
 
-LiTrustLevel	li_keyring_process_pkg_signature (LiKeyring *kr,
+LiTrustLevel	li_keyring_process_signature (LiKeyring *kr,
 									const gchar *sigtext,
 									gchar **out_data,
 									gchar **out_fpr,

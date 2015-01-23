@@ -39,14 +39,16 @@
 #include "li-utils.h"
 #include "li-utils-private.h"
 #include "li-pkg-index.h"
+#include "li-keyring.h"
 
 typedef struct _LiPkgCachePrivate	LiPkgCachePrivate;
 struct _LiPkgCachePrivate
 {
 	LiPkgIndex *index;
 	AsMetadata *metad;
-
 	GPtrArray *repo_urls;
+
+	LiKeyring *kr;
 	gchar *cache_index_fname;
 	gchar *tmp_dir;
 };
@@ -71,6 +73,7 @@ li_pkg_cache_finalize (GObject *object)
 	g_object_unref (priv->metad);
 	g_ptr_array_unref (priv->repo_urls);
 	g_free (priv->cache_index_fname);
+	g_object_unref (priv->kr);
 
 	/* cleanup */
 	li_delete_dir_recursive (priv->tmp_dir);
@@ -125,6 +128,7 @@ li_pkg_cache_init (LiPkgCache *cache)
 	priv->metad = as_metadata_new ();
 	priv->repo_urls = g_ptr_array_new_with_free_func (g_free);
 	priv->cache_index_fname = g_build_filename (LIMBA_CACHE_DIR, "available.index", NULL);
+	priv->kr = li_keyring_new ();
 
 	/* get temporary directory */
 	priv->tmp_dir = li_utils_get_tmp_dir ("remote");
@@ -231,6 +235,41 @@ li_pkg_cache_download_file_sync (LiPkgCache *cache, const gchar *url, const gcha
 }
 
 /**
+ * _li_pkg_cache_signature_hash_matches:
+ *
+ * Helper function to verify the repository signature
+ */
+gboolean
+_li_pkg_cache_signature_hash_matches (gchar **sigparts, const gchar *fname, const gchar *id)
+{
+	gint i;
+	gboolean valid;
+	_cleanup_free_ gchar *hash = NULL;
+	_cleanup_free_ gchar *expected_hash = NULL;
+
+	for (i = 0; sigparts[i] != NULL; i++) {
+		if (g_str_has_suffix (sigparts[i], id)) {
+			gchar **tmp;
+			tmp = g_strsplit (sigparts[i], "\t", 2);
+			if (g_strv_length (tmp) != 2) {
+				g_strfreev (tmp);
+				continue;
+			}
+			expected_hash = g_strdup (tmp[0]);
+			g_strfreev (tmp);
+			break;
+		}
+	}
+
+	hash = li_compute_checksum_for_file (fname);
+	valid = g_strcmp0 (hash, expected_hash) == 0;
+	if (!valid)
+		g_debug ("Hash value of repository index '%s' do not match file.", id);
+
+	return valid;
+}
+
+/**
  * li_pkg_cache_update:
  *
  * Update the package cache by downloading new package indices from the web.
@@ -262,19 +301,25 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		const gchar *url;
 		_cleanup_free_ gchar *url_index_all = NULL;
 		_cleanup_free_ gchar *url_index_arch = NULL;
+		_cleanup_free_ gchar *url_signature = NULL;
 		_cleanup_free_ gchar *url_asdata = NULL;
 		_cleanup_free_ gchar *dest = NULL;
 		_cleanup_free_ gchar *dest_index_all = NULL;
 		_cleanup_free_ gchar *dest_index_arch = NULL;
 		_cleanup_free_ gchar *dest_asdata = NULL;
 		_cleanup_free_ gchar *dest_repoconf = NULL;
+		_cleanup_free_ gchar *dest_signature = NULL;
 		_cleanup_object_unref_ GFile *idxfile = NULL;
 		_cleanup_object_unref_ GFile *asfile = NULL;
 		_cleanup_object_unref_ LiPkgIndex *tmp_index = NULL;
+		_cleanup_strv_free_ gchar **hashlist = NULL;
+		_cleanup_free_ gchar *fpr = NULL;
 		gboolean index_read;
 		GPtrArray *pkgs;
 		guint j;
 		gchar *tmp;
+		gchar *tmp2;
+		LiTrustLevel tlevel;
 		url = (const gchar*) g_ptr_array_index (priv->repo_urls, i);
 
 		/* create temporary index */
@@ -283,6 +328,7 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		url_index_all = g_build_filename (url, "indices", "all", "Index.gz", NULL);
 		url_index_arch = g_build_filename (url, "indices", current_arch, "Index.gz", NULL);
 		url_asdata = g_build_filename (url, "indices", "Metadata.xml.gz", NULL);
+		url_signature = g_build_filename (url, "indices", "Indices.gpg", NULL);
 
 		/* prepare cache dir and ensure it exists */
 		tmp = g_compute_checksum_for_string (G_CHECKSUM_MD5, url, -1);
@@ -293,8 +339,11 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		dest_index_all = g_build_filename (dest, "Index-all.gz", NULL);
 		dest_index_arch = g_strdup_printf ("%s/Index-%s.gz", dest, current_arch);
 		dest_asdata = g_build_filename (dest, "Metadata.xml.gz", NULL);
+		dest_signature = g_build_filename (dest, "Indices.gpg", NULL);
 
 		g_debug ("Updating cached data for repository: %s", url);
+
+		/* download indices */
 		li_pkg_cache_download_file_sync (cache, url_index_all, dest_index_all, &tmp_error);
 		if (tmp_error != NULL) {
 			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
@@ -320,7 +369,15 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 			}
 		}
 
+		/* download AppStream metadata */
 		li_pkg_cache_download_file_sync (cache, url_asdata, dest_asdata, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+
+		/* download signature */
+		li_pkg_cache_download_file_sync (cache, url_signature, dest_signature, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return;
@@ -336,7 +393,38 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 		g_debug ("Updated data for repository: %s", url);
 
+		/* check signature */
+		tmp = NULL;
+		g_file_get_contents (dest_signature, &tmp, NULL, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_prefixed_error (error, tmp_error, "Unable to read signature data:");
+			return;
+		}
+		tlevel = li_keyring_process_signature (priv->kr, tmp, &tmp2, &fpr, &tmp_error);
+		g_free (tmp);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+		hashlist = g_strsplit (tmp2, "\n", -1);
+		g_free (tmp2);
+
+		if (tlevel < LI_TRUST_LEVEL_MEDIUM) {
+			g_set_error (error,
+					LI_PKG_CACHE_ERROR,
+					LI_PKG_CACHE_ERROR_VERIFICATION,
+					_("Repository '%s' (signed with key '%s') is untrusted."), url, fpr);
+			return;
+		}
+
 		/* load AppStream metadata */
+		if (!_li_pkg_cache_signature_hash_matches (hashlist, dest_asdata, "indices/Metadata.xml.gz")) {
+			g_set_error (error,
+					LI_PKG_CACHE_ERROR,
+					LI_PKG_CACHE_ERROR_VERIFICATION,
+					_("Siganture on '%s' is invalid."), url);
+			return;
+		}
 		asfile = g_file_new_for_path (dest_asdata);
 		as_metadata_parse_file (priv->metad, asfile, &tmp_error);
 		if (tmp_error != NULL) {
@@ -347,6 +435,15 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		/* load index */
 		idxfile = g_file_new_for_path (dest_index_all);
 		if (g_file_query_exists (idxfile, NULL)) {
+			/* validate */
+			if (!_li_pkg_cache_signature_hash_matches (hashlist, dest_index_all, "indices/all/Index.gz")) {
+				g_set_error (error,
+						LI_PKG_CACHE_ERROR,
+						LI_PKG_CACHE_ERROR_VERIFICATION,
+						_("Siganture on '%s' is invalid."), url);
+				return;
+			}
+
 			li_pkg_index_load_file (tmp_index, idxfile, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_prefixed_error (error, tmp_error, "Unable to load index for repository: %s", url);
@@ -358,6 +455,18 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		g_object_unref (idxfile);
 		idxfile = g_file_new_for_path (dest_index_arch);
 		if (g_file_query_exists (idxfile, NULL)) {
+			/* validate */
+			tmp = g_strdup_printf ("indices/%s/Index.gz", current_arch);
+			if (!_li_pkg_cache_signature_hash_matches (hashlist, dest_index_arch, tmp)) {
+				g_free (tmp);
+				g_set_error (error,
+						LI_PKG_CACHE_ERROR,
+						LI_PKG_CACHE_ERROR_VERIFICATION,
+						_("Siganture on '%s' is invalid."), url);
+				return;
+			}
+			g_free (tmp);
+
 			li_pkg_index_load_file (tmp_index, idxfile, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_prefixed_error (error, tmp_error, "Unable to load index for repository: %s", url);

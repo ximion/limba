@@ -941,7 +941,7 @@ li_package_verify_signature (LiPackage *pkg, GError **error)
 	if (priv->sig_fpr != NULL)
 		g_free (priv->sig_fpr);
 
-	level = li_keyring_process_pkg_signature (priv->kr, priv->signature_data, &sig_content, &priv->sig_fpr, &tmp_error);
+	level = li_keyring_process_signature (priv->kr, priv->signature_data, &sig_content, &priv->sig_fpr, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;

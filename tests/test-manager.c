@@ -25,6 +25,7 @@
 #include "common.h"
 #include "li-pkg-cache.h"
 #include "li-utils-private.h"
+#include "li-keyring.h"
 
 static gchar *datadir = NULL;
 
@@ -192,11 +193,17 @@ void
 test_pkg_cache_setup ()
 {
 	LiPkgCache *cache;
+	LiKeyring *kr;
 	GError *error = NULL;
 
 	/* write sample repository file */
 	g_mkdir_with_parents ("/etc/limba/", 0755);
 	g_file_set_contents ("/etc/limba/sources.list", "# Limba Unit Tests\n\n# Test Repo\nhttp://people.freedesktop.org/~mak/stuff/limba-repo/\n", -1, &error);
+	g_assert_no_error (error);
+
+	/* we need to trust the sample repository key */
+	kr = li_keyring_new ();
+	li_keyring_import_key (kr, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB", LI_KEYRING_KIND_USER, &error);
 	g_assert_no_error (error);
 
 	/* run a cache update */
