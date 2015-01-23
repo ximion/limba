@@ -193,7 +193,7 @@ li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, gboolean remote, GErro
 		return NULL;
 	}
 
-	err = gpgme_get_key (ctx, full_fpr, &key, 0);
+	err = gpgme_get_key (ctx, full_fpr, &key, FALSE);
 	if(gpg_err_code (err) == GPG_ERR_EOF) {
 		/* we couldn't find the key */
 		return NULL;
@@ -225,7 +225,7 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 	gpgme_ctx_t ctx;
 	gpgme_key_t key;
 	gpgme_error_t err;
-	gpgme_key_t *keys;
+	gpgme_key_t keys[2];
 	gpgme_import_result_t ires;
 	GError *tmp_error = NULL;
 
@@ -259,7 +259,6 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 		return FALSE;
 	}
 
-	keys = g_new0 (gpgme_key_t, 2 + 1);
 	keys[0] = key;
 	keys[1] = NULL;
 
@@ -282,6 +281,18 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 				LI_KEYRING_ERROR_IMPORT,
 				_("Importing of key failed: %s"),
 				_("No import result returned."));
+		gpgme_key_unref (key);
+		gpgme_release (ctx);
+		return FALSE;
+	}
+
+	/* we tried to import one key, so one key should have been accepted */
+	if (ires->considered != 1 || !ires->imports) {
+		g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_IMPORT,
+				_("Importing of key failed: %s"),
+				_("Zero results returned."));
 		gpgme_key_unref (key);
 		gpgme_release (ctx);
 		return FALSE;
