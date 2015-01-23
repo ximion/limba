@@ -43,6 +43,7 @@ G_BEGIN_DECLS
  * @LI_REPOSITORY_ERROR_NO_REPO:		The directory is no Limba repository
  * @LI_REPOSITORY_ERROR_PKG_EXISTS:		Package was already in the repository and can not be added again.
  * @LI_REPOSITORY_ERROR_EMBEDDED_COPY:	The package contains embedded other packages, which is not allowed.
+ * @LI_REPOSITORY_ERROR_SIGN:			Signing of repository failed.
  *
  * The error type.
  **/
@@ -51,6 +52,7 @@ typedef enum {
 	LI_REPOSITORY_ERROR_NO_REPO,
 	LI_REPOSITORY_ERROR_PKG_EXISTS,
 	LI_REPOSITORY_ERROR_EMBEDDED_COPY,
+	LI_REPOSITORY_ERROR_SIGN,
 	/*< private >*/
 	LI_REPOSITORY_ERROR_LAST
 } LiRepositoryError;

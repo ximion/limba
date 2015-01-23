@@ -33,7 +33,9 @@
 #include <locale.h>
 #include <gpgme.h>
 #include <appstream.h>
+#include <errno.h>
 
+#include "li-config-data.h"
 #include "li-utils-private.h"
 #include "li-pkg-index.h"
 #include "li-package.h"
@@ -45,6 +47,8 @@ struct _LiRepositoryPrivate
 	GHashTable *indices;
 	AsMetadata *metad;
 	gchar *repo_path;
+
+	LiConfigData *rconfig;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiRepository, li_repository, G_TYPE_OBJECT)
@@ -63,6 +67,7 @@ li_repository_finalize (GObject *object)
 	g_free (priv->repo_path);
 	g_hash_table_unref (priv->indices);
 	g_object_unref (priv->metad);
+	g_object_unref (priv->rconfig);
 
 	G_OBJECT_CLASS (li_repository_parent_class)->finalize (object);
 }
@@ -77,6 +82,7 @@ li_repository_init (LiRepository *repo)
 
 	priv->indices = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	priv->metad = as_metadata_new ();
+	priv->rconfig = li_config_data_new ();
 
 	/* we do not want to filter languages */
 	as_metadata_set_locale (priv->metad, "ALL");
@@ -188,6 +194,21 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 	/* cleanup everything */
 	as_metadata_clear_components (priv->metad);
 	g_hash_table_remove_all (priv->indices);
+	g_object_unref (priv->rconfig);
+	priv->rconfig = li_config_data_new ();
+
+	/* load repository configuration */
+	fname = g_build_filename (directory, ".repo-config", NULL);
+	file = g_file_new_for_path (fname);
+	g_free (fname);
+	if (g_file_query_exists (file, NULL)) {
+		li_config_data_load_file (priv->rconfig, file, &tmp_error);
+	}
+	g_object_unref (file);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
 
 	/* load index data if we find it */
 	fname = g_build_filename (directory, "indices", NULL);
@@ -218,25 +239,170 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 }
 
 /**
+ * li_repository_sign:
+ */
+static void
+li_repository_sign (LiRepository *repo, const gchar *sigtext, GError **error)
+{
+	gpgme_error_t err;
+	gpgme_ctx_t ctx;
+	gpgme_sig_mode_t sigmode = GPGME_SIG_MODE_NORMAL;
+	gpgme_data_t din, dout;
+
+	#define BUF_SIZE 512
+	gchar *sig_fname;
+	char buf[BUF_SIZE + 1];
+	FILE *file;
+	int ret;
+	_cleanup_free_ gchar *gpg_key = NULL;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	err = gpgme_new (&ctx);
+	if (err != 0) {
+		g_set_error (error,
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_SIGN,
+				_("Signing of repository failed: %s"),
+				gpgme_strsource (err));
+		return;
+	}
+
+	gpg_key = li_config_data_get_value (priv->rconfig, "GPGKey");
+
+	gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
+	gpgme_set_armor (ctx, TRUE);
+
+	if (gpg_key != NULL) {
+		gpgme_key_t akey;
+
+		err = gpgme_get_key (ctx, gpg_key, &akey, 1);
+		if (err != 0) {
+			g_set_error (error,
+					LI_REPOSITORY_ERROR,
+					LI_REPOSITORY_ERROR_SIGN,
+					_("Signing of repository failed: %s"),
+					gpgme_strsource (err));
+			return;
+		}
+
+		err = gpgme_signers_add (ctx, akey);
+		if (err != 0) {
+			g_set_error (error,
+					LI_REPOSITORY_ERROR,
+					LI_REPOSITORY_ERROR_SIGN,
+					_("Signing of repository failed: %s"),
+					gpgme_strsource (err));
+			return;
+		}
+
+		gpgme_key_unref (akey);
+	}
+
+	err = gpgme_data_new_from_mem (&din, sigtext, strlen (sigtext), 0);
+	if (err != 0) {
+		g_set_error (error,
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_SIGN,
+				_("Signing of repository failed: %s"),
+				gpgme_strsource (err));
+		return;
+	}
+
+	err = gpgme_data_new (&dout);
+	if (err != 0) {
+		g_set_error (error,
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_SIGN,
+				_("Signing of repository failed: %s"),
+				gpgme_strsource (err));
+		return;
+	}
+
+	err = gpgme_op_sign (ctx, din, dout, sigmode);
+
+	if (err != 0) {
+		g_set_error (error,
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_SIGN,
+				_("Signing of repository failed: %s"),
+				gpgme_strsource (err));
+		return;
+	}
+
+	sig_fname = g_build_filename (priv->repo_path, "indices", "Indices.gpg", NULL);
+	file = fopen (sig_fname, "w");
+	if (file == NULL) {
+		g_set_error (error,
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_SIGN,
+				_("Unable to write signature: %s"),
+				g_strerror (errno));
+		g_free (sig_fname);
+		return;
+	}
+	g_free (sig_fname);
+
+	gpgme_data_seek (dout, 0, SEEK_SET);
+	while ((ret = gpgme_data_read (dout, buf, BUF_SIZE)) > 0)
+		fwrite (buf, ret, 1, file);
+	fclose (file);
+
+	gpgme_data_release (dout);
+	gpgme_data_release (din);
+	gpgme_release (ctx);
+}
+
+/**
+ * Temporary helper structure, to make saving and hashing indices easier
+ */
+typedef struct {
+	LiRepository *repo;
+	GString *sigtext;
+
+	GError *error;
+} LiIndexSaveHelper;
+
+/**
  * li_repository_save_indices:
  *
  * Helper function to save the hash-table on disk
  */
 static void
-li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiRepository *repo)
+li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiIndexSaveHelper *helper)
 {
-	gchar *fname;
-	gchar *dir;
-	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+	_cleanup_free_ gchar *fname = NULL;
+	_cleanup_free_ gchar *dir = NULL;
+	_cleanup_free_ gchar *checksum = NULL;
+	_cleanup_free_ gchar *internal_name = NULL;
+	LiRepositoryPrivate *priv = GET_PRIVATE (helper->repo);
+
+	/* don't continue if we already have an error */
+	if (helper->error != NULL)
+		return;
 
 	dir = g_build_filename (priv->repo_path, "indices", arch, NULL);
 	g_mkdir_with_parents (dir, 0755);
 
 	fname = g_build_filename (dir, "Index.gz", NULL);
-	g_free (dir);
-
 	li_pkg_index_save_to_file (index, fname);
-	g_free (fname);
+
+	if (g_str_has_prefix (fname, priv->repo_path)) {
+		internal_name = g_strdup (&fname[strlen (priv->repo_path) + 1]);
+	} else {
+		internal_name = g_path_get_basename (fname);
+	}
+
+	checksum = li_compute_checksum_for_file (fname);
+	if (checksum == NULL) {
+		g_set_error (&helper->error,
+			LI_REPOSITORY_ERROR,
+			LI_REPOSITORY_ERROR_SIGN,
+			_("Unable to calculate checksum for: %s"),
+			internal_name);
+		return;
+	}
+
+	g_string_append_printf (helper->sigtext, "%s\t%s\n", checksum, internal_name);
 }
 
 /**
@@ -248,9 +414,16 @@ gboolean
 li_repository_save (LiRepository *repo, GError **error)
 {
 	gchar *dir;
-	gchar *fname;
+	_cleanup_free_ gchar *fname = NULL;
 	GError *tmp_error = NULL;
+	LiIndexSaveHelper helper;
+	_cleanup_string_free_ GString *sigtext = NULL;
+	_cleanup_free_ gchar *internal_name = NULL;
+	_cleanup_free_ gchar *checksum = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	/* prepare variable to store checksums */
+	sigtext = g_string_new ("");
 
 	/* ensure the basic directory structure is present */
 	dir = g_build_filename (priv->repo_path, "indices", NULL);
@@ -266,19 +439,47 @@ li_repository_save (LiRepository *repo, GError **error)
 	g_free (dir);
 
 	/* save indices */
+	helper.repo = repo;
+	helper.sigtext = sigtext;
+	helper.error = NULL;
 	g_hash_table_foreach (priv->indices,
 						(GHFunc) li_repository_save_indices,
-						repo);
+						&helper);
+	if (helper.error != NULL) {
+		g_propagate_error (error, helper.error);
+		return FALSE;
+	}
 
 	/* save AppStream metadata */
 	fname = g_build_filename (priv->repo_path, "indices", "Metadata.xml.gz", NULL);
 	as_metadata_save_distro_xml (priv->metad, fname, &tmp_error);
-	g_free (fname);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
+		return FALSE;
 	}
 
-	// TODO: Sign index and AppStream data
+	if (g_str_has_prefix (fname, priv->repo_path)) {
+		internal_name = g_strdup (&fname[strlen (priv->repo_path) + 1]);
+	} else {
+		internal_name = g_path_get_basename (fname);
+	}
+	checksum = li_compute_checksum_for_file (fname);
+	if (checksum == NULL) {
+		g_set_error (error,
+			LI_REPOSITORY_ERROR,
+			LI_REPOSITORY_ERROR_SIGN,
+			_("Unable to calculate checksum for: %s"),
+			internal_name);
+		return FALSE;
+	}
+	g_string_append_printf (sigtext, "%s\t%s\n", checksum, internal_name);
+
+	/* now sign the package */
+	li_repository_sign (repo, sigtext->str, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
 
 	return TRUE;
 }

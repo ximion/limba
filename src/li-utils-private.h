@@ -88,6 +88,8 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 #define _cleanup_ptrarray_unref_ __attribute__ ((cleanup(gs_local_ptrarray_unref)))
 #define _cleanup_variant_unref_ __attribute__ ((cleanup(gs_local_variant_unref)))
 
+#define LI_GPG_PROTOCOL GPGME_PROTOCOL_OpenPGP
+
 gboolean		li_str_empty (const gchar* str);
 gchar**			li_ptr_array_to_strv (GPtrArray *array);
 gchar			*li_str_replace (const gchar* str,
@@ -110,8 +112,6 @@ gboolean		li_utils_is_root (void);
 gchar			*li_compute_checksum_for_file (const gchar *fname);
 gchar			*li_get_uuid_string (void);
 const gchar		*li_get_last_version_from_component (AsComponent *cpt);
-
-const gchar		*li_get_prefixdir (void);
 
 G_END_DECLS
 

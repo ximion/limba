@@ -54,8 +54,6 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiPkgBuilder, li_pkg_builder, G_TYPE_OBJECT)
 
 #define GET_PRIVATE(o) (li_pkg_builder_get_instance_private (o))
 
-#define LI_GPG_PROTOCOL GPGME_PROTOCOL_OpenPGP
-
 /**
  * li_pkg_builder_finalize:
  **/
