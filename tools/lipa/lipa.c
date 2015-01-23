@@ -136,7 +136,50 @@ out:
  * lipa_install_package:
  */
 static gint
-lipa_install_package (const gchar *fname)
+lipa_install_package (const gchar *pkgid)
+{
+	LiInstaller *inst = NULL;
+	GError *error = NULL;
+	gint res = 0;
+
+	if (pkgid == NULL) {
+		li_print_stderr (_("You need to specify a package to install."));
+		res = 4;
+		goto out;
+	}
+
+	if (!lipa_check_su ())
+		return 2;
+
+	inst = li_installer_new ();
+	li_installer_open_remote (inst, pkgid, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Could find package: %s"), error->message);
+		g_error_free (error);
+		res = 1;
+		goto out;
+	}
+
+	li_installer_install (inst, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Could not install software: %s"), error->message);
+		g_error_free (error);
+		res = 1;
+	}
+
+out:
+	if (res == 0)
+		g_print ("%s\n", _("Software was installed successfully."));
+
+	g_object_unref (inst);
+	return res;
+}
+
+/**
+ * lipa_install_local_package:
+ */
+static gint
+lipa_install_local_package (const gchar *fname)
 {
 	LiInstaller *inst = NULL;
 	GError *error = NULL;
@@ -304,7 +347,8 @@ lipa_get_summary ()
 				_("Subcommands:"));
 
 	g_string_append_printf (string, "  %s - %s\n", "list", _("List installed software"));
-	g_string_append_printf (string, "  %s - %s\n", "install [FILENAME]", _("Install a local software package"));
+	g_string_append_printf (string, "  %s - %s\n", "install [PKGID]", _("Install software from a repository"));
+	g_string_append_printf (string, "  %s - %s\n", "install-local [FILENAME]", _("Install a local software package"));
 	g_string_append_printf (string, "  %s - %s\n", "remove  [PKGID]", _("Remove an installed software package"));
 	g_string_append_printf (string, "  %s - %s\n", "refresh", _("Refresh the cache of available packages"));
 	g_string_append_printf (string, "  %s - %s\n", "cleanup", _("Cleanup cruft packages"));
@@ -385,6 +429,8 @@ main (int argc, char *argv[])
 		exit_code = lipa_list_software ();
 	} else if ((g_strcmp0 (command, "install") == 0) || (g_strcmp0 (command, "i") == 0)) {
 		exit_code = lipa_install_package (value1);
+	} else if (g_strcmp0 (command, "install-local") == 0) {
+		exit_code = lipa_install_local_package (value1);
 	} else if ((g_strcmp0 (command, "remove") == 0) || (g_strcmp0 (command, "r") == 0)) {
 		exit_code = lipa_remove_software (value1);
 	} else if (g_strcmp0 (command, "refresh") == 0) {
