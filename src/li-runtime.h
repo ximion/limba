@@ -74,8 +74,8 @@ gchar			*li_runtime_get_data_path (LiRuntime *rt);
 LiRuntime		*li_runtime_create_with_members (GPtrArray *members,
 												GError **error);
 
-GPtrArray		*li_runtime_get_members (LiRuntime *rt);
-void			li_runtime_add_member (LiRuntime *rt,
+GHashTable		*li_runtime_get_members (LiRuntime *rt);
+void			li_runtime_add_package (LiRuntime *rt,
 									   LiPkgInfo *pki);
 
 gboolean		li_runtime_remove (LiRuntime *rt);

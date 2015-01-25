@@ -316,15 +316,15 @@ li_manager_get_installed_runtimes (LiManager *mgr)
 LiRuntime*
 li_manager_find_runtime_with_members (LiManager *mgr, GPtrArray *members)
 {
-	guint i, j, k;
+	guint i, j;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	/* ensure we have all installed runtimes cached */
 	li_manager_get_installed_runtimes (mgr);
 
-	/* NOTE: If we ever have more frameworks with more members, we need a more efficient implementation here */
+	/* NOTE: If we ever have more frameworks with more members, we might need a more efficient implementation here */
 	for (i = 0; i < priv->rts->len; i++) {
-		GPtrArray *test_members;
+		GHashTable *test_members;
 		gboolean ret = FALSE;
 		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (priv->rts, i));
 
@@ -334,13 +334,7 @@ li_manager_find_runtime_with_members (LiManager *mgr, GPtrArray *members)
 			LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (members, j));
 			pkid = li_pkg_info_get_id (pki);
 
-			for (k = 0; k < test_members->len; k++) {
-				const gchar *member_id = (const gchar *) g_ptr_array_index (test_members, k);
-				if (g_strcmp0 (pkid, member_id) == 0) {
-					ret = TRUE;
-					break;
-				}
-			}
+			ret = g_hash_table_lookup (test_members, pkid) != NULL;
 			if (!ret)
 				break;
 		}
@@ -575,15 +569,17 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 	/* remove every software from the list which is not member of a runtime */
 	rt_array = li_manager_get_installed_runtimes (mgr);
 	for (i = 0; i < rt_array->len; i++) {
-		GPtrArray *rt_members;
+		gchar **rt_members;
+		guint len;
 		guint j;
 		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (rt_array, i));
 
-		rt_members = li_runtime_get_members (rt);
-		for (j = 0; j < rt_members->len; j++) {
-			const gchar *member_id = (const gchar *) g_ptr_array_index (rt_members, j);
-			g_hash_table_remove (sws, member_id);
+		rt_members = (gchar**) g_hash_table_get_keys_as_array (li_runtime_get_members (rt), &len);
+		for (j = 0; j < len; j++) {
+			g_hash_table_remove (sws, rt_members[j]);
 		}
+		g_free (rt_members);
+
 		g_hash_table_insert (rts,
 							g_strdup (li_runtime_get_uuid (rt)),
 							g_object_ref (rt));

@@ -42,8 +42,8 @@ struct _LiRuntimePrivate
 {
 	gchar *dir;
 	gchar *uuid; /* auto-generated */
-	GPtrArray *members;
-	GPtrArray *requirements;
+	GHashTable *members;
+	GHashTable *requirements;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiRuntime, li_runtime, G_TYPE_OBJECT)
@@ -59,10 +59,8 @@ li_runtime_fetch_values_from_cdata (LiRuntime *rt, LiConfigData *cdata)
 	gchar *tmp;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
-	if (priv->members->len > 0)
-		g_ptr_array_remove_range (priv->members, 0, priv->members->len);
-	if (priv->requirements->len > 0)
-		g_ptr_array_remove_range (priv->requirements, 0, priv->requirements->len);
+	g_hash_table_remove_all (priv->members);
+	g_hash_table_remove_all (priv->requirements);
 
 	tmp = li_config_data_get_value (cdata, "Members");
 	if (tmp != NULL) {
@@ -72,7 +70,7 @@ li_runtime_fetch_values_from_cdata (LiRuntime *rt, LiConfigData *cdata)
 
 		for (i = 0; strv[i] != NULL; i++) {
 			g_strstrip (strv[i]);
-			g_ptr_array_add (priv->members, g_strdup (strv[i]));
+			g_hash_table_add (priv->members, g_strdup (strv[i]));
 		}
 	}
 	g_free (tmp);
@@ -85,7 +83,7 @@ li_runtime_fetch_values_from_cdata (LiRuntime *rt, LiConfigData *cdata)
 
 		for (i = 0; strv[i] != NULL; i++) {
 			g_strstrip (strv[i]);
-			g_ptr_array_add (priv->requirements, g_strdup (strv[i]));
+			g_hash_table_add (priv->requirements, g_strdup (strv[i]));
 		}
 	}
 	g_free (tmp);
@@ -99,14 +97,16 @@ li_runtime_update_cdata_values (LiRuntime *rt, LiConfigData *cdata)
 {
 	guint i;
 	GString *str;
+	gchar **strv;
+	guint len;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
 	str = g_string_new ("");
-	for (i=0; i < priv->members->len; i++) {
-		const gchar *value;
-		value = (const gchar *) g_ptr_array_index (priv->members, i);
-		g_string_append_printf (str, "%s, ", value);
+	strv = (gchar**) g_hash_table_get_keys_as_array (priv->members, &len);
+	for (i=0; i < len; i++) {
+		g_string_append_printf (str, "%s, ", strv[i]);
 	}
+	g_free (strv);
 
 	if (str->len > 0) {
 		g_string_truncate (str, str->len - 2);
@@ -115,11 +115,11 @@ li_runtime_update_cdata_values (LiRuntime *rt, LiConfigData *cdata)
 	g_string_free (str, TRUE);
 
 	str = g_string_new ("");
-	for (i=0; i < priv->requirements->len; i++) {
-		const gchar *value;
-		value = (const gchar *) g_ptr_array_index (priv->requirements, i);
-		g_string_append_printf (str, "%s, ", value);
+	strv = (gchar**) g_hash_table_get_keys_as_array (priv->requirements, &len);
+	for (i=0; i < len; i++) {
+		g_string_append_printf (str, "%s, ", strv[i]);
 	}
+	g_free (strv);
 
 	if (str->len > 0) {
 		g_string_truncate (str, str->len - 2);
@@ -139,8 +139,8 @@ li_runtime_finalize (GObject *object)
 
 	g_free (priv->uuid);
 	g_free (priv->dir);
-	g_ptr_array_unref (priv->requirements);
-	g_ptr_array_unref (priv->members);
+	g_hash_table_unref (priv->requirements);
+	g_hash_table_unref (priv->members);
 
 	G_OBJECT_CLASS (li_runtime_parent_class)->finalize (object);
 }
@@ -155,8 +155,8 @@ li_runtime_init (LiRuntime *rt)
 
 	priv->dir = NULL;
 	priv->uuid = li_get_uuid_string ();
-	priv->requirements = g_ptr_array_new_with_free_func (g_free);
-	priv->members = g_ptr_array_new_with_free_func (g_free);
+	priv->requirements = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	priv->members = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 }
 
 /**
@@ -233,7 +233,7 @@ li_runtime_get_data_path (LiRuntime *rt)
  *
  * Returns: (transfer none) (element-type LiPkgInfo): Array of packages which are members of this runtime
  */
-GPtrArray*
+GHashTable*
 li_runtime_get_members (LiRuntime *rt)
 {
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
@@ -241,16 +241,16 @@ li_runtime_get_members (LiRuntime *rt)
 }
 
 /**
- * li_runtime_add_member:
+ * li_runtime_add_package:
  */
 void
-li_runtime_add_member (LiRuntime *rt, LiPkgInfo *pki)
+li_runtime_add_package (LiRuntime *rt, LiPkgInfo *pki)
 {
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
-	g_ptr_array_add (priv->members,
-					g_strdup (li_pkg_info_get_id (pki)));
-	g_ptr_array_add (priv->requirements,
-					li_pkg_info_get_name_relation_string (pki));
+	g_hash_table_add (priv->members,
+						g_strdup (li_pkg_info_get_id (pki)));
+	g_hash_table_add (priv->requirements,
+						li_pkg_info_get_name_relation_string (pki));
 }
 
 /**
@@ -410,7 +410,7 @@ li_runtime_link_software (LiRuntime *rt, LiPkgInfo *pki, GError **error)
 	}
 
 	/* register the added member with the runtime */
-	li_runtime_add_member (rt, pki);
+	li_runtime_add_package (rt, pki);
 out:
 	g_free (rt_path);
 	return ret;
