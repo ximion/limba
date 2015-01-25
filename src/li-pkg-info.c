@@ -529,6 +529,38 @@ li_pkg_info_get_architecture (LiPkgInfo *pki)
 }
 
 /**
+ * li_pkg_info_get_name_relation_string:
+ *
+ * Get the package name and relation as string, e.g. "foobar >= 2.1"
+ *
+ * Returns: The name/relation string, free with g_free()
+ */
+gchar*
+li_pkg_info_get_name_relation_string (LiPkgInfo *pki)
+{
+	gchar *relation = NULL;
+	gchar *tmp;
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+
+	if (priv->vrel & LI_VERSION_LOWER)
+		relation = g_strnfill (2, '<');
+	if (priv->vrel & LI_VERSION_HIGHER)
+		relation = g_strnfill (2, '>');
+	if (relation == NULL)
+		relation = g_strnfill (2, '=');
+	if (priv->vrel & LI_VERSION_EQUAL)
+		relation[1] = '=';
+
+	tmp = g_strdup_printf ("%s %s %s",
+						li_pkg_info_get_name (pki),
+						relation,
+						li_pkg_info_get_version (pki));
+	g_free (relation);
+
+	return tmp;
+}
+
+/**
  * li_pkg_info_set_architecture:
  */
 void

@@ -154,6 +154,8 @@ const gchar		*li_pkg_info_get_repo_location (LiPkgInfo *pki);
 void			li_pkg_info_set_repo_location (LiPkgInfo *pki,
 										const gchar *location);
 
+gchar			*li_pkg_info_get_name_relation_string (LiPkgInfo *pki);
+
 G_END_DECLS
 
 #endif /* __LI_PKG_INFO_H */

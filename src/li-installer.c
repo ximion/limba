@@ -172,6 +172,7 @@ li_installer_find_satisfying_pkg (GList *pkglist, LiPkgInfo *dep)
 	GList *l;
 	const gchar *dep_name;
 	const gchar *dep_version;
+	LiPkgInfo *res_pki = NULL;
 	LiVersionFlags dep_vrel;
 
 	if (pkglist == NULL)
@@ -193,8 +194,8 @@ li_installer_find_satisfying_pkg (GList *pkglist, LiPkgInfo *dep)
 			pver = li_pkg_info_get_version (pki);
 			if (dep_version == NULL) {
 				/* any version satisfies this dependency - so we are happy already */
-				li_pkg_info_set_version (dep, pver);
-				return pki;
+				res_pki = pki;
+				goto out;
 			}
 
 			/* now verify that its version is sufficient */
@@ -204,16 +205,25 @@ li_installer_find_satisfying_pkg (GList *pkglist, LiPkgInfo *dep)
 				((cmp == -1) && (dep_vrel & LI_VERSION_LOWER))) {
 				/* we are good, the found package satisfies our requirements */
 
-				/* update the version of the dependency to what we found */
-				li_pkg_info_set_version (dep, pver);
-				return pki;
+				res_pki = pki;
+				goto out;
 			} else {
 				g_debug ("Found %s (%s), skipping because version does not satisfy requirements(%i#%s).", pname, pver, dep_vrel, dep_version);
 			}
 		}
 	}
 
-	return NULL;
+out:
+	if (res_pki != NULL) {
+		/* update the version of the dependency to what we found */
+		li_pkg_info_set_version (dep,
+							li_pkg_info_get_version (res_pki));
+
+		/* update the version restrictions of the found package - kind of hackish to do it here, but very convenient */
+		li_pkg_info_set_version_relation (res_pki, dep_vrel);
+	}
+
+	return res_pki;
 }
 
 /**
@@ -233,7 +243,7 @@ li_installer_fetch_dependency_remote (LiInstaller *inst, GNode *root, LiPkgInfo 
 		return FALSE;
 	}
 
-	node = li_package_graph_add_package_install_todo (priv->pg, root, pkg);
+	node = li_package_graph_add_package_install_todo (priv->pg, root, pkg, dep_pki);
 
 	/* check if we have the dependencies, or can install them */
 	li_installer_check_dependencies (inst, node, &tmp_error);
@@ -291,7 +301,7 @@ li_installer_find_dependency_embedded_single (LiInstaller *inst, GNode *root, Li
 		g_object_ref (epkg);
 	}
 
-	node = li_package_graph_add_package_install_todo (priv->pg, root, epkg);
+	node = li_package_graph_add_package_install_todo (priv->pg, root, epkg, dep_pki);
 
 	/* check if we have the dependencies, or can install them */
 	li_installer_check_dependencies (inst, node, &tmp_error);
@@ -424,7 +434,7 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 							li_pkg_info_get_id (ipki));
 
 			/* dependency is already installed, add it as satisfied */
-			node = li_package_graph_add_package (priv->pg, root, ipki);
+			node = li_package_graph_add_package (priv->pg, root, ipki, dep);
 
 			/* we need a full dependency tree to generate one or more working runtimes later */
 			li_installer_check_dependencies (inst, node, &tmp_error);

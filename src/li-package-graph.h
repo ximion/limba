@@ -74,11 +74,13 @@ GPtrArray			*li_package_graph_branch_to_array (GNode *root);
 
 GNode				*li_package_graph_add_package (LiPackageGraph *pg,
 												GNode *parent,
-												LiPkgInfo *pki);
+												LiPkgInfo *pki,
+												LiPkgInfo *satisfied_dep);
 
 GNode				*li_package_graph_add_package_install_todo (LiPackageGraph *pg,
 															GNode *parent,
-															LiPackage *pkg);
+															LiPackage *pkg,
+															LiPkgInfo *satisfied_dep);
 
 LiPackage			*li_package_graph_get_install_candidate (LiPackageGraph *pg,
 															LiPkgInfo *pki);

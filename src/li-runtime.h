@@ -76,7 +76,7 @@ LiRuntime		*li_runtime_create_with_members (GPtrArray *members,
 
 GPtrArray		*li_runtime_get_members (LiRuntime *rt);
 void			li_runtime_add_member (LiRuntime *rt,
-									   const gchar *pkg_id);
+									   LiPkgInfo *pki);
 
 gboolean		li_runtime_remove (LiRuntime *rt);
 

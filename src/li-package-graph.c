@@ -98,13 +98,14 @@ li_package_graph_teardown (GNode *root)
 }
 
 /**
- * li_package_graph_add_package_info:
+ * li_package_graph_add_package:
  * @pki: The information about an installed package
+ * @satisfied_dep: The dependency this package satisfies, or %NULL
  *
  * Returns: A reference to the new node
  */
 GNode*
-li_package_graph_add_package (LiPackageGraph *pg, GNode *parent, LiPkgInfo *pki)
+li_package_graph_add_package (LiPackageGraph *pg, GNode *parent, LiPkgInfo *pki, LiPkgInfo *satisfied_dep)
 {
 	GNode *node;
 
@@ -112,17 +113,22 @@ li_package_graph_add_package (LiPackageGraph *pg, GNode *parent, LiPkgInfo *pki)
 	g_node_append (parent, node);
 	g_debug ("Component %s-%s found.", li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
 
+	if (satisfied_dep != NULL)
+		li_pkg_info_set_version_relation (pki,
+									li_pkg_info_get_version_relation (satisfied_dep));
+
 	return node;
 }
 
 /**
  * li_package_graph_add_package_install_todo:
  * @pkg: The package required to be installed
+ * @satisfied_dep: The dependency this package satisfies, or %NULL
  *
  * Returns: A reference to the new node
  */
 GNode*
-li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, LiPackage *pkg)
+li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, LiPackage *pkg, LiPkgInfo *satisfied_dep)
 {
 	GNode *node;
 	gboolean ret;
@@ -139,6 +145,10 @@ li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, Li
 	else
 		g_debug ("Package %s already marked for installation.", li_package_get_id (pkg));
 
+	if (satisfied_dep != NULL)
+		li_pkg_info_set_version_relation (li_package_get_info (pkg),
+									li_pkg_info_get_version_relation (satisfied_dep));
+
 	return node;
 }
 
@@ -148,10 +158,17 @@ li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, Li
 LiPackage*
 li_package_graph_get_install_candidate (LiPackageGraph *pg, LiPkgInfo *pki)
 {
+	LiPackage *pkg;
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	return g_hash_table_lookup (priv->install_todo,
+	pkg = g_hash_table_lookup (priv->install_todo,
 						li_pkg_info_get_id (pki));
+
+	if (pkg != NULL)
+		li_pkg_info_set_version_relation (li_package_get_info (pkg),
+									li_pkg_info_get_version_relation (pki));
+
+	return pkg;
 }
 
 /**

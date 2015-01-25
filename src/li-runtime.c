@@ -43,6 +43,7 @@ struct _LiRuntimePrivate
 	gchar *dir;
 	gchar *uuid; /* auto-generated */
 	GPtrArray *members;
+	GPtrArray *requirements;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiRuntime, li_runtime, G_TYPE_OBJECT)
@@ -60,6 +61,9 @@ li_runtime_fetch_values_from_cdata (LiRuntime *rt, LiConfigData *cdata)
 
 	if (priv->members->len > 0)
 		g_ptr_array_remove_range (priv->members, 0, priv->members->len);
+	if (priv->requirements->len > 0)
+		g_ptr_array_remove_range (priv->requirements, 0, priv->requirements->len);
+
 	tmp = li_config_data_get_value (cdata, "Members");
 	if (tmp != NULL) {
 		guint i;
@@ -69,6 +73,19 @@ li_runtime_fetch_values_from_cdata (LiRuntime *rt, LiConfigData *cdata)
 		for (i = 0; strv[i] != NULL; i++) {
 			g_strstrip (strv[i]);
 			g_ptr_array_add (priv->members, g_strdup (strv[i]));
+		}
+	}
+	g_free (tmp);
+
+	tmp = li_config_data_get_value (cdata, "Requirements");
+	if (tmp != NULL) {
+		guint i;
+		gchar **strv;
+		strv = g_strsplit (tmp, ",", -1);
+
+		for (i = 0; strv[i] != NULL; i++) {
+			g_strstrip (strv[i]);
+			g_ptr_array_add (priv->requirements, g_strdup (strv[i]));
 		}
 	}
 	g_free (tmp);
@@ -90,12 +107,25 @@ li_runtime_update_cdata_values (LiRuntime *rt, LiConfigData *cdata)
 		value = (const gchar *) g_ptr_array_index (priv->members, i);
 		g_string_append_printf (str, "%s, ", value);
 	}
+
 	if (str->len > 0) {
 		g_string_truncate (str, str->len - 2);
 		li_config_data_set_value (cdata, "Members", str->str);
 	}
 	g_string_free (str, TRUE);
 
+	str = g_string_new ("");
+	for (i=0; i < priv->requirements->len; i++) {
+		const gchar *value;
+		value = (const gchar *) g_ptr_array_index (priv->requirements, i);
+		g_string_append_printf (str, "%s, ", value);
+	}
+
+	if (str->len > 0) {
+		g_string_truncate (str, str->len - 2);
+		li_config_data_set_value (cdata, "Requirements", str->str);
+	}
+	g_string_free (str, TRUE);
 }
 
 /**
@@ -109,6 +139,7 @@ li_runtime_finalize (GObject *object)
 
 	g_free (priv->uuid);
 	g_free (priv->dir);
+	g_ptr_array_unref (priv->requirements);
 	g_ptr_array_unref (priv->members);
 
 	G_OBJECT_CLASS (li_runtime_parent_class)->finalize (object);
@@ -124,6 +155,7 @@ li_runtime_init (LiRuntime *rt)
 
 	priv->dir = NULL;
 	priv->uuid = li_get_uuid_string ();
+	priv->requirements = g_ptr_array_new_with_free_func (g_free);
 	priv->members = g_ptr_array_new_with_free_func (g_free);
 }
 
@@ -212,10 +244,13 @@ li_runtime_get_members (LiRuntime *rt)
  * li_runtime_add_member:
  */
 void
-li_runtime_add_member (LiRuntime *rt, const gchar *pkg_id)
+li_runtime_add_member (LiRuntime *rt, LiPkgInfo *pki)
 {
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
-	g_ptr_array_add (priv->members, g_strdup (pkg_id));
+	g_ptr_array_add (priv->members,
+					g_strdup (li_pkg_info_get_id (pki)));
+	g_ptr_array_add (priv->requirements,
+					li_pkg_info_get_name_relation_string (pki));
 }
 
 /**
@@ -375,7 +410,7 @@ li_runtime_link_software (LiRuntime *rt, LiPkgInfo *pki, GError **error)
 	}
 
 	/* register the added member with the runtime */
-	li_runtime_add_member (rt, pkid);
+	li_runtime_add_member (rt, pki);
 out:
 	g_free (rt_path);
 	return ret;
