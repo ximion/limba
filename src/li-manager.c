@@ -90,18 +90,18 @@ li_manager_reset_cached_data (LiManager *mgr)
 /**
  * li_manager_find_installed_software:
  **/
-static gboolean
-li_manager_find_installed_software (LiManager *mgr, GError **error)
+static GHashTable*
+li_manager_get_installed_software (LiManager *mgr, GError **error)
 {
 	GError *tmp_error = NULL;
 	GFile *fdir;
 	GFileEnumerator *enumerator = NULL;
 	GFileInfo *file_info;
-	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+	GHashTable *pkgs = NULL;
 
 	if (!g_file_test (LI_SOFTWARE_ROOT, G_FILE_TEST_IS_DIR)) {
 		/* directory not found, no software to be searched for */
-		return TRUE;
+		return NULL;
 	}
 
 	/* get stuff in the software directory */
@@ -109,6 +109,8 @@ li_manager_find_installed_software (LiManager *mgr, GError **error)
 	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
 	if (tmp_error != NULL)
 		goto out;
+
+	pkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
 		gchar *path;
@@ -139,7 +141,7 @@ li_manager_find_installed_software (LiManager *mgr, GError **error)
 					goto out;
 				}
 
-				g_hash_table_insert (priv->pkgs,
+				g_hash_table_insert (pkgs,
 									g_strdup (li_pkg_info_get_id (pki)),
 									pki);
 			}
@@ -147,7 +149,6 @@ li_manager_find_installed_software (LiManager *mgr, GError **error)
 		}
 		g_free (path);
 	}
-
 
 out:
 	g_object_unref (fdir);
@@ -157,10 +158,12 @@ out:
 		g_propagate_prefixed_error (error,
 						tmp_error,
 						"Error while searching for installed software:");
-		return FALSE;
+		if (pkgs != NULL)
+			g_hash_table_unref (pkgs);
+		return NULL;
 	}
 
-	return TRUE;
+	return pkgs;
 }
 
 /**
@@ -173,6 +176,7 @@ li_manager_get_software_list (LiManager *mgr, GError **error)
 {
 	_cleanup_object_unref_ LiPkgCache *cache = NULL;
 	GPtrArray *apkgs;
+	GHashTable *ipkgs;
 	guint i;
 	GError *tmp_error = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
@@ -191,10 +195,15 @@ li_manager_get_software_list (LiManager *mgr, GError **error)
 	}
 
 	/* populate table with installed packages */
-	li_manager_find_installed_software (mgr, &tmp_error);
+	ipkgs = li_manager_get_installed_software (mgr, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		return NULL;
+	}
+
+	if (ipkgs != NULL) {
+		g_hash_table_unref (priv->pkgs);
+		priv->pkgs = ipkgs;
 	}
 
 	/* get available packages */
@@ -659,6 +668,107 @@ li_manager_receive_key (LiManager *mgr, const gchar *fpr, GError **error)
 	kr = li_keyring_new ();
 	li_keyring_import_key (kr, fpr, LI_KEYRING_KIND_USER, error);
 	g_object_unref (kr);
+}
+
+/**
+ * li_pki_hash_func:
+ *
+ * GHashFunc() for #LiPkgInfo
+ */
+static guint
+li_pki_hash_func (LiPkgInfo *key)
+{
+	return g_str_hash (li_pkg_info_get_id (key));
+}
+
+/**
+ * li_pkg_equal_func:
+ *
+ * GEqualFunc() for #LiPkgInfo
+ */
+static gboolean
+li_pki_equal_func (LiPkgInfo *a, LiPkgInfo *b)
+{
+	return g_strcmp0 (li_pkg_info_get_id (a), li_pkg_info_get_id (b)) == 0;
+}
+
+/**
+ * li_manager_get_updates:
+ *
+ * EXPERIMENTAL
+ **/
+GHashTable*
+li_manager_get_updates (LiManager *mgr, GError **error)
+{
+	_cleanup_object_unref_ LiPkgCache *cache = NULL;
+	GPtrArray *apkgs_list;
+	_cleanup_hashtable_unref_ GHashTable *ipkgs = NULL;
+	_cleanup_hashtable_unref_ GHashTable *apkgs = NULL;
+	GHashTable *updates = NULL;
+	guint i;
+	_cleanup_list_free_ GList *ipkg_list = NULL;
+	GList *l;
+	GError *tmp_error = NULL;
+
+	cache = li_pkg_cache_new ();
+
+	/* get a list of all packages we have installed */
+	ipkgs = li_manager_get_installed_software (mgr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+
+	li_pkg_cache_open (cache, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+
+	/* get available packages and prepare a hash map with the newest releases and the pkg name as key */
+	apkgs_list = li_pkg_cache_get_packages (cache);
+	apkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	for (i = 0; i < apkgs_list->len; i++) {
+		LiPkgInfo *a_pki = NULL;
+		LiPkgInfo *b_pki = LI_PKG_INFO (g_ptr_array_index (apkgs_list, i));
+
+		a_pki = g_hash_table_lookup (apkgs, li_pkg_info_get_name (b_pki));
+		if (a_pki != NULL) {
+			if (li_compare_versions (li_pkg_info_get_version (a_pki), li_pkg_info_get_version (b_pki)) > 0) {
+				/* the existing version is newer, we do not add it to the hash table */
+				continue;
+			}
+		}
+
+		g_hash_table_insert (apkgs,
+							g_strdup (li_pkg_info_get_name (b_pki)),
+							g_object_ref (b_pki));
+	}
+
+	/* match it! */
+	updates = g_hash_table_new_full ((GHashFunc) li_pki_hash_func,
+									(GEqualFunc) li_pki_equal_func,
+									g_object_unref,
+									g_object_unref);
+	ipkg_list = g_hash_table_get_values (ipkgs);
+	for (l = ipkg_list; l != NULL; l = l->next) {
+		LiPkgInfo *ipki = LI_PKG_INFO (l->data);
+		LiPkgInfo *apki = NULL;
+
+		apki = g_hash_table_lookup (apkgs, li_pkg_info_get_name (ipki));
+		/* check if we actually have a package available */
+		if (ipki == NULL)
+			continue;
+
+		if (li_compare_versions (li_pkg_info_get_version (apki), li_pkg_info_get_version (ipki)) > 0) {
+			/* we have a potential update */
+			g_hash_table_insert (updates,
+							g_object_ref (ipki),
+							g_object_ref (apki));
+		}
+	}
+
+	return updates;
 }
 
 /**

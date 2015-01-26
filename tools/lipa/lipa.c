@@ -333,6 +333,51 @@ lipa_trust_key (const gchar *fpr)
 }
 
 /**
+ * lipa_print_updates_hashtable:
+ *
+ * Helper for lipa_list_updates()
+ */
+static void
+lipa_print_updates_hashtable (LiPkgInfo *old, LiPkgInfo *new, gpointer user_data)
+{
+	g_print ("%s: (%s) -> (%s)\n",
+			li_pkg_info_get_name (old),
+			li_pkg_info_get_version (old),
+			li_pkg_info_get_version (new));
+}
+
+/**
+ * lipa_list_updates:
+ */
+static gint
+lipa_list_updates (void)
+{
+	LiManager *mgr;
+	GHashTable *utable = NULL;
+	gint exit_code = 0;
+	GError *error = NULL;
+
+	mgr = li_manager_new ();
+
+	utable = li_manager_get_updates (mgr, &error);
+	if (error != NULL) {
+		li_print_stderr ("An error occured while fetching the software-list: %s", error->message);
+		exit_code = 2;
+		goto out;
+	}
+
+	g_hash_table_foreach (utable, (GHFunc) lipa_print_updates_hashtable, NULL);
+
+out:
+	g_hash_table_unref (utable);
+	g_object_unref (mgr);
+	if (error != NULL)
+		g_error_free (error);
+
+	return exit_code;
+}
+
+/**
  * lipa_get_summary:
  **/
 static gchar *
@@ -439,6 +484,8 @@ main (int argc, char *argv[])
 		exit_code = lipa_cleanup ();
 	} else if (g_strcmp0 (command, "trust-key") == 0) {
 		exit_code = lipa_trust_key (value1);
+	} else if (g_strcmp0 (command, "list-updates") == 0) {
+		exit_code = lipa_list_updates ();
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;
