@@ -359,7 +359,7 @@ lipa_list_updates (void)
 
 	mgr = li_manager_new ();
 
-	utable = li_manager_get_updates (mgr, &error);
+	utable = li_manager_get_update_list (mgr, &error);
 	if (error != NULL) {
 		li_print_stderr ("An error occured while fetching the software-list: %s", error->message);
 		exit_code = 2;
@@ -370,6 +370,36 @@ lipa_list_updates (void)
 
 out:
 	g_hash_table_unref (utable);
+	g_object_unref (mgr);
+	if (error != NULL)
+		g_error_free (error);
+
+	return exit_code;
+}
+
+/**
+ * lipa_update:
+ */
+static gint
+lipa_update (void)
+{
+	LiManager *mgr;
+	gint exit_code = 0;
+	GError *error = NULL;
+
+	if (!lipa_check_su ())
+		return 2;
+
+	mgr = li_manager_new ();
+
+	li_manager_apply_updates (mgr, &error);
+	if (error != NULL) {
+		li_print_stderr ("Could not apply updates: %s", error->message);
+		exit_code = 2;
+		goto out;
+	}
+
+out:
 	g_object_unref (mgr);
 	if (error != NULL)
 		g_error_free (error);
@@ -486,6 +516,8 @@ main (int argc, char *argv[])
 		exit_code = lipa_trust_key (value1);
 	} else if (g_strcmp0 (command, "list-updates") == 0) {
 		exit_code = lipa_list_updates ();
+	} else if (g_strcmp0 (command, "update") == 0) {
+		exit_code = lipa_update ();
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;

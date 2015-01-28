@@ -34,6 +34,7 @@
 #include "li-pkg-info.h"
 #include "li-pkg-cache.h"
 #include "li-keyring.h"
+#include "li-installer.h"
 
 typedef struct _LiManagerPrivate	LiManagerPrivate;
 struct _LiManagerPrivate
@@ -353,6 +354,38 @@ li_manager_find_runtime_with_members (LiManager *mgr, GPtrArray *members)
 	}
 
 	return NULL;
+}
+
+/**
+ * li_manager_find_runtimes_with_member:
+ * @mgr: An instance of #LiManager
+ */
+static GPtrArray*
+li_manager_find_runtimes_with_member (LiManager *mgr, LiPkgInfo *member)
+{
+	guint i;
+	GPtrArray *res = NULL;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	/* ensure we have all installed runtimes cached */
+	li_manager_get_installed_runtimes (mgr);
+
+	/* NOTE: If we ever have more frameworks with more members, we might need a more efficient implementation here */
+	for (i = 0; i < priv->rts->len; i++) {
+		GHashTable *test_members;
+		gboolean ret = FALSE;
+		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (priv->rts, i));
+
+		test_members = li_runtime_get_members (rt);
+		ret = g_hash_table_lookup (test_members, li_pkg_info_get_id (member)) != NULL;
+		if (ret) {
+			if (res == NULL)
+				res = g_ptr_array_new_with_free_func (g_object_unref);
+			g_ptr_array_add (res, g_object_ref (rt));
+		}
+	}
+
+	return res;
 }
 
 /**
@@ -693,12 +726,12 @@ li_pki_equal_func (LiPkgInfo *a, LiPkgInfo *b)
 }
 
 /**
- * li_manager_get_updates:
+ * li_manager_get_update_list:
  *
  * EXPERIMENTAL
  **/
 GHashTable*
-li_manager_get_updates (LiManager *mgr, GError **error)
+li_manager_get_update_list (LiManager *mgr, GError **error)
 {
 	_cleanup_object_unref_ LiPkgCache *cache = NULL;
 	GPtrArray *apkgs_list;
@@ -740,7 +773,7 @@ li_manager_get_updates (LiManager *mgr, GError **error)
 			}
 		}
 
-		g_hash_table_insert (apkgs,
+		g_hash_table_replace (apkgs,
 							g_strdup (li_pkg_info_get_name (b_pki)),
 							g_object_ref (b_pki));
 	}
@@ -769,6 +802,99 @@ li_manager_get_updates (LiManager *mgr, GError **error)
 	}
 
 	return updates;
+}
+
+/**
+ * li_manager_apply_updates:
+ *
+ * EXPERIMENTAL
+ */
+gboolean
+li_manager_apply_updates (LiManager *mgr, GError **error)
+{
+	_cleanup_hashtable_unref_ GHashTable *updates = NULL;
+	GHashTableIter iter;
+	gpointer key, value;
+	GError *tmp_error = NULL;
+
+	updates = li_manager_get_update_list (mgr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	g_hash_table_iter_init (&iter, updates);
+	while (g_hash_table_iter_next (&iter, &key, &value)) {
+		LiPkgInfo *ipki;
+		LiPkgInfo *apki;
+		_cleanup_ptrarray_unref_ GPtrArray *rts = NULL;
+		_cleanup_free_ gchar *swpath = NULL;
+		_cleanup_object_unref_ LiInstaller *inst = NULL;
+		ipki = LI_PKG_INFO (key);
+		apki = LI_PKG_INFO (value);
+
+		swpath = g_build_filename (LI_SOFTWARE_ROOT,
+								li_pkg_info_get_id (ipki),
+								NULL);
+
+		rts = li_manager_find_runtimes_with_member (mgr, ipki);
+		if (rts == NULL) {
+			gchar *tmp;
+			_cleanup_object_unref_ GFile *expfile = NULL;
+			/* we have no runtime, it is safe to update in any case */
+
+			g_debug ("Performing straight-forward update of '%s'", li_pkg_info_get_id (ipki));
+
+			/* prepare installation */
+			inst = li_installer_new ();
+			li_installer_open_remote (inst, li_pkg_info_get_id (apki), &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return FALSE;
+			}
+
+			/* delete exported files */
+			/* FIXME: Move them away at first, to allow a later rollback */
+			tmp = g_build_filename (swpath, "exported", NULL);
+			expfile = g_file_new_for_path (tmp);
+			g_free (tmp);
+			if (g_file_query_exists (expfile, NULL)) {
+				li_manager_remove_exported_files (expfile, &tmp_error);
+
+				if (tmp_error != NULL) {
+					g_propagate_error (error, tmp_error);
+					return FALSE;
+				}
+				g_file_delete (expfile, NULL, &tmp_error);
+				if (tmp_error != NULL) {
+					g_propagate_error (error, tmp_error);
+					return FALSE;
+				}
+			}
+
+			/* install new version */
+			li_installer_install (inst, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return FALSE;
+			}
+
+			/* mark package as faded, so it will get killed on the shutdown-cleanup run */
+			li_pkg_info_add_flag (ipki, LI_PACKAGE_FLAG_FADED);
+			li_pkg_info_save_changes (ipki);
+
+			/* TODO: touch /var/lib/limba/cleanup-needed */
+		} else {
+
+			g_warning ("Complex update of '%s' (involving runtime rebuild) is not yet implemented", li_pkg_info_get_id (ipki));
+
+			// TODO: * Upgrade ipki to apki where the runtime requirements allow it.
+			//         -> remove ipki exported data in any case (!)
+			//       * If ipki is no member of a runtime anymore, flag it as crap.
+		}
+	}
+
+	return TRUE;
 }
 
 /**

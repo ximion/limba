@@ -112,6 +112,11 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 		li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_AUTOMATIC);
 	g_free (str);
 
+	str = li_config_data_get_value (cdata, "Faded");
+	if (li_str_to_bool (str))
+		li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_FADED);
+	g_free (str);
+
 	/* a package with a %NULL architecture should never happen - assume the current one in that case */
 	if (priv->arch == NULL)
 		priv->arch = li_get_current_arch_h ();
@@ -156,6 +161,9 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 
 	if (priv->flags & LI_PACKAGE_FLAG_AUTOMATIC)
 		li_config_data_set_value (cdata, "Automatic", "true");
+
+	if (priv->flags & LI_PACKAGE_FLAG_FADED)
+		li_config_data_set_value (cdata, "Faded", "true");
 }
 
 /**

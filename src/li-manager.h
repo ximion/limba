@@ -107,7 +107,10 @@ void			li_manager_receive_key (LiManager *mgr,
 void			li_manager_refresh_cache (LiManager *mgr,
 									GError **error);
 
-GHashTable		*li_manager_get_updates (LiManager *mgr,
+GHashTable		*li_manager_get_update_list (LiManager *mgr,
+									GError **error);
+
+gboolean		li_manager_apply_updates (LiManager *mgr,
 									GError **error);
 
 G_END_DECLS
