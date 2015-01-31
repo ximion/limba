@@ -114,7 +114,7 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 	pkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		gchar *path;
+		_cleanup_free_ gchar *path = NULL;
 		if (tmp_error != NULL)
 			goto out;
 
@@ -125,7 +125,7 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 								 "control",
 								 NULL);
 		if (g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
-			GFile *ctlfile;
+			_cleanup_object_unref_ GFile *ctlfile = NULL;
 			ctlfile = g_file_new_for_path (path);
 			if (g_file_query_exists (ctlfile, NULL)) {
 				LiPkgInfo *pki;
@@ -136,19 +136,21 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 
 				li_pkg_info_load_file (pki, ctlfile, &tmp_error);
 				if (tmp_error != NULL) {
-					g_free (path);
-					g_object_unref (ctlfile);
 					g_object_unref (pki);
 					goto out;
+				}
+
+				/* do not list as installed if the software is faded */
+				if (li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_FADED)) {
+					g_object_unref (pki);
+					continue;
 				}
 
 				g_hash_table_insert (pkgs,
 									g_strdup (li_pkg_info_get_id (pki)),
 									pki);
 			}
-			g_object_unref (ctlfile);
 		}
-		g_free (path);
 	}
 
 out:
@@ -805,6 +807,41 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 }
 
 /**
+ * li_manager_remove_exported_files_by_pki:
+ */
+static void
+li_manager_remove_exported_files_by_pki (LiManager *mgr, LiPkgInfo *pki, GError **error)
+{
+	_cleanup_free_ gchar *swpath = NULL;
+	_cleanup_object_unref_ GFile *expfile = NULL;
+	GError *tmp_error = NULL;
+	gchar *tmp;
+
+	swpath = g_build_filename (LI_SOFTWARE_ROOT,
+								li_pkg_info_get_id (pki),
+								NULL);
+
+	/* delete exported files */
+	/* FIXME: Move them away at first, to allow a later rollback */
+	tmp = g_build_filename (swpath, "exported", NULL);
+	expfile = g_file_new_for_path (tmp);
+	g_free (tmp);
+	if (g_file_query_exists (expfile, NULL)) {
+		li_manager_remove_exported_files (expfile, &tmp_error);
+
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+		g_file_delete (expfile, NULL, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+	}
+}
+
+/**
  * li_manager_apply_updates:
  *
  * EXPERIMENTAL
@@ -828,19 +865,12 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 		LiPkgInfo *ipki;
 		LiPkgInfo *apki;
 		_cleanup_ptrarray_unref_ GPtrArray *rts = NULL;
-		_cleanup_free_ gchar *swpath = NULL;
 		_cleanup_object_unref_ LiInstaller *inst = NULL;
 		ipki = LI_PKG_INFO (key);
 		apki = LI_PKG_INFO (value);
 
-		swpath = g_build_filename (LI_SOFTWARE_ROOT,
-								li_pkg_info_get_id (ipki),
-								NULL);
-
 		rts = li_manager_find_runtimes_with_member (mgr, ipki);
 		if (rts == NULL) {
-			gchar *tmp;
-			_cleanup_object_unref_ GFile *expfile = NULL;
 			/* we have no runtime, it is safe to update in any case */
 
 			g_debug ("Performing straight-forward update of '%s'", li_pkg_info_get_id (ipki));
@@ -853,23 +883,10 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 				return FALSE;
 			}
 
-			/* delete exported files */
-			/* FIXME: Move them away at first, to allow a later rollback */
-			tmp = g_build_filename (swpath, "exported", NULL);
-			expfile = g_file_new_for_path (tmp);
-			g_free (tmp);
-			if (g_file_query_exists (expfile, NULL)) {
-				li_manager_remove_exported_files (expfile, &tmp_error);
-
-				if (tmp_error != NULL) {
-					g_propagate_error (error, tmp_error);
-					return FALSE;
-				}
-				g_file_delete (expfile, NULL, &tmp_error);
-				if (tmp_error != NULL) {
-					g_propagate_error (error, tmp_error);
-					return FALSE;
-				}
+			li_manager_remove_exported_files_by_pki (mgr, ipki, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return FALSE;
 			}
 
 			/* install new version */
@@ -885,7 +902,6 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 
 			/* TODO: touch /var/lib/limba/cleanup-needed */
 		} else {
-
 			g_warning ("Complex update of '%s' (involving runtime rebuild) is not yet implemented", li_pkg_info_get_id (ipki));
 
 			// TODO: * Upgrade ipki to apki where the runtime requirements allow it.
