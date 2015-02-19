@@ -231,13 +231,35 @@ li_runtime_get_data_path (LiRuntime *rt)
 /**
  * li_runtime_get_members:
  *
- * Returns: (transfer none) (element-type LiPkgInfo): Array of packages which are members of this runtime
+ * Returns: (transfer none) (element-type LiPkgInfo): Hash set of packages which are members of this runtime
  */
 GHashTable*
 li_runtime_get_members (LiRuntime *rt)
 {
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 	return priv->members;
+}
+
+/**
+ * li_runtime_get_requirements:
+ *
+ * Returns: (transfer none) (element-type LiPkgInfo): Hash set of package requirements which make up this runtime
+ */
+GHashTable*
+li_runtime_get_requirements (LiRuntime *rt)
+{
+	LiRuntimePrivate *priv = GET_PRIVATE (rt);
+	return priv->requirements;
+}
+
+/**
+ * li_runtime_set_requirements:
+ */
+void
+li_runtime_set_requirements (LiRuntime *rt, GHashTable *reqs)
+{
+	LiRuntimePrivate *priv = GET_PRIVATE (rt);
+	priv->requirements = g_hash_table_ref (reqs);
 }
 
 /**

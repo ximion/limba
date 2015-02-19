@@ -128,6 +128,8 @@ void			li_pkg_info_set_dependencies (LiPkgInfo *pki,
 										const gchar *deps_string);
 
 const gchar		*li_pkg_info_get_id (LiPkgInfo *pki);
+void			li_pkg_info_set_id (LiPkgInfo *pki,
+									const gchar *id);
 
 const gchar		*li_pkg_info_get_checksum_sha256 (LiPkgInfo *pki);
 void			li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki,
@@ -155,6 +157,9 @@ void			li_pkg_info_set_repo_location (LiPkgInfo *pki,
 										const gchar *location);
 
 gchar			*li_pkg_info_get_name_relation_string (LiPkgInfo *pki);
+
+gboolean		li_pkg_info_satisfies_requirement (LiPkgInfo *pki,
+													LiPkgInfo *req);
 
 G_END_DECLS
 

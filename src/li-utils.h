@@ -22,14 +22,20 @@
 #define __LI_UTILS_H
 
 #include <glib-object.h>
+#include "li-pkg-info.h"
 
 G_BEGIN_DECLS
 
 const gchar		*li_get_software_root (void);
 void			li_set_verbose_mode (gboolean verbose);
+
 gchar			*li_get_current_arch_h (void);
+
 gint			li_compare_versions (const gchar* a,
 									const gchar *b);
+
+LiPkgInfo		*li_parse_dependency_string (const gchar *depstr);
+GPtrArray		*li_parse_dependencies_string (const gchar *depstr);
 
 G_END_DECLS
 

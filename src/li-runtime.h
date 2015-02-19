@@ -75,6 +75,8 @@ LiRuntime		*li_runtime_create_with_members (GPtrArray *members,
 												GError **error);
 
 GHashTable		*li_runtime_get_members (LiRuntime *rt);
+GHashTable		*li_runtime_get_requirements (LiRuntime *rt);
+void			li_runtime_set_requirements (LiRuntime *rt, GHashTable *reqs);
 void			li_runtime_add_package (LiRuntime *rt,
 									   LiPkgInfo *pki);
 

@@ -88,82 +88,6 @@ li_installer_init (LiInstaller *inst)
 }
 
 /**
- * li_installer_parse_dependency_string:
- */
-static GPtrArray*
-li_installer_parse_dependency_string (const gchar *depstr)
-{
-	guint i;
-	gchar **slices;
-	GPtrArray *array;
-
-	if (depstr == NULL)
-		return NULL;
-
-	array = g_ptr_array_new_with_free_func (g_object_unref);
-	slices = g_strsplit (depstr, ",", -1);
-
-	for (i = 0; slices[i] != NULL; i++) {
-		gchar *dep_raw;
-		LiPkgInfo *pki;
-
-		dep_raw = slices[i];
-		g_strstrip (dep_raw);
-
-		pki = li_pkg_info_new ();
-		if (g_strrstr (dep_raw, "(") != NULL) {
-			gchar **strv;
-			gchar *ver_tmp;
-
-			strv = g_strsplit (dep_raw, "(", 2);
-			g_strstrip (strv[0]);
-
-			li_pkg_info_set_name (pki, strv[0]);
-			ver_tmp = strv[1];
-			g_strstrip (ver_tmp);
-			if (strlen (ver_tmp) > 2) {
-				LiVersionFlags flags = LI_VERSION_UNKNOWN;
-				guint i;
-
-				/* extract the version relation (>>, >=, <=, ==, <<) */
-				for (i = 0; i <= 1; i++) {
-					if (ver_tmp[i] == '>')
-						flags |= LI_VERSION_HIGHER;
-					else if (ver_tmp[i] == '<')
-						flags |= LI_VERSION_LOWER;
-					else if (ver_tmp[i] == '=')
-						flags |= LI_VERSION_EQUAL;
-					else {
-						g_warning ("Found invalid character in version relation: %c", ver_tmp[i]);
-						flags = LI_VERSION_UNKNOWN;
-					}
-				}
-
-				/* extract the version */
-				if (g_str_has_suffix (ver_tmp, ")")) {
-					ver_tmp = g_strndup (ver_tmp+2, strlen (ver_tmp)-3);
-					g_strstrip (ver_tmp);
-
-					li_pkg_info_set_version (pki, ver_tmp);
-					li_pkg_info_set_version_relation (pki, flags);
-					g_free (ver_tmp);
-				} else {
-					g_warning ("Malformed dependency string found: Closing bracket of version is missing: %s (%s", strv[0], ver_tmp);
-				}
-			}
-			g_strfreev (strv);
-		} else {
-			li_pkg_info_set_name (pki, dep_raw);
-		}
-
-		g_ptr_array_add (array, pki);
-	}
-	g_strfreev (slices);
-
-	return array;
-}
-
-/**
  * li_installed_dep_is_installed:
  */
 static LiPkgInfo*
@@ -172,8 +96,8 @@ li_installer_find_satisfying_pkg (GList *pkglist, LiPkgInfo *dep)
 	GList *l;
 	const gchar *dep_name;
 	const gchar *dep_version;
-	LiPkgInfo *res_pki = NULL;
 	LiVersionFlags dep_vrel;
+	LiPkgInfo *res_pki = NULL;
 
 	if (pkglist == NULL)
 		return NULL;
@@ -393,7 +317,7 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 	else
 		g_debug ("Hit new package: %s", li_pkg_info_get_id (pki));
 
-	deps = li_installer_parse_dependency_string (li_pkg_info_get_dependencies (pki));
+	deps = li_parse_dependencies_string (li_pkg_info_get_dependencies (pki));
 
 	/* do we have dependencies at all? */
 	if (deps == NULL)

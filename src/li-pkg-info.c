@@ -406,17 +406,28 @@ li_pkg_info_get_id (LiPkgInfo *pki)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 
-	if ((priv->name == NULL) || (priv->version == NULL)) {
-		/* an empty package-id is a serious issue and usually a bug */
-		g_warning ("Queried empty package-id.");
-		return NULL;
+	if (priv->id == NULL) {
+		if ((priv->name == NULL) || (priv->version == NULL)) {
+			/* an empty package-id is a serious issue and usually a bug */
+			g_warning ("Queried empty package-id.");
+			return NULL;
+		}
+
+		/* re-generate id if necessary */
+		priv->id = g_strdup_printf ("%s-%s", priv->name, priv->version);
 	}
 
-	/* re-generate id if necessary */
-	if (priv->id == NULL)
-		priv->id = g_strdup_printf ("%s-%s", priv->name, priv->version);
-
 	return priv->id;
+}
+
+/**
+ * li_pkg_info_set_id:
+ */
+void
+li_pkg_info_set_id (LiPkgInfo *pki, const gchar *id)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	priv->id = g_strdup (id);
 }
 
 /**
@@ -525,18 +536,6 @@ li_pkg_info_get_version_relation (LiPkgInfo *pki)
 }
 
 /**
- * li_pkg_info_get_architecture:
- *
- * Get the architecture this package was built for.
- */
-const gchar*
-li_pkg_info_get_architecture (LiPkgInfo *pki)
-{
-	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
-	return priv->arch;
-}
-
-/**
  * li_pkg_info_get_name_relation_string:
  *
  * Get the package name and relation as string, e.g. "foobar >= 2.1"
@@ -559,13 +558,67 @@ li_pkg_info_get_name_relation_string (LiPkgInfo *pki)
 	if (priv->vrel & LI_VERSION_EQUAL)
 		relation[1] = '=';
 
-	tmp = g_strdup_printf ("%s %s %s",
+	tmp = g_strdup_printf ("%s (%s %s)",
 						li_pkg_info_get_name (pki),
 						relation,
 						li_pkg_info_get_version (pki));
 	g_free (relation);
 
 	return tmp;
+}
+
+/**
+ * li_pkg_info_satisfies_requirement:
+ *
+ * Check if the current package @pki matches the requirements defined
+ * by #LiPkgInfo @req.
+ *
+ * Returns: %TRUE if package satisfies requirements.
+ */
+gboolean
+li_pkg_info_satisfies_requirement (LiPkgInfo *pki, LiPkgInfo *req)
+{
+	const gchar *req_name;
+	const gchar *req_version;
+	LiVersionFlags req_vrel;
+	gint cmp;
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+
+	req_name = li_pkg_info_get_name (req);
+	req_version = li_pkg_info_get_version (req);
+	req_vrel = li_pkg_info_get_version_relation (req);
+
+	/* check if names match */
+	if (g_strcmp0 (priv->name, req_name) != 0)
+		return FALSE;
+
+	if (req_version == NULL) {
+		/* any version satisfies this dependency - so we are happy already */
+		return TRUE;
+	}
+
+	/* now verify that its version is sufficient */
+	cmp = li_compare_versions (priv->version, req_version);
+	if (((cmp == 1) && (req_vrel & LI_VERSION_HIGHER)) ||
+		((cmp == 0) && (req_vrel & LI_VERSION_EQUAL)) ||
+		((cmp == -1) && (req_vrel & LI_VERSION_LOWER))) {
+		/* we are good, this package satisfies the requirements */
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
+/**
+ * li_pkg_info_get_architecture:
+ *
+ * Get the architecture this package was built for.
+ */
+const gchar*
+li_pkg_info_get_architecture (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->arch;
 }
 
 /**

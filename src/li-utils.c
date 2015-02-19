@@ -582,3 +582,97 @@ li_compare_versions (const gchar* a, const gchar *b)
 	/* whichever version still has characters left over wins */
 	if (!*one) return -1; else return 1;
 }
+
+/**
+ * li_parse_dependency_string:
+ *
+ * Parse a dependency string (e.g. "foo (>= 4.0)") and return a #LiPkgInfo
+ * object reflecting the required package name and dependency relation.
+ */
+LiPkgInfo*
+li_parse_dependency_string (const gchar *depstr)
+{
+	_cleanup_free_ gchar *dep_raw = NULL;
+	LiPkgInfo *pki;
+
+	dep_raw = g_strdup (depstr);
+	g_strstrip (dep_raw);
+
+	pki = li_pkg_info_new ();
+	if (g_strrstr (dep_raw, "(") != NULL) {
+		gchar **strv;
+		gchar *ver_tmp;
+
+		strv = g_strsplit (dep_raw, "(", 2);
+		g_strstrip (strv[0]);
+
+		li_pkg_info_set_name (pki, strv[0]);
+		ver_tmp = strv[1];
+		g_strstrip (ver_tmp);
+		if (strlen (ver_tmp) > 2) {
+			LiVersionFlags flags = LI_VERSION_UNKNOWN;
+			guint i;
+
+			/* extract the version relation (>>, >=, <=, ==, <<) */
+			for (i = 0; i <= 1; i++) {
+				if (ver_tmp[i] == '>')
+					flags |= LI_VERSION_HIGHER;
+				else if (ver_tmp[i] == '<')
+					flags |= LI_VERSION_LOWER;
+				else if (ver_tmp[i] == '=')
+					flags |= LI_VERSION_EQUAL;
+				else {
+					g_warning ("Found invalid character in version relation: %c", ver_tmp[i]);
+					flags = LI_VERSION_UNKNOWN;
+				}
+			}
+
+			/* extract the version */
+			if (g_str_has_suffix (ver_tmp, ")")) {
+				ver_tmp = g_strndup (ver_tmp+2, strlen (ver_tmp)-3);
+				g_strstrip (ver_tmp);
+
+				li_pkg_info_set_version (pki, ver_tmp);
+				li_pkg_info_set_version_relation (pki, flags);
+				g_free (ver_tmp);
+			} else {
+				g_warning ("Malformed dependency string found: Closing bracket of version is missing: %s (%s", strv[0], ver_tmp);
+			}
+		}
+		g_strfreev (strv);
+	} else {
+		li_pkg_info_set_name (pki, dep_raw);
+	}
+
+	return pki;
+}
+
+/**
+ * li_parse_dependencies_string:
+ *
+ * Parse a dependencies string (in the form of "foo (>= 2.0), bar (== 1.0)") and return an array of #LiPkgInfo
+ * objects reflecting the relations and packages specified in the dependency string.
+ */
+GPtrArray*
+li_parse_dependencies_string (const gchar *depstr)
+{
+	guint i;
+	gchar **slices;
+	GPtrArray *array;
+
+	if (depstr == NULL)
+		return NULL;
+
+	array = g_ptr_array_new_with_free_func (g_object_unref);
+	slices = g_strsplit (depstr, ",", -1);
+
+	for (i = 0; slices[i] != NULL; i++) {
+		LiPkgInfo *pki;
+		pki = li_parse_dependency_string (slices[i]);
+
+		g_ptr_array_add (array, pki);
+	}
+	g_strfreev (slices);
+
+	return array;
+}
