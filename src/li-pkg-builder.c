@@ -160,6 +160,12 @@ li_pkg_builder_write_payload (const gchar *input_dir, const gchar *out_fname)
 		archive_write_header (a, entry);
 
 		fd = open (fname, O_RDONLY);
+		if (fd < 0) {
+			g_warning ("Could not open file '%s' for reading. Skipping it.", fname);
+			archive_entry_free (entry);
+			continue;
+		}
+
 		len = read (fd, buff, sizeof (buff));
 		while (len > 0) {
 			archive_write_data (a, buff, len);
@@ -302,11 +308,21 @@ li_pkg_builder_write_package (GPtrArray *files, const gchar *out_fname, GError *
 		archive_write_header (a, entry);
 
 		fd = open (fname, O_RDONLY);
+		if (fd < 0) {
+			g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_WRITE,
+				_("Could not open metadata-file '%s' for reading."), fname);
+			archive_entry_free (entry);
+			return;
+		}
+
 		len = read (fd, buff, sizeof (buff));
 		while (len > 0) {
 			archive_write_data (a, buff, len);
 			len = read(fd, buff, sizeof (buff));
 		}
+
 		close (fd);
 		archive_entry_free (entry);
 	}
