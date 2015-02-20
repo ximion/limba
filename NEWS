@@ -1,3 +1,44 @@
+Version 0.4.0
+~~~~~~~~~~~~~~
+Released: 2015-02-20
+
+Features:
+ * Add new lirepo tool to create repositories
+ * Allow adding packages to a repository
+ * Compress Index file of repositories
+ * Make cache download repository metadata
+ * repo: Register AppStream metadata files
+ * Use Freedesktop namespace for DBus service and PolKit rules
+ * Make Limba DBus service kdbus-safe
+ * Encode architecture in repo package names
+ * Allow Limba to query the package cache
+ * Write single cache file for AppStream metadata
+ * Use the new "bundle" tag in AppStream 0.8
+ * Implement installations from remote sources
+ * Handle multiple architectures inone repository
+ * Sign repositories by default
+ * lipa: Add command to receive & trust a key
+ * tests: Add fake GPG home with dummy key
+ * lipa: Implement command to install remote package
+ * Encode requirements in runtime definition
+ * Set systemd service name in D-Bus service file
+ * Implement a very simple way of listing potential updates
+ * Implement update mechanism
+
+
+Bugfixes:
+ * Use pool.sks-keyservers.net as default keyserver
+ * Fail with a less scary message if signing key could not be fetched
+ * Collect cruft packages on system shutdown
+ * Get rid of all unit-test hacks by creating a fake root environment
+ * Perform some loose kernel version checks before compiling Limba
+ * Disable Travis CI: We need a recent kernel with OverlayFS now
+ * Fix keyring test again, by giving the test container network access
+ * Fix some potential bugs found by static code analysis
+ * Don't filter languages when reading AppStream metadata
+ * Fool the testsuite, since GPGMe is still not behaving like the docs say
+ * Don't list faded packages as installed
+
 Version 0.3.0
 ~~~~~~~~~~~~~~
 Released: 2015-01-08
