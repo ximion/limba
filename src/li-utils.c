@@ -588,6 +588,8 @@ li_compare_versions (const gchar* a, const gchar *b)
  *
  * Parse a dependency string (e.g. "foo (>= 4.0)") and return a #LiPkgInfo
  * object reflecting the required package name and dependency relation.
+ *
+ * Returns: (transfer full): A new #LiPkgInfo reflecting the relation and package
  */
 LiPkgInfo*
 li_parse_dependency_string (const gchar *depstr)
@@ -652,6 +654,8 @@ li_parse_dependency_string (const gchar *depstr)
  *
  * Parse a dependencies string (in the form of "foo (>= 2.0), bar (== 1.0)") and return an array of #LiPkgInfo
  * objects reflecting the relations and packages specified in the dependency string.
+ *
+ * Returns: (transfer full) (element-type LiPkgInfo): A list of #LiPkgInfo objects reflecting the relation and package
  */
 GPtrArray*
 li_parse_dependencies_string (const gchar *depstr)

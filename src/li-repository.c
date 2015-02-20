@@ -353,6 +353,8 @@ li_repository_sign (LiRepository *repo, const gchar *sigtext, GError **error)
 }
 
 /**
+ * LiIndexSaveHelper:
+ * 
  * Temporary helper structure, to make saving and hashing indices easier
  */
 typedef struct {
