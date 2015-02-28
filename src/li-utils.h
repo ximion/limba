@@ -30,6 +30,7 @@ const gchar		*li_get_software_root (void);
 void			li_set_verbose_mode (gboolean verbose);
 
 gchar			*li_get_current_arch_h (void);
+gchar			*li_get_arch_triplet (void);
 
 gint			li_compare_versions (const gchar* a,
 									const gchar *b);

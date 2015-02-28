@@ -451,6 +451,30 @@ li_get_current_arch_h (void)
 }
 
 /**
+ * li_get_arch_triplet:
+ *
+ * Get the full architecture triplet, e.g. "x86_64-linux-gnu".
+ *
+ * Returns: (transfer full): The current arch triplet.
+ */
+gchar*
+li_get_arch_triplet (void)
+{
+	gchar *triplet;
+	gchar *tmp;
+	struct utsname uts;
+
+	uname (&uts);
+
+	/* FIXME: We just assume the OS is GNU here - this needs to be detected better. */
+	tmp = g_strdup_printf ("%s-%s-%s", uts.machine, uts.sysname, "gnu");
+	triplet = g_ascii_strdown (tmp, -1);
+	g_free (tmp);
+
+	return triplet;
+}
+
+/**
  * li_set_verbose_mode:
  * @verbose: %TRUE to increase verbosity
  *

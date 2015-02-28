@@ -238,6 +238,8 @@ main (gint argc, gchar *argv[])
 	int ret;
 	_cleanup_free_ gchar *swname = NULL;
 	_cleanup_free_ gchar *executable = NULL;
+	gchar *ma_lib_path = NULL;
+	gchar *tmp;
 	gchar **strv;
 	gchar **child_argv = NULL;
 	guint i;
@@ -276,7 +278,16 @@ main (gint argc, gchar *argv[])
 	/* Now we have everything we need CAP_SYS_ADMIN for, so drop setuid */
 	setuid (getuid ());
 
+	/* add generic library path */
 	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/lib");
+
+	/* add multiarch library path for compatibility reasons */
+	tmp = li_get_arch_triplet ();
+	ma_lib_path = g_build_filename (LI_SW_ROOT_PREFIX, "lib", tmp, NULL);
+	g_free (tmp);
+	update_env_var_list ("LD_LIBRARY_PATH", ma_lib_path);
+	g_free (ma_lib_path);
+
 
 	child_argv = malloc ((1 + argc - 1) * sizeof (char *));
 	if (child_argv == NULL) {
