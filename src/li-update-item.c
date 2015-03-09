@@ -67,7 +67,7 @@ li_update_item_init (LiUpdateItem *uitem)
 /**
  * li_update_item_get_installed_pkg:
  *
- * Returns: A #LiPkgInfo of the installed software version.
+ * Returns: (transfer none): A #LiPkgInfo of the installed software version.
  */
 LiPkgInfo*
 li_update_item_get_installed_pkg (LiUpdateItem *uitem)
@@ -89,7 +89,7 @@ li_update_item_set_installed_pkg (LiUpdateItem *uitem, LiPkgInfo *pki)
 /**
  * li_update_item_get_available_pkg:
  *
- * Returns: A #LiPkgInfo of the available new software version.
+ * Returns: (transfer none): A #LiPkgInfo of the available new software version.
  */
 LiPkgInfo*
 li_update_item_get_available_pkg (LiUpdateItem *uitem)
