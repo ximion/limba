@@ -220,7 +220,7 @@ li_test_enter_chroot ()
 
 	/* create installer locations */
 	test_env_mkdir ("/usr/local/bin");
-	test_env_mkdir ("/usr/share/applications");
+	test_env_mkdir ("/usr/local/share/applications");
 
 	/* populate /dev */
 	test_env_mount_devproc ();
