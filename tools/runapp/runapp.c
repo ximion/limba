@@ -288,16 +288,20 @@ main (gint argc, gchar *argv[])
 	update_env_var_list ("LD_LIBRARY_PATH", ma_lib_path);
 	g_free (ma_lib_path);
 
+	/* add generic binary directory to PATH */
+	update_env_var_list ("PATH", LI_SW_ROOT_PREFIX "/bin");
 
-	child_argv = malloc ((1 + argc - 1) * sizeof (char *));
+	child_argv = malloc ((argc) * sizeof (char *));
 	if (child_argv == NULL) {
 		ret = FALSE;
 		fprintf (stderr, "Out of memory!\n");
 		goto out;
 	}
 
-	i = 0;
-	for (i = 0; i < argc; i++) {
+	/* give absolute executable path as argv[0] */
+	child_argv[0] = executable;
+
+	for (i = 1; i < argc - 1; i++) {
 		child_argv[i] = argv[i+1];
 	}
 	child_argv[i++] = NULL;
