@@ -34,6 +34,7 @@ extern "C" {
 #include <li-manager.h>
 #include <li-pkg-builder.h>
 #include <li-repository.h>
+#include <li-update-item.h>
 
 #ifdef __cplusplus
 };

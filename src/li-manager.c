@@ -35,6 +35,7 @@
 #include "li-pkg-cache.h"
 #include "li-keyring.h"
 #include "li-installer.h"
+#include "li-update-item.h"
 
 typedef struct _LiManagerPrivate	LiManagerPrivate;
 struct _LiManagerPrivate
@@ -731,19 +732,24 @@ li_pki_equal_func (LiPkgInfo *a, LiPkgInfo *b)
  * li_manager_get_update_list:
  *
  * EXPERIMENTAL
+ *
+ * Returns: (transfer full) (element-type LiUpdateItem): A list of #LiUpdateItem describing the potential updates.
  **/
-GHashTable*
+GPtrArray*
 li_manager_get_update_list (LiManager *mgr, GError **error)
 {
 	_cleanup_object_unref_ LiPkgCache *cache = NULL;
 	GPtrArray *apkgs_list;
 	_cleanup_hashtable_unref_ GHashTable *ipkgs = NULL;
 	_cleanup_hashtable_unref_ GHashTable *apkgs = NULL;
-	GHashTable *updates = NULL;
+	_cleanup_hashtable_unref_ GHashTable *updates = NULL;
+	GPtrArray *uitem_list = NULL;
 	guint i;
 	_cleanup_list_free_ GList *ipkg_list = NULL;
 	GList *l;
 	GError *tmp_error = NULL;
+	GHashTableIter iter;
+	gpointer key, value;
 
 	cache = li_pkg_cache_new ();
 
@@ -803,7 +809,22 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 		}
 	}
 
-	return updates;
+	/* create a list of sane update items */
+	uitem_list = g_ptr_array_new_with_free_func (g_object_unref);
+
+	g_hash_table_iter_init (&iter, updates);
+	while (g_hash_table_iter_next (&iter, &key, &value)) {
+		LiPkgInfo *ipki;
+		LiPkgInfo *apki;
+		LiUpdateItem *uitem;
+		ipki = LI_PKG_INFO (key);
+		apki = LI_PKG_INFO (value);
+
+		uitem = li_update_item_new_with_packages (ipki, apki);
+		g_ptr_array_add (uitem_list, uitem);
+	}
+
+	return uitem_list;
 }
 
 /**
@@ -884,10 +905,9 @@ li_manager_upgrade_single_package (LiManager *mgr, LiPkgInfo *ipki, LiPkgInfo *a
 gboolean
 li_manager_apply_updates (LiManager *mgr, GError **error)
 {
-	_cleanup_hashtable_unref_ GHashTable *updates = NULL;
+	_cleanup_ptrarray_unref_ GPtrArray *updates = NULL;
 	_cleanup_hashtable_unref_ GHashTable *ipkgs = NULL;
-	GHashTableIter iter;
-	gpointer key, value;
+	guint i;
 	GError *tmp_error = NULL;
 
 	updates = li_manager_get_update_list (mgr, &tmp_error);
@@ -903,13 +923,14 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 		return FALSE;
 	}
 
-	g_hash_table_iter_init (&iter, updates);
-	while (g_hash_table_iter_next (&iter, &key, &value)) {
+	for (i = 0; i < updates->len; i++) {
 		LiPkgInfo *ipki;
 		LiPkgInfo *apki;
 		_cleanup_ptrarray_unref_ GPtrArray *rts = NULL;
-		ipki = LI_PKG_INFO (key);
-		apki = LI_PKG_INFO (value);
+		LiUpdateItem *uitem = LI_UPDATE_ITEM (g_ptr_array_index (updates, i));
+
+		ipki = li_update_item_get_installed_pkg (uitem);
+		apki = li_update_item_get_available_pkg (uitem);
 
 		rts = li_manager_find_runtimes_with_member (mgr, ipki);
 		if (rts == NULL) {

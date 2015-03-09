@@ -26,6 +26,7 @@ set(LIBLIMBA_SRC
 	li-keyring.c
 	li-repository.c
 	li-pkg-cache.c
+	li-update-item.c
 )
 
 set(LIBLIMBA_PUBLIC_HEADERS
@@ -40,6 +41,7 @@ set(LIBLIMBA_PUBLIC_HEADERS
 	li-pkg-builder.h
 	li-keyring.h
 	li-repository.h
+	li-update-item.h
 )
 
 set(LIBLIMBA_PRIVATE_HEADERS
