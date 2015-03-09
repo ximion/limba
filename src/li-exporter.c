@@ -26,6 +26,7 @@
 #include "config.h"
 #include "li-exporter.h"
 
+#include <errno.h>
 #include <glib/gstdio.h>
 #include <glib/gi18n-lib.h>
 #include "li-utils-private.h"
@@ -124,6 +125,14 @@ li_exporter_process_desktop_file (LiExporter *exp, const gchar *disk_location, G
 	tmp = g_path_get_basename (disk_location);
 	dest = g_build_filename (PREFIXDIR, "local", "share", "applications", tmp, NULL);
 	g_free (tmp);
+
+	if (g_mkdir_with_parents (PREFIXDIR "/local/share/applications", 0755) != 0) {
+		g_set_error (error,
+			G_FILE_ERROR,
+			G_FILE_ERROR_FAILED,
+			_("Could not create system directory: %s"), g_strerror (errno));
+		goto out;
+	}
 
 	li_exporter_copy_file (exp, disk_location, dest, &tmp_error);
 	if (tmp_error != NULL) {
