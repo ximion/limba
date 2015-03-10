@@ -1,25 +1,24 @@
 # CMakeLists for LI-BuildTools
 
-set(BUILDLIST_SOURCES buildlist.vala
+set(BUILDLIST_SOURCES
+	buildlist.c
 )
 
 link_libraries(${GLIB_LIBRARIES}
 	       ${GIO2_LIBRARIES}
+	       limba
 )
 
 include_directories(${CMAKE_BINARY_DIR}
-		    ${CMAKE_CURRENT_SOURCE_DIR}
-		    ${GLIB_INCLUDE_DIRS}
-		    ${GEE_INCLUDE_DIR}
+			${CMAKE_BINARY_DIR}/src
+			${CMAKE_SOURCE_DIR}/src
+			${CMAKE_CURRENT_SOURCE_DIR}
+			${GLIB_INCLUDE_DIRS}
 )
 
-add_definitions(${GEE_CFLAGS} ${GEE_CFLAGS_OTHER})
+add_executable(buildlist ${BUILDLIST_SOURCES})
 
-#vala_add_executable(buildlist ${BUILDLIST_SOURCES}
-#				PACKAGES posix glib-2.0 gio-2.0 gee-0.8
-#)
-
-#install(TARGETS buildlist DESTINATION lib/libuild COMPONENT buildtools)
+install(TARGETS buildlist DESTINATION lib/libuild COMPONENT buildtools)
 install(PROGRAMS ligcc
 		 lig++
 		 relaytool
