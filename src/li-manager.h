@@ -107,7 +107,7 @@ void			li_manager_receive_key (LiManager *mgr,
 void			li_manager_refresh_cache (LiManager *mgr,
 									GError **error);
 
-GPtrArray		*li_manager_get_update_list (LiManager *mgr,
+GList			*li_manager_get_update_list (LiManager *mgr,
 									GError **error);
 
 gboolean		li_manager_apply_updates (LiManager *mgr,

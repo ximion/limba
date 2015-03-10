@@ -42,6 +42,7 @@ struct _LiManagerPrivate
 {
 	GHashTable *pkgs; /* key:utf8;value:LiPkgInfo */
 	GPtrArray *rts; /* of LiRuntime */
+	GHashTable *updates; /* of LiUpdateItem */
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiManager, li_manager, G_TYPE_OBJECT)
@@ -59,8 +60,31 @@ li_manager_finalize (GObject *object)
 
 	g_hash_table_unref (priv->pkgs);
 	g_ptr_array_unref (priv->rts);
+	g_hash_table_unref (priv->updates);
 
 	G_OBJECT_CLASS (li_manager_parent_class)->finalize (object);
+}
+
+/**
+ * li_pki_hash_func:
+ *
+ * GHashFunc() for #LiPkgInfo
+ */
+static guint
+li_pki_hash_func (LiPkgInfo *key)
+{
+	return g_str_hash (li_pkg_info_get_id (key));
+}
+
+/**
+ * li_pkg_equal_func:
+ *
+ * GEqualFunc() for #LiPkgInfo
+ */
+static gboolean
+li_pki_equal_func (LiPkgInfo *a, LiPkgInfo *b)
+{
+	return g_strcmp0 (li_pkg_info_get_id (a), li_pkg_info_get_id (b)) == 0;
 }
 
 /**
@@ -73,6 +97,10 @@ li_manager_init (LiManager *mgr)
 
 	priv->pkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	priv->rts = g_ptr_array_new_with_free_func (g_object_unref);
+	priv->updates = g_hash_table_new_full ((GHashFunc) li_pki_hash_func,
+									(GEqualFunc) li_pki_equal_func,
+									g_object_unref,
+									g_object_unref);
 }
 
 /**
@@ -707,25 +735,22 @@ li_manager_receive_key (LiManager *mgr, const gchar *fpr, GError **error)
 }
 
 /**
- * li_pki_hash_func:
- *
- * GHashFunc() for #LiPkgInfo
+ * li_manager_clear_updates_table:
  */
-static guint
-li_pki_hash_func (LiPkgInfo *key)
+static void
+li_manager_clear_updates_table (LiManager *mgr)
 {
-	return g_str_hash (li_pkg_info_get_id (key));
-}
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
-/**
- * li_pkg_equal_func:
- *
- * GEqualFunc() for #LiPkgInfo
- */
-static gboolean
-li_pki_equal_func (LiPkgInfo *a, LiPkgInfo *b)
-{
-	return g_strcmp0 (li_pkg_info_get_id (a), li_pkg_info_get_id (b)) == 0;
+	/* clear table by recreating it, if necessary */
+	if (g_hash_table_size (priv->updates) == 0)
+		return;
+
+	g_hash_table_unref (priv->updates);
+	priv->updates = g_hash_table_new_full ((GHashFunc) li_pki_hash_func,
+									(GEqualFunc) li_pki_equal_func,
+									g_object_unref,
+									g_object_unref);
 }
 
 /**
@@ -733,23 +758,20 @@ li_pki_equal_func (LiPkgInfo *a, LiPkgInfo *b)
  *
  * EXPERIMENTAL
  *
- * Returns: (transfer full) (element-type LiUpdateItem): A list of #LiUpdateItem describing the potential updates.
+ * Returns: (transfer full) (element-type LiUpdateItem): A list of #LiUpdateItem describing the potential updates. Free with g_list_free().
  **/
-GPtrArray*
+GList*
 li_manager_get_update_list (LiManager *mgr, GError **error)
 {
 	_cleanup_object_unref_ LiPkgCache *cache = NULL;
 	GPtrArray *apkgs_list;
 	_cleanup_hashtable_unref_ GHashTable *ipkgs = NULL;
 	_cleanup_hashtable_unref_ GHashTable *apkgs = NULL;
-	_cleanup_hashtable_unref_ GHashTable *updates = NULL;
-	GPtrArray *uitem_list = NULL;
 	guint i;
 	_cleanup_list_free_ GList *ipkg_list = NULL;
 	GList *l;
 	GError *tmp_error = NULL;
-	GHashTableIter iter;
-	gpointer key, value;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	cache = li_pkg_cache_new ();
 
@@ -786,11 +808,10 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 							g_object_ref (b_pki));
 	}
 
+	/* ensure we have a clean updates table */
+	li_manager_clear_updates_table (mgr);
+
 	/* match it! */
-	updates = g_hash_table_new_full ((GHashFunc) li_pki_hash_func,
-									(GEqualFunc) li_pki_equal_func,
-									g_object_unref,
-									g_object_unref);
 	ipkg_list = g_hash_table_get_values (ipkgs);
 	for (l = ipkg_list; l != NULL; l = l->next) {
 		LiPkgInfo *ipki = LI_PKG_INFO (l->data);
@@ -802,29 +823,17 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 			continue;
 
 		if (li_compare_versions (li_pkg_info_get_version (apki), li_pkg_info_get_version (ipki)) > 0) {
+			LiUpdateItem *uitem;
+
 			/* we have a potential update */
-			g_hash_table_insert (updates,
+			uitem = li_update_item_new_with_packages (ipki, apki);
+			g_hash_table_insert (priv->updates,
 							g_object_ref (ipki),
-							g_object_ref (apki));
+							uitem);
 		}
 	}
 
-	/* create a list of sane update items */
-	uitem_list = g_ptr_array_new_with_free_func (g_object_unref);
-
-	g_hash_table_iter_init (&iter, updates);
-	while (g_hash_table_iter_next (&iter, &key, &value)) {
-		LiPkgInfo *ipki;
-		LiPkgInfo *apki;
-		LiUpdateItem *uitem;
-		ipki = LI_PKG_INFO (key);
-		apki = LI_PKG_INFO (value);
-
-		uitem = li_update_item_new_with_packages (ipki, apki);
-		g_ptr_array_add (uitem_list, uitem);
-	}
-
-	return uitem_list;
+	return g_hash_table_get_values (priv->updates);
 }
 
 /**
@@ -905,15 +914,21 @@ li_manager_upgrade_single_package (LiManager *mgr, LiPkgInfo *ipki, LiPkgInfo *a
 gboolean
 li_manager_apply_updates (LiManager *mgr, GError **error)
 {
-	_cleanup_ptrarray_unref_ GPtrArray *updates = NULL;
+	_cleanup_list_free_ GList *updlist = NULL;
 	_cleanup_hashtable_unref_ GHashTable *ipkgs = NULL;
-	guint i;
+	GList *l;
 	GError *tmp_error = NULL;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
-	updates = li_manager_get_update_list (mgr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
+	/* only search for new updates if we don't have some already in the queue */
+	if (g_hash_table_size (priv->updates) == 0) {
+		updlist = li_manager_get_update_list (mgr, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return FALSE;
+		}
+	} else {
+		updlist = g_hash_table_get_values (priv->updates);
 	}
 
 	/* get a list of all packages we have installed */
@@ -923,11 +938,12 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 		return FALSE;
 	}
 
-	for (i = 0; i < updates->len; i++) {
+	for (l = updlist; l != NULL; l = l->next) {
 		LiPkgInfo *ipki;
 		LiPkgInfo *apki;
 		_cleanup_ptrarray_unref_ GPtrArray *rts = NULL;
-		LiUpdateItem *uitem = LI_UPDATE_ITEM (g_ptr_array_index (updates, i));
+
+		LiUpdateItem *uitem = LI_UPDATE_ITEM (l->data);
 
 		ipki = li_update_item_get_installed_pkg (uitem);
 		apki = li_update_item_get_available_pkg (uitem);

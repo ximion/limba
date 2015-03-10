@@ -339,8 +339,8 @@ static gint
 lipa_list_updates (void)
 {
 	LiManager *mgr;
-	GPtrArray *updates = NULL;
-	guint i;
+	GList *updates = NULL;
+	GList *l;
 	gint exit_code = 0;
 	GError *error = NULL;
 
@@ -353,10 +353,10 @@ lipa_list_updates (void)
 		goto out;
 	}
 
-	for (i = 0; i < updates->len; i++) {
+	for (l = updates; l != NULL; l = l->next) {
 		LiPkgInfo *old_p;
 		LiPkgInfo *new_p;
-		LiUpdateItem *uitem = LI_UPDATE_ITEM (g_ptr_array_index (updates, i));
+		LiUpdateItem *uitem = LI_UPDATE_ITEM (l->data);
 
 		old_p = li_update_item_get_installed_pkg (uitem);
 		new_p = li_update_item_get_available_pkg (uitem);
@@ -368,7 +368,7 @@ lipa_list_updates (void)
 	}
 
 out:
-	g_ptr_array_unref (updates);
+	g_list_free (updates);
 	g_object_unref (mgr);
 	if (error != NULL)
 		g_error_free (error);
