@@ -1,3 +1,19 @@
+Version 0.4.1
+~~~~~~~~~~~~~~
+Released: 2015-03-10
+
+Features:
+ * Include contrib/ directory
+ * Inject multiarch library path into the application's environment
+ * Improve the updates API
+ * Rewrite buildlist Vala code to C code
+
+Bugfixes:
+ * Fix some GIR annotations
+ * Install .desktop files into local/share/applications to override distro packages
+ * runapp: Ensure argv0 of a spawned application is always its absolute executable path
+ * Create applications directory if it doesn't exist yet
+
 Version 0.4.0
 ~~~~~~~~~~~~~~
 Released: 2015-02-20
