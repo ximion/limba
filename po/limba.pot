@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2014-11-20 03:57+0100\n"
+        "POT-Creation-Date: 2015-03-10 21:47+0100\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,8 +16,14 @@ msgstr  "Project-Id-Version: limba\n"
         "Content-Type: text/plain; charset=CHARSET\n"
         "Content-Transfer-Encoding: 8bit\n"
 
+msgid   "Add a PGP key to the trusted database."
+msgstr  ""
+
 #, c-format
 msgid   "Checksum for embedded package '%s' did not match."
+msgstr  ""
+
+msgid   "Cleanup cruft packages"
 msgstr  ""
 
 #, c-format
@@ -29,11 +35,19 @@ msgid   "Command '%s' is unknown."
 msgstr  ""
 
 #, c-format
+msgid   "Could find package: %s"
+msgstr  ""
+
+#, c-format
 msgid   "Could not create directory structure '%s'. %s"
 msgstr  ""
 
 #, c-format
 msgid   "Could not create directory structure for runtime. %s"
+msgstr  ""
+
+#, c-format
+msgid   "Could not create system directory: %s"
 msgstr  ""
 
 #, c-format
@@ -89,6 +103,14 @@ msgid   "Could not open IPK payload! Error: %s"
 msgstr  ""
 
 #, c-format
+msgid   "Could not open file '%s' for writing."
+msgstr  ""
+
+#, c-format
+msgid   "Could not open metadata-file '%s' for reading."
+msgstr  ""
+
+#, c-format
 msgid   "Could not open package: %s"
 msgstr  ""
 
@@ -98,6 +120,10 @@ msgstr  ""
 
 #, c-format
 msgid   "Could not remove software directory."
+msgstr  ""
+
+#, c-format
+msgid   "Could not write to file: '%s'"
 msgstr  ""
 
 msgid   "Create a new package using data found in DIRECTORY."
@@ -112,16 +138,22 @@ msgid   "Created project template in '%s'.\n"
         "Please edit the files in that directory, e.g. add a long description to your\n"
         "application and specify its run-time dependencies.\n"
         "When you are done with this, build your software with --prefix=%s\n"
-        "and install it into the inst_target subdirectory of your 'pkginstall' directory.\n"
-        "Then run 'lipkgen build pkginstall/' to create your package. \n"
+        "and install it into the inst_target subdirectory of your 'lipkg' directory.\n"
+        "Then run 'lipkgen build lipkg/' to create your package. \n"
         "If you want to embed dependencies, place their IPK packages in the 'repo/'\n"
-        "subdirectory of 'pkginstall/'"
+        "subdirectory of 'lipkg/'"
 msgstr  ""
 
 msgid   "Define a software name (human readable):"
 msgstr  ""
 
 msgid   "Define a software version:"
+msgstr  ""
+
+msgid   "Do not fail action with an error code."
+msgstr  ""
+
+msgid   "Do not sign the package"
 msgstr  ""
 
 #, c-format
@@ -140,6 +172,9 @@ msgid   "File '%s' already exists."
 msgstr  ""
 
 msgid   "Install a local software package"
+msgstr  ""
+
+msgid   "Install software from a repository"
 msgstr  ""
 
 #, c-format
@@ -161,6 +196,9 @@ msgstr  ""
 msgid   "List installed software"
 msgstr  ""
 
+msgid   "No package file given for extraction."
+msgstr  ""
+
 #, c-format
 msgid   "No package is loaded."
 msgstr  ""
@@ -172,7 +210,18 @@ msgstr  ""
 msgid   "Package file '%s' was not found."
 msgstr  ""
 
+#, c-format
+msgid   "Package signed for \"%s\" [0x%s]\n"
+msgstr  ""
+
+#, c-format
+msgid   "Package signed for 0x%s\n"
+msgstr  ""
+
 msgid   "Please specify a path to the AppStream XML data:"
+msgstr  ""
+
+msgid   "Refresh the cache of available packages"
 msgstr  ""
 
 msgid   "Remove an installed software package"
@@ -196,6 +245,10 @@ msgstr  ""
 msgid   "Show the program version"
 msgstr  ""
 
+#, c-format
+msgid   "Signing of package failed: %s"
+msgstr  ""
+
 msgid   "Software package"
 msgstr  ""
 
@@ -203,6 +256,33 @@ msgid   "Software was installed successfully."
 msgstr  ""
 
 msgid   "Subcommands:"
+msgstr  ""
+
+msgid   "The package is signed with a known, trusted key."
+msgstr  ""
+
+msgid   "The package is signed with a trusted key."
+msgstr  ""
+
+msgid   "The package is signed, but not explicitly trusted."
+msgstr  ""
+
+#, c-format
+msgid   "The package was built for a different architecture."
+msgstr  ""
+
+msgid   "The signature on this package is broken."
+msgstr  ""
+
+msgid   "This package can not be trusted. It likely is not signed."
+msgstr  ""
+
+#, c-format
+msgid   "This package has a broken signature."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to calculate checksum for: %s"
 msgstr  ""
 
 #, c-format
@@ -234,7 +314,19 @@ msgid   "Unable to find or unpack package payload."
 msgstr  ""
 
 #, c-format
+msgid   "Unable to open package. %s"
+msgstr  ""
+
+#, c-format
 msgid   "Unable to remove existing installation of '%s (%s)'."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to set permissions on file '%s'. Error: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to unpack package. %s"
 msgstr  ""
 
 #, c-format
@@ -245,6 +337,13 @@ msgstr  ""
 msgid   "Unable to write AppStream data. %s"
 msgstr  ""
 
+#, c-format
+msgid   "Unable to write signature: %s"
+msgstr  ""
+
+msgid   "Unpack the Limba package to a directory."
+msgstr  ""
+
 msgid   "Write a short summary (one sentence) about your software:"
 msgstr  ""
 
@@ -252,6 +351,15 @@ msgid   "You need to specify a command."
 msgstr  ""
 
 msgid   "You need to specify a directory with build-metadata."
+msgstr  ""
+
+msgid   "You need to specify a key fingerprint."
+msgstr  ""
+
+msgid   "You need to specify a package to install."
+msgstr  ""
+
+msgid   "You need to specify a package to remove."
 msgstr  ""
 
 msgid   "Your software needs a unique name.\n"
