@@ -101,9 +101,15 @@ int main (int argc, char **argv)
 
 	/* We need to check if the buildlist executable changed. */
 	fd = open (argv[0], 0, (mode_t) 0);
-	fstat (fd, &stat);
-	modificationTime = (gint) stat.st_mtime;
-	close (fd);
+	if (fd >= 0) {
+		if (fstat (fd, &stat) == 0)
+			modificationTime = (gint) stat.st_mtime;
+		else
+			g_debug ("Unable to get mtime for self.");
+		close (fd);
+	} else {
+		g_debug ("Unable to get mtime for self: Could not get fd.");
+	}
 
 	firstLine = g_strdup_printf ("/* minimum glibc %s; modification time of buildlist %d */", minimum_version, modificationTime);
 
@@ -130,7 +136,6 @@ int main (int argc, char **argv)
 		g_strfreev (split);
 	}
 
-
 	header_content = g_string_new ("");
 	tmp = g_strconcat (firstLine, "\n", NULL);
 	g_string_append (header_content, tmp);
@@ -145,7 +150,6 @@ int main (int argc, char **argv)
 	if (G_UNLIKELY (inner_error != NULL)) {
 		goto out;
 	}
-
 
 	/* This map contains every symbol and the version as close to the minimum version as possible */
 	symbol_map = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
@@ -322,8 +326,6 @@ out:
 	g_free (firstLine);
 	g_free (filename);
 	g_free (minimum_version);
-	g_object_unref (enumerator);
-	g_object_unref (libPath);
 
 	if (inner_error == NULL) {
 		fprintf (stdout, " OK\n");

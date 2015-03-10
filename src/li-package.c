@@ -256,7 +256,14 @@ li_package_extract_entry_to (LiPackage *pkg, struct archive* ar, struct archive_
 
 done:
 	/* apply permissions from the archive */
-	chmod (fname, archive_entry_mode (e));
+	res = chmod (fname, archive_entry_mode (e));
+	if (res != 0) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_FAILED,
+				_("Unable to set permissions on file '%s'. Error: %s"), fname, g_strerror (errno));
+		return FALSE;
+	}
 
 	return ret;
 }
