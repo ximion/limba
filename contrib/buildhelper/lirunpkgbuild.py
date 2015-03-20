@@ -28,8 +28,9 @@ from tempfile import NamedTemporaryFile
 
 class LipkgBuilder:
 
-    def __init__(self, chroot):
+    def __init__(self, chroot, use_chroot=True):
         self.chroot = chroot
+        self._use_chroot = use_chroot
 
     def _find_build_paths(self, path):
         buildconf = os.path.join(path, "lipkg", "build.yml")
@@ -56,21 +57,28 @@ class LipkgBuilder:
             raise Exception("Could not find a 'build.yml' file!")
             return False
 
+        if self._use_chroot and not self.chroot:
+            print("You need to specify a chroot!")
+            sys.exit(1)
+
         self.wdir = path
 
         f = open(self.build_conf_file, 'r')
         self.recipe = yaml.safe_load(f)
         f.close()
 
-    def exec_cmd_schroot(self, cmd):
-        chroot_cmd = ['schroot', '-c', self.chroot, '--', 'bash', cmd]
-        proc = subprocess.Popen(chroot_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    def exec_cmd(self, cmd):
+        if self._use_chroot:
+            bcommand = ['schroot', '-c', self.chroot, '--', 'bash', cmd]
+        else:
+            bcommand = ['bash', cmd]
+        proc = subprocess.Popen(bcommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                     universal_newlines=True)
         while True:
             line = proc.stdout.readline()
             if not line:
                 break
-            print(line.strip())
+            print(line.rstrip())
         proc.poll()
 
         return proc.returncode
@@ -98,18 +106,15 @@ class LipkgBuilder:
     def run(self):
         buildscript = list()
 
-        if not self.chroot:
-            print("You need to specify a chroot!")
-            sys.exit(1)
-
         if not self.wdir:
             print("Could not determine a working directory - is the builder initialized?")
             sys.exit(1)
 
-        buildscript.append("#!/bin/sh")
+        buildscript.append("#!/bin/bash")
         buildscript.append("set -e")
         buildscript.append("")
         buildscript.append("cd %s" % (self.wdir))
+        buildscript.append("BUILDROOT=\"%s\"" % (self.wdir))
         buildscript.append("")
 
         commands = self.recipe.get('before_script')
@@ -120,6 +125,9 @@ class LipkgBuilder:
             return 0
         self.add_buildscript_commands(buildscript, commands, "Build", "script")
 
+        commands = self.recipe.get('after_script')
+        self.add_buildscript_commands(buildscript, commands, "Cleanup", "after_script")
+
         f = NamedTemporaryFile(mode='w', suffix="_lbs.sh")
         for line in buildscript:
             f.write("%s\n" % line)
@@ -128,7 +136,7 @@ class LipkgBuilder:
         # NOTE: We are running a script in /tmp as root in a chroot - this is not really
         # a safe thing todo, although - since it is always chrooted - the security issue should
         # be minimal. Still, a better solution is on TODO
-        ret = self.exec_cmd_schroot(f.name)
+        ret = self.exec_cmd(f.name)
         if ret != 0:
             return ret
 
@@ -138,10 +146,13 @@ def main():
     parser.add_option("-c", "--chroot",
                   type="string", dest="chroot", default=None,
                   help="use selected chroot")
+    parser.add_option("--no-chroot",
+                  action="store_true", dest="no_chroot",
+                  help="explicitly do not use a chroot")
 
     (options, args) = parser.parse_args()
 
-    builder = LipkgBuilder(options.chroot)
+    builder = LipkgBuilder(options.chroot, not options.no_chroot)
     if len(args) > 0:
         path = args[0]
     else:
