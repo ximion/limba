@@ -97,18 +97,21 @@ li_get_package_fname (const gchar *root_dir, const gchar *disk_fname)
 {
 	gchar *tmp;
 	gchar *fname = NULL;
+	_cleanup_free_ gchar *root_prefix = NULL;
 	gint offset;
 
 	if (g_str_has_prefix (disk_fname, root_dir)) {
 		fname = g_strdup (disk_fname + strlen (root_dir) + 1);
 	}
 
+	root_prefix = g_strdup (LI_SW_ROOT_PREFIX + 1);
+
 	if (fname != NULL) {
-		if (g_str_has_prefix (fname, LI_SW_ROOT_PREFIX)) {
+		if (g_str_has_prefix (fname, root_prefix)) {
 			tmp = g_strdup (fname);
 			g_free (fname);
 
-			offset = strlen (LI_SW_ROOT_PREFIX) + 1;
+			offset = strlen (root_prefix) + 1;
 			if (strlen (tmp) > offset)
 				fname = g_strdup (tmp + offset);
 			else
