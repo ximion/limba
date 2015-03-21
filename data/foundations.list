@@ -14,6 +14,9 @@ ID: foundation:systemd-logind
 ConditionFileExists: /lib/systemd/systemd-logind
 Description: Session tracking service by the systemd project
 
+ID: foundation:udev
+Description: /dev/ and hotplug management daemon
+
 ID: foundation:Linux
 Description: The Linux kernel
 
