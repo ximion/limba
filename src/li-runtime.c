@@ -469,6 +469,11 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 			continue;
 		}
 
+		/* we can't add system dependencies to a runtime, so filter them out */
+		if (g_str_has_prefix (li_pkg_info_get_name (pki), "foundation:")) {
+			continue;
+		}
+
 		/* did we add this already? */
 		if (!g_hash_table_add (dedup, g_strdup (pkid)))
 			continue;

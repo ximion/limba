@@ -22,7 +22,7 @@ ConditionFileExists: /usr/bin/pulseaudio
 Description: The PulseAudio sound server.
 
 ID: foundation:ALSA-Lib
-ConditionLibExists: libasound.so.2
+ConditionLibraryExists: libasound.so.2
 Description: The ALSA library.
 
 ID: foundation:Mesa

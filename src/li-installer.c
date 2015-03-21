@@ -35,6 +35,7 @@
 #include "li-runtime.h"
 #include "li-package-graph.h"
 #include "li-pkg-cache.h"
+#include "li-config-data.h"
 #include "li-dbus-interface.h"
 
 typedef struct _LiInstallerPrivate	LiInstallerPrivate;
@@ -45,6 +46,7 @@ struct _LiInstallerPrivate
 	LiPackageGraph *pg;
 	LiPackage *pkg;
 	LiPkgCache *cache;
+	GHashTable *foundations;
 
 	gchar *fname;
 };
@@ -67,6 +69,7 @@ li_installer_finalize (GObject *object)
 	g_object_unref (priv->mgr);
 	g_object_unref (priv->pg);
 	g_object_unref (priv->cache);
+	g_hash_table_unref (priv->foundations);
 	if (priv->pkg != NULL)
 		g_object_unref (priv->pkg);
 	g_free (priv->fname);
@@ -85,6 +88,7 @@ li_installer_init (LiInstaller *inst)
 	priv->mgr = li_manager_new ();
 	priv->pg = li_package_graph_new ();
 	priv->cache = li_pkg_cache_new ();
+	priv->foundations = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
 }
 
 /**
@@ -297,6 +301,39 @@ li_installer_find_dependency_embedded (LiInstaller *inst, GNode *child, LiPkgInf
 }
 
 /**
+ * li_installer_test_foundation_dependency:
+ *
+ * Check if we have a foundation dependency.
+ *
+ * Returns: %TRUE if dependency is satisfied, and %FALSE if it is not.
+ * In case we have failed to find the dependency, error is set.
+ */
+static gboolean
+li_installer_test_foundation_dependency (LiInstaller *inst, LiPkgInfo *dep_pki, GError **error)
+{
+	const gchar *pkname;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	pkname = li_pkg_info_get_name (dep_pki);
+
+	/* check if this dependency is a foundation dependency */
+	if (!g_str_has_prefix (pkname, "foundation:"))
+		return FALSE;
+
+	if (g_hash_table_lookup (priv->foundations, pkname) != NULL) {
+		/* foundation was found, dependency is satisfied! */
+		g_debug ("Detected system dependency '%s' as satisfied.", pkname);
+		return TRUE;
+	} else {
+		g_set_error (error,
+			LI_INSTALLER_ERROR,
+			LI_INSTALLER_ERROR_FOUNDATION_NOT_FOUND,
+			_("Could not find system component: '%s'. Please install it manually."), pkname);
+		return FALSE;
+	}
+}
+
+/**
  * li_installer_check_dependencies:
  */
 static void
@@ -331,7 +368,18 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 
 	for (i = 0; i < deps->len; i++) {
 		LiPkgInfo *ipki;
+		gboolean ret;
 		LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, i));
+
+		/* test if we have a dependency on a system component */
+		ret = li_installer_test_foundation_dependency (inst, dep, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+		/* continue if dependency is already satisfied */
+		if (ret)
+			continue;
 
 		/* test if this package is already in the installed set */
 		ipki = li_installer_find_satisfying_pkg (all_pkgs, dep);
@@ -474,6 +522,66 @@ li_installer_set_package (LiInstaller *inst, LiPackage *pkg)
 }
 
 /**
+ * li_installer_update_foundations_table:
+ */
+static void
+li_installer_update_foundations_table (LiInstaller *inst, GError **error)
+{
+	_cleanup_object_unref_ LiConfigData *fdconf = NULL;
+	GError *tmp_error = NULL;
+	GFile *file;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	if (g_hash_table_size (priv->foundations) > 0)
+		return;
+
+	fdconf = li_config_data_new ();
+	file = g_file_new_for_path (DATADIR "/foundations.list");
+	if (g_file_query_exists (file, NULL)) {
+		li_config_data_load_file (fdconf, file, &tmp_error);
+	} else {
+		g_warning ("No foundation (system-component) was defined. Continueing without that knowledge.");
+	}
+	g_object_unref (file);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	li_config_data_reset (fdconf);
+
+	do {
+		_cleanup_free_ gchar *fid = NULL;
+		gchar *condition;
+		gboolean ret;
+		fid = li_config_data_get_value (fdconf, "ID");
+
+		/* skip invalid data */
+		if (fid == NULL)
+			continue;
+
+		condition = li_config_data_get_value (fdconf, "ConditionFileExists");
+		if (condition != NULL) {
+			ret = g_file_test (condition, G_FILE_TEST_IS_REGULAR);
+			/* skip foundation if condition was not satisfied */
+			if (!ret) {
+				g_debug ("Foundation '%s' is not installed.", fid);
+				continue;
+			}
+		}
+
+		/* TODO: Implement ConditionLibraryExists */
+
+		/* TODO: Create a LiPkgInfo for each foundation, to produce better (error) messages later, and
+		 * to be more verbose */
+		g_hash_table_insert (priv->foundations,
+							g_strdup (fid),
+							g_strdup (fid));
+
+	} while (li_config_data_next (fdconf));
+}
+
+/**
  * li_installer_install:
  */
 gboolean
@@ -517,6 +625,14 @@ li_installer_install (LiInstaller *inst, GError **error)
 			LI_INSTALLER_ERROR_FAILED,
 			_("No package is loaded."));
 		return FALSE;
+	}
+
+	/* populate the foundations registry, if not yet done */
+	li_installer_update_foundations_table (inst, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error,
+									"Could not load foundations list.");
+		goto out;
 	}
 
 	/* open the package cache */
