@@ -78,11 +78,15 @@ li_exporter_init (LiExporter *exp)
 static void
 li_exporter_copy_file (LiExporter *exp, const gchar *source, const gchar *destination, GError **error)
 {
+	_cleanup_object_unref_ GFile *fsrc = NULL;
+	_cleanup_object_unref_ GFile *fdest = NULL;
 	GError *tmp_error = NULL;
-	gchar *contents = NULL;
 	LiExporterPrivate *priv = GET_PRIVATE (exp);
 
-	if ((!priv->override) && (g_file_test (destination, G_FILE_TEST_EXISTS))) {
+	fsrc = g_file_new_for_path (source);
+	fdest = g_file_new_for_path (destination);
+
+	if ((!priv->override) && (g_file_query_exists (fdest, NULL))) {
 		g_set_error (error,
 					G_FILE_ERROR,
 					G_FILE_ERROR_EXIST,
@@ -90,18 +94,17 @@ li_exporter_copy_file (LiExporter *exp, const gchar *source, const gchar *destin
 		return;
 	}
 
-	g_file_get_contents (source, &contents, NULL, &tmp_error);
+
+
+	g_file_copy (fsrc,
+				fdest,
+				G_FILE_COPY_OVERWRITE,
+				NULL, NULL, NULL, &tmp_error);
+
 	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+		g_propagate_prefixed_error (error, tmp_error, "Unable to export file.");
 		return;
 	}
-
-	g_file_set_contents (destination, contents, -1, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-	}
-
-	g_free (contents);
 }
 
 /**
@@ -123,10 +126,10 @@ li_exporter_process_desktop_file (LiExporter *exp, const gchar *disk_location, G
 		return FALSE;
 
 	tmp = g_path_get_basename (disk_location);
-	dest = g_build_filename (PREFIXDIR, "local", "share", "applications", tmp, NULL);
+	dest = g_build_filename ("/usr/local/share/applications", tmp, NULL);
 	g_free (tmp);
 
-	if (g_mkdir_with_parents (PREFIXDIR "/local/share/applications", 0755) != 0) {
+	if (g_mkdir_with_parents ("/usr/local/share/applications", 0755) != 0) {
 		g_set_error (error,
 			G_FILE_ERROR,
 			G_FILE_ERROR_FAILED,
@@ -250,6 +253,49 @@ li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError 
 }
 
 /**
+ * li_exporter_process_icon:
+ */
+static gboolean
+li_exporter_process_icon (LiExporter *exp, const gchar *disk_location, GError **error)
+{
+	_cleanup_free_ gchar *dest = NULL;
+	gchar *tmp;
+	GError *tmp_error = NULL;
+	LiExporterPrivate *priv = GET_PRIVATE (exp);
+
+
+	tmp = g_strrstr (disk_location, "icons/hicolor/");
+	if (tmp == NULL)
+		return TRUE;
+	tmp = g_strdup (tmp + 14);
+
+	dest = g_build_filename ("/usr/local/share/icons/hicolor", tmp, NULL);
+	g_free (tmp);
+
+	/* create destination directory */
+	tmp = g_path_get_dirname (dest);
+	if (g_mkdir_with_parents (tmp, 0755) != 0) {
+		g_free (tmp);
+		g_set_error (error,
+			G_FILE_ERROR,
+			G_FILE_ERROR_FAILED,
+			_("Could not create system directory: %s"), g_strerror (errno));
+		return FALSE;
+	}
+	g_free (tmp);
+
+	li_exporter_copy_file (exp, disk_location, dest, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	/* register installation of new external file */
+	g_ptr_array_add (priv->external_files, g_strdup (dest));
+	return TRUE;
+}
+
+/**
  * li_exporter_process_file:
  */
 gboolean
@@ -270,6 +316,8 @@ li_exporter_process_file (LiExporter *exp, const gchar *filename, const gchar *d
 		ret = li_exporter_process_desktop_file (exp, disk_location, error);
 	else if (g_str_has_prefix (filename, "bin"))
 		ret = li_exporter_process_binary (exp, disk_location, error);
+	else if (g_str_has_prefix (filename, "share/icons/hicolor/"))
+		ret = li_exporter_process_icon (exp, disk_location, error);
 
 	return ret;
 }
