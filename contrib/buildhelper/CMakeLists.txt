@@ -1,2 +1,2 @@
 
-install(PROGRAMS lirunpkgbuild.py DESTINATION bin RENAME lirunpkgbuild)
+install(PROGRAMS lipkbh.py DESTINATION bin RENAME lipkbh)

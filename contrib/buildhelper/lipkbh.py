@@ -153,19 +153,30 @@ def main():
     (options, args) = parser.parse_args()
 
     builder = LipkgBuilder(options.chroot, not options.no_chroot)
-    if len(args) > 0:
-        path = args[0]
-    else:
-        path = os.getcwd()
 
-    try:
-        builder.initialize(path)
-    except Exception as e:
-        print("Error: %s" % (str(e)))
+    if len(args) == 0:
+        print("You need to specify a command!")
         sys.exit(1)
 
-    res = builder.run()
-    sys.exit(res)
+    command = args[0]
+
+    if command == "build" or command == "b":
+        if len(args) > 1:
+            path = args[1]
+        else:
+            path = os.getcwd()
+
+        try:
+            builder.initialize(path)
+        except Exception as e:
+            print("Error: %s" % (str(e)))
+            sys.exit(2)
+
+        res = builder.run()
+        sys.exit(res)
+    else:
+        print("Sorry, I don't know the command '%s'." % (command))
+        sys.exit(1)
 
 
 if __name__ == "__main__":
