@@ -52,6 +52,10 @@ make
 sudo make install
 ```
 
+### Translating Limba
+You can help localizing Limba! Take a look at the [Transifex Project](https://www.transifex.com/projects/p/limba/).
+New languages will be approved as soon as possible.
+
 ### Testing Limba
 Run "make test" first, This will produce two packages (file extension .ipk) in the tests/data directory.
 You can install these packages using
