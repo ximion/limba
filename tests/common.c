@@ -25,8 +25,9 @@
 #include <sys/mount.h>
 #include <errno.h>
 #include <string.h>
-#include <linux/version.h>
+#include <sys/utsname.h>
 
+#include "limba.h"
 #include "li-utils-private.h"
 
 #define TEST_ROOT "/var/tmp/limba-tests/root"
@@ -46,15 +47,9 @@ ofsmount (const gchar *dir, const gchar *mlower, const gchar *mupper, unsigned l
 	gchar *mp;
 	gint res;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION (3,18,0)
-		mp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", mlower, mupper, OFS_WDIR);
-		res = mount ("overlay", dir,
-					"overlay", options, mp);
-#else
-		mp = g_strdup_printf ("lowerdir=%s,upperdir=%s", mlower, mupper);
-		res = mount ("overlayfs", dir,
-					"overlayfs", options, mp);
-#endif
+	mp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", mlower, mupper, OFS_WDIR);
+	res = mount ("overlay", dir,
+				"overlay", options, mp);
 	li_assert_errno (res);
 }
 
@@ -195,10 +190,18 @@ gboolean
 li_test_enter_chroot ()
 {
 	gint res;
+	struct utsname uts_data;
 
 	/* we need to be root */
 	if (!li_utils_is_root ())
 		g_error ("This testsuite needs CAP_SYS_ADMIN to work.");
+
+	uname (&uts_data);
+	/* we need at least Linux 3.18 for the tests to work */
+	if (li_compare_versions ("3.18", uts_data.release) > 0) {
+		g_error ("Running on Linux %s. The testsuite needs at least Linux 3.18 to work properly.", uts_data.release);
+		return FALSE;
+	}
 
 	/* unmount stuff */
 	li_test_finalize_chroot ();
@@ -250,9 +253,9 @@ li_test_enter_chroot ()
 
 	/* change root */
 	res = chroot (TEST_ROOT);
-	g_assert (res == 0);
-
 	chdir ("/");
+
+	g_assert (res == 0);
 
 	return TRUE;
 }
