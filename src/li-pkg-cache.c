@@ -279,7 +279,6 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 {
 	guint i;
 	GError *tmp_error = NULL;
-	_cleanup_object_unref_ LiPkgIndex *tmp_index = NULL;
 	_cleanup_object_unref_ LiPkgIndex *global_index = NULL;
 	_cleanup_free_ gchar *dest_ascache = NULL;
 	_cleanup_free_ gchar *current_arch = NULL;
