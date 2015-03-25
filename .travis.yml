@@ -9,7 +9,6 @@ compiler:
 before_script:
   - env | sort
   - uname -m && uname -r
-  - modprobe -c | grep overlay
   - sudo add-apt-repository "deb mirror://mirrors.ubuntu.com/US.txt trusty main restricted universe multiverse" -y
   - sudo apt-get update -qq && sudo apt-get install -qq base-files software-properties-common build-essential zlib1g # workarounds for upgrade issues
   - sudo add-apt-repository ppa:ximion/packagekit -y
@@ -18,4 +17,6 @@ before_script:
 script:
   - mkdir build && cd build
   - cmake -DMAINTAINER=ON -DLIBUILD=ON ..
-  - make && make install DESTDIR=./install_root/ && sudo make test ARGS=-V
+  - make && make install DESTDIR=./install_root/
+  # tests need Linux 3.18 which Travis does not provide
+  #- sudo make test ARGS=-V
