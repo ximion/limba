@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ ! -u "@LITESTRUNNER_EXEC@" ]
+then
+  sudo chown root.root "@LITESTRUNNER_EXEC@"
+  sudo chmod u+s "@LITESTRUNNER_EXEC@"
+fi
+
+sudo "@LITESTRUNNER_EXEC@" $@

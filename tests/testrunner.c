@@ -19,13 +19,15 @@
  */
 
 #include "config.h"
-#include "common.h"
+#include "testrunner.h"
 
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/mount.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/utsname.h>
+#include <glib/gi18n-lib.h>
 
 #include "limba.h"
 #include "li-utils-private.h"
@@ -35,6 +37,9 @@
 
 #define OFS_WDIR "/var/tmp/limba-tests/ofs_work"
 #define li_assert_errno(e) if (e != 0) { g_print("ERROR: %s", strerror(errno)); g_assert (e == 0); }
+
+static gboolean optn_show_version = FALSE;
+static gboolean optn_verbose_mode = FALSE;
 
 /**
  * ofsmount:
@@ -268,4 +273,70 @@ li_test_drop_privileges ()
 {
 	if (li_utils_is_root ())
 		setuid (getuid ());
+}
+
+/**
+ * main:
+ **/
+int
+main (int argc, char *argv[])
+{
+	gint exit_code = 0;
+	gboolean ret;
+	gchar *exec_cmd;
+	GOptionContext *opt_context;
+	GError *error = NULL;
+
+	const GOptionEntry client_options[] = {
+		{ "version", 0, 0, G_OPTION_ARG_NONE, &optn_show_version, _("Show the program version"), NULL },
+		{ "verbose", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_verbose_mode, _("Show extra debugging information"), NULL },
+		{ NULL }
+	};
+
+	opt_context = g_option_context_new ("- Limba Privileged Test Runner");
+	g_option_context_set_help_enabled (opt_context, TRUE);
+	g_option_context_add_main_entries (opt_context, client_options, NULL);
+
+	g_option_context_parse (opt_context, &argc, &argv, &error);
+	if (error != NULL) {
+		gchar *msg;
+		msg = g_strconcat (error->message, "\n", NULL);
+		g_print ("%s\n", msg);
+		g_free (msg);
+		g_error (_("Run '%s --help' to see a full list of available command line options."), argv[0]);
+		exit_code = 1;
+		g_error_free (error);
+		goto out;
+	}
+
+	if (optn_show_version) {
+		g_print ("Limba version: %s\n", VERSION);
+		goto out;
+	}
+
+	/* just a hack, we might need proper message handling later */
+	if (optn_verbose_mode) {
+		g_setenv ("G_MESSAGES_DEBUG", "all", TRUE);
+	}
+
+	if (argc < 2) {
+		g_printerr ("%s\n", _("You need to specify a command."));
+		exit_code = 1;
+		goto out;
+	}
+
+	/* switch to fake root environment */
+	ret = li_test_enter_chroot ();
+	g_assert (ret);
+
+	exec_cmd = g_strjoinv (" ", argv+1);
+	g_debug ("Running: %s", exec_cmd);
+
+	exit_code = system (exec_cmd);
+	g_free (exec_cmd);
+
+out:
+	g_option_context_free (opt_context);
+
+	return exit_code;
 }

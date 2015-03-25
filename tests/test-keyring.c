@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include "limba.h"
 
-#include "common.h"
 #include "li-keyring.h"
 
 static gchar *datadir = NULL;
@@ -103,9 +102,6 @@ main (int argc, char **argv)
 	g_assert (datadir != NULL);
 	datadir = g_build_filename (datadir, "data", NULL);
 	g_assert (g_file_test (datadir, G_FILE_TEST_EXISTS) != FALSE);
-
-	/* switch to fake root environment */
-	li_test_enter_chroot ();
 
 	/* set fake GPG home */
 	tmp = g_build_filename (argv[1], "gpg", NULL);
