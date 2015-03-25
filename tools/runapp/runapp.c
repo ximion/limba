@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <linux/version.h>
+#include <sys/utsname.h>
 
 #include <gio/gio.h>
 
@@ -147,10 +148,6 @@ mount_overlay (const gchar *pkgid)
 		goto out;
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION (3,18,0)
-	g_warning ("Compiled for an old Linux kernel (<< 3.18). This tool might not work as expected.");
-#endif
-
 	if (g_strcmp0 (runtime_uuid, "None") != 0) {
 		/* mount the desired runtime */
 		gchar *rt_path;
@@ -163,15 +160,9 @@ mount_overlay (const gchar *pkgid)
 			goto out;
 		}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION (3,18,0)
 		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", LI_SW_ROOT_PREFIX, rt_path, wdir);
 		res = mount ("overlay", LI_SW_ROOT_PREFIX,
 					"overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
-#else
-		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, rt_path);
-		res = mount ("overlayfs", LI_SW_ROOT_PREFIX,
-					"overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
-#endif
 
 		g_free (tmp);
 		g_free (rt_path);
@@ -182,15 +173,9 @@ mount_overlay (const gchar *pkgid)
 		}
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION (3,18,0)
 	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", LI_SW_ROOT_PREFIX, main_data_path, wdir);
 	res = mount ("overlay", LI_SW_ROOT_PREFIX,
 				 "overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
-#else
-	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s", LI_SW_ROOT_PREFIX, main_data_path);
-	res = mount ("overlayfs", LI_SW_ROOT_PREFIX,
-				 "overlayfs", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
-#endif
 
 	g_free (tmp);
 	if (res != 0) {
@@ -238,6 +223,7 @@ main (gint argc, gchar *argv[])
 	int ret;
 	_cleanup_free_ gchar *swname = NULL;
 	_cleanup_free_ gchar *executable = NULL;
+	struct utsname uts_data;
 	gchar *ma_lib_path = NULL;
 	gchar *tmp;
 	gchar **strv;
@@ -262,6 +248,11 @@ main (gint argc, gchar *argv[])
 		ret = 1;
 		goto out;
 	}
+
+	uname (&uts_data);
+	/* we need at least Linux 4.0 for Limba to work properly */
+	if (li_compare_versions ("4.0", uts_data.release) > 0)
+		g_warning ("Running on Linux %s. Runapp needs at least Linux 4.0 to be sure all needed features are present.", uts_data.release);
 
 	swname = g_strdup (strv[0]);
 	executable = g_build_filename (LI_SW_ROOT_PREFIX, strv[1], NULL);
