@@ -15,7 +15,7 @@
 	<refentryinfo>
 	<title>Limba Project</title>
 	<copyright>
-		<year>2014</year>
+		<year>2014-2015</year>
 		<holder>Matthias Klumpp</holder>
 	</copyright>
 	<productname>Limba Project</productname>
@@ -56,15 +56,29 @@
 		</para>
 	</refsect1>
 
-       <refsect1>
-	       <title>Options</title>
-	       <variablelist>
+	<refsect1>
+		<title>Options</title>
+		<variablelist>
+
+		<varlistentry>
+			<term><option>list</option></term>
+			<listitem>
+				<para>List software installed using Limba.</para>
+			</listitem>
+		</varlistentry>
 
 		<varlistentry>
 			<term><option>i</option></term>
 			<term><option>install <replaceable>PACKAGE</replaceable></option></term>
 			<listitem>
-				<para>Install new software from a local IPK package.</para>
+				<para>Install new software from a remote source (repository).</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>install-local <replaceable>FILENAME</replaceable></option></term>
+			<listitem>
+				<para>Install a local IPK package.</para>
 			</listitem>
 		</varlistentry>
 
@@ -77,9 +91,9 @@
 		</varlistentry>
 
 		<varlistentry>
-			<term><option>list</option></term>
+			<term><option>refresh</option></term>
 			<listitem>
-				<para>List software installed using Limba.</para>
+				<para>Refresh the cache of installed packages.</para>
 			</listitem>
 		</varlistentry>
 
@@ -107,9 +121,11 @@
 			Additional documentation can be found on http://people.freedesktop.org/~mak/limba.
 		</para>
 	</refsect1>
-<refsect1>
-<title>AUTHOR</title>
-<para>This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
-</para>
-</refsect1>
+
+	<refsect1>
+		<title>AUTHOR</title>
+		<para>
+			This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
+		</para>
+	</refsect1>
 </refentry>

@@ -15,7 +15,7 @@
 	<refentryinfo>
 	<title>Limba Project</title>
 	<copyright>
-		<year>2014</year>
+		<year>2014-2015</year>
 		<holder>Matthias Klumpp</holder>
 	</copyright>
 	<productname>Limba Project</productname>
@@ -31,15 +31,15 @@
 		<refpurpose>Limba package builder</refpurpose>
 	</refnamediv>
 
-       <refsynopsisdiv>
-	       <cmdsynopsis>
-		       <command>&package;</command>
-		       <group choice="req">
-			       <option>COMMAND</option>
-		       </group>
-		       <group choice="opt">
-			       <option>OPTION ...</option>
-		       </group>
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>&package;</command>
+			<group choice="req">
+				<option>COMMAND</option>
+			</group>
+			<group choice="opt">
+				<option>OPTION ...</option>
+			</group>
 		</cmdsynopsis>
 	</refsynopsisdiv>
 
@@ -54,15 +54,34 @@
 		</para>
 	</refsect1>
 
-       <refsect1>
-	       <title>Options</title>
-	       <variablelist>
+	<refsect1>
+		<title>Options</title>
+		<variablelist>
 
 		<varlistentry>
 			<term><option>b</option></term>
 			<term><option>build <replaceable>DIRECTORY</replaceable></option></term>
 			<listitem>
-				<para>Build IPK package using package metadata in <replaceable>DIRECTORY</replaceable>.</para>
+				<para>
+					Build IPK package using package metadata in <replaceable>DIRECTORY</replaceable>.
+				</para>
+				<para>
+					If <replaceable>DIRECTORY</replaceable> is not defined, <command>&package;</command> will
+					try to find the package sources automatically in the current directory.
+				</para>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><option>unpack-pkg <replaceable>FILENAME</replaceable> <replaceable>DIRECTORY</replaceable></option></term>
+			<listitem>
+				<para>
+					Extract contents of package <replaceable>FILENAME</replaceable> into <replaceable>DIRECTORY</replaceable>.
+					This is useful for investigating the raw contents of a Limba package.
+				</para>
+				<para>
+					If <replaceable>DIRECTORY</replaceable> is not defined, the contents are extracted into the current directory.
+				</para>
 			</listitem>
 		</varlistentry>
 
@@ -90,9 +109,11 @@
 			Additional documentation can be found on http://people.freedesktop.org/~mak/limba.
 		</para>
 	</refsect1>
-<refsect1>
-<title>AUTHOR</title>
-<para>This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
-</para>
-</refsect1>
+
+	<refsect1>
+		<title>AUTHOR</title>
+		<para>
+			This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
+		</para>
+	</refsect1>
 </refentry>

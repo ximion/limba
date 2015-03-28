@@ -15,7 +15,7 @@
 	<refentryinfo>
 	<title>Limba Project</title>
 	<copyright>
-		<year>2014</year>
+		<year>2014-2015</year>
 		<holder>Matthias Klumpp</holder>
 	</copyright>
 	<productname>Limba Project</productname>
@@ -31,12 +31,12 @@
 		<refpurpose>Run an application</refpurpose>
 	</refnamediv>
 
-       <refsynopsisdiv>
-	       <cmdsynopsis>
-		       <command>&package;</command>
-		       <group choice="req">
-			       <option>SOFTWARE</option>
-		       </group>
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>&package;</command>
+				<group choice="req">
+					<option>BUNDLE:BINARY</option>
+				</group>
 		</cmdsynopsis>
 	</refsynopsisdiv>
 
@@ -50,6 +50,14 @@
 			the application environment, make it find its dependencies, initiate a sandbox and
 			do everything else needed to run the application.
 		</para>
+		<para>
+			The first parameter of <command>&package;</command> should be the <replaceable>BUNDLE:BINARY</replaceable>
+			combination, e.g. if you want to run the binary <filename>/bin/foo</filename> of the <literal>foobar-1.0</literal>
+			package, use <replaceable>foobar-1.0:/bin/foo</replaceable> as parameter.
+		</para>
+		<para>
+			All following options are treated as belonging to the called binary.
+		</para>
 	</refsect1>
 
 	<refsect1>
@@ -59,9 +67,11 @@
 			Additional documentation can be found on http://people.freedesktop.org/~mak/limba.
 		</para>
 	</refsect1>
-<refsect1>
-<title>AUTHOR</title>
-<para>This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
-</para>
-</refsect1>
+
+	<refsect1>
+		<title>AUTHOR</title>
+		<para>
+			This manual page was written by Matthias Klumpp <email>matthias@tenstral.net</email>.
+		</para>
+	</refsect1>
 </refentry>
