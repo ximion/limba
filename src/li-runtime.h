@@ -73,7 +73,6 @@ gboolean		li_runtime_save (LiRuntime *rt,
 								GError **error);
 
 const gchar		*li_runtime_get_uuid (LiRuntime *rt);
-gchar			*li_runtime_get_data_path (LiRuntime *rt);
 
 LiRuntime		*li_runtime_create_with_members (GPtrArray *members,
 												GError **error);

@@ -241,18 +241,6 @@ li_runtime_get_uuid (LiRuntime *rt)
 }
 
 /**
- * li_runtime_get_data_path:
- *
- * Get the path to the data of this runtime.
- */
-gchar*
-li_runtime_get_data_path (LiRuntime *rt)
-{
-	LiRuntimePrivate *priv = GET_PRIVATE (rt);
-	return g_build_filename (LI_SOFTWARE_ROOT, "runtimes", priv->uuid, "data", NULL);
-}
-
-/**
  * li_runtime_get_members:
  *
  * Returns: (transfer none) (element-type LiPkgInfo, LiPkgInfo): Hash set of packages which are members of this runtime
@@ -309,156 +297,33 @@ li_runtime_save (LiRuntime *rt, GError **error)
 {
 	gboolean ret;
 	LiConfigData *cdata;
-	gchar *control_fname;
+	_cleanup_free_ gchar *control_fname = NULL;
+	_cleanup_free_ gchar *rt_path = NULL;
 	GError *tmp_error = NULL;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
-	control_fname = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", priv->uuid, "control", NULL);
+	rt_path = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", priv->uuid, NULL);
+	control_fname = g_build_filename (rt_path, "control", NULL);
+
+	if (!g_file_test (rt_path, G_FILE_TEST_IS_DIR)) {
+		if (g_mkdir_with_parents (rt_path, 0755) != 0) {
+			g_set_error (error,
+				G_FILE_ERROR,
+				G_FILE_ERROR_FAILED,
+				_("Could not create directory structure for runtime. %s"), g_strerror (errno));
+			return FALSE;
+		}
+	}
 
 	cdata = li_config_data_new ();
 	li_runtime_update_cdata_values (rt, cdata);
 	ret = li_config_data_save_to_file (cdata, control_fname, &tmp_error);
 	g_object_unref (cdata);
-	g_free (control_fname);
 
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 	}
 
-	return ret;
-}
-
-/**
- * li_runtime_link_data_path:
- *
- * Helper for li_runtime_link_software()
- */
-static gboolean
-li_runtime_link_data_path (const gchar* sw_dir, const gchar* rt_destination, GError **error)
-{
-	GError *tmp_error = NULL;
-	GFileInfo *file_info;
-	GFileEnumerator *enumerator = NULL;
-	GFile *fdir;
-
-	fdir =  g_file_new_for_path (sw_dir);
-	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
-	if (tmp_error != NULL)
-		goto out;
-
-	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		_cleanup_free_ gchar *path = NULL;
-		_cleanup_free_ gchar *dest_path = NULL;
-		gchar *tmp;
-		gint res;
-
-		path = g_build_filename (sw_dir,
-								 g_file_info_get_name (file_info),
-								 NULL);
-		tmp = g_path_get_basename (path);
-		dest_path = g_build_filename (rt_destination, tmp, NULL);
-		g_free (tmp);
-
-		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
-			/* if there is already a file with that name at the destination, we skip this directory */
-			if (g_file_test (dest_path, G_FILE_TEST_IS_REGULAR)) {
-				continue;
-			}
-
-			/* create directory at destination */
-			if (!g_file_test (dest_path, G_FILE_TEST_IS_DIR)) {
-				res = g_mkdir (dest_path, 0755);
-				if (res != 0) {
-					g_set_error (error,
-						G_FILE_ERROR,
-						G_FILE_ERROR_FAILED,
-						_("Unable to create directory. Error: %s"), g_strerror (errno));
-					goto out;
-				}
-			}
-
-			li_runtime_link_data_path (path, dest_path, &tmp_error);
-			/* if there was an error, exit */
-			if (tmp_error != NULL) {
-				goto out;
-			}
-		} else {
-			if (g_file_test (dest_path, G_FILE_TEST_EXISTS))
-				continue;
-
-			if (g_file_test (path, G_FILE_TEST_IS_SYMLINK)) {
-				gchar *target;
-				target = g_file_read_link (path, &tmp_error);
-				if (tmp_error != NULL)
-					goto out;
-				res = symlink (target, dest_path);
-				g_free (target);
-			} else {
-				/* we have a file, link it */
-				res = link (path, dest_path);
-			}
-			if (res != 0) {
-				g_set_error (error,
-					G_FILE_ERROR,
-					G_FILE_ERROR_FAILED,
-					_("Unable to create symbolic link. Error: %s"), g_strerror (errno));
-				goto out;
-			}
-		}
-	}
-	if (tmp_error != NULL)
-		goto out;
-
-out:
-	g_object_unref (fdir);
-	if (enumerator != NULL)
-		g_object_unref (enumerator);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-/**
- * li_runtime_link_software:
- */
-static gboolean
-li_runtime_link_software (LiRuntime *rt, LiPkgInfo *pki, GError **error)
-{
-	gchar *data_path;
-	gchar *rt_path;
-	const gchar *pkid;
-	GError *tmp_error = NULL;
-	gboolean ret = FALSE;
-
-	pkid = li_pkg_info_get_id (pki);
-	if (pkid == NULL)
-		return FALSE;
-
-	rt_path = li_runtime_get_data_path (rt);
-	if (g_mkdir_with_parents (rt_path, 0755) != 0) {
-		g_set_error (error,
-			G_FILE_ERROR,
-			G_FILE_ERROR_FAILED,
-			_("Could not create directory structure for runtime. %s"), g_strerror (errno));
-		goto out;
-	}
-
-	data_path = g_build_filename (LI_SOFTWARE_ROOT, pkid, "data", NULL);
-	li_runtime_link_data_path (data_path, rt_path, &tmp_error);
-	g_free (data_path);
-
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		goto out;
-	}
-
-	/* register the added member with the runtime */
-	li_runtime_add_package (rt, pki);
-out:
-	g_free (rt_path);
 	return ret;
 }
 
@@ -502,19 +367,17 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 		if (!g_hash_table_add (dedup, g_strdup (pkid)))
 			continue;
 
-		li_runtime_link_software (rt, pki, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_prefixed_error (error, tmp_error, "%s ", "Unable to link runtime.");
-			goto out;
-		}
+		/* register the added member with the runtime */
+		li_runtime_add_package (rt, pki);
 	}
+
 	/* store metadata on disk */
 	ret = li_runtime_save (rt, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 	}
 
-out:
+	/* finish */
 	if (ret) {
 		return rt;
 	} else {
