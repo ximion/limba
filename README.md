@@ -19,8 +19,9 @@ get the latest changes.
 
 # Getting started with Limba
 ## Running Limba applications
-In order to run Limba applications, you will need a Linux kernel supporting OverlayFS.
-This is at least Linux 3.18[1].
+In order to run Limba applications, you will need a Linux kernel supporting OverlayFS[1] and
+multiple OverlayFS layers.
+This is at least Linux 4.0.
 
 Applications installed with Limba will nicely integrate with your desktop-environment, and should not
 look different from native applications.
