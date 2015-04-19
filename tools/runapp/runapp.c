@@ -250,9 +250,9 @@ main (gint argc, gchar *argv[])
 	}
 
 	uname (&uts_data);
-	/* we need at least Linux 3.18 for Limba to work properly */
-	if (li_compare_versions ("3.18", uts_data.release) > 0)
-		g_warning ("Running on Linux %s. Runapp needs at least Linux 3.18 to be sure all needed features are present.", uts_data.release);
+	/* we need at least Linux 4.0 for Limba to work properly */
+	if (li_compare_versions ("4.0", uts_data.release) > 0)
+		g_warning ("Running on Linux %s. Runapp needs at least Linux 4.0 to be sure all needed features are present.", uts_data.release);
 
 	swname = g_strdup (strv[0]);
 	executable = g_build_filename (LI_SW_ROOT_PREFIX, strv[1], NULL);
