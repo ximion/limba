@@ -207,6 +207,30 @@ li_runtime_load_directory (LiRuntime *rt, const gchar *dir, GError **error)
 }
 
 /**
+ * li_runtime_load_by_uuid:
+ */
+gboolean
+li_runtime_load_by_uuid (LiRuntime *rt, const gchar *uuid, GError **error)
+{
+	_cleanup_free_ gchar *runtime_dir = NULL;
+	gboolean ret;
+	GError *tmp_error = NULL;
+
+	if (strlen (uuid) != 36) {
+		g_warning ("Loading runtime with uuid '%s', which doesn't look valid.", uuid);
+	}
+
+	runtime_dir = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", uuid, NULL);
+
+	ret = li_runtime_load_directory (rt, runtime_dir, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+	}
+
+	return ret;
+}
+
+/**
  * li_runtime_get_uuid:
  */
 const gchar*

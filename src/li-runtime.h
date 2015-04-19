@@ -65,6 +65,10 @@ LiRuntime		*li_runtime_new		(void);
 gboolean		li_runtime_load_directory (LiRuntime *rt,
 											const gchar *dir,
 											GError **error);
+gboolean		li_runtime_load_by_uuid (LiRuntime *rt,
+											const gchar *uuid,
+											GError **error);
+
 gboolean		li_runtime_save (LiRuntime *rt,
 								GError **error);
 

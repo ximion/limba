@@ -150,22 +150,42 @@ mount_overlay (const gchar *pkgid)
 
 	if (g_strcmp0 (runtime_uuid, "None") != 0) {
 		/* mount the desired runtime */
-		gchar *rt_path;
+		LiRuntime *rt;
+		gchar **rt_members;
+		GString *mergedirs_str;
+		guint i;
 
-		rt_path = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", runtime_uuid, "data", NULL);
-		if (!g_file_test (rt_path, G_FILE_TEST_IS_DIR)) {
-			fprintf (stderr, "The runtime '%s' does not exist.\n", runtime_uuid);
+		rt = li_runtime_new ();
+		li_runtime_load_by_uuid (rt, runtime_uuid, &error);
+		if (error != NULL) {
+			fprintf (stderr, "Unable to load runtime '%s': %s\n", runtime_uuid, error->message);
 			res = 1;
-			g_free (rt_path);
 			goto out;
 		}
 
-		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", LI_SW_ROOT_PREFIX, rt_path, wdir);
+		rt_members = (gchar**) g_hash_table_get_keys_as_array (li_runtime_get_members (rt), NULL);
+
+		/* build our lowerdir directive */
+		mergedirs_str = g_string_new ("");
+		for (i = 0; rt_members[i] != NULL; i++) {
+			g_string_append_printf (mergedirs_str, "%s/%s/data:", LI_SOFTWARE_ROOT, rt_members[i]);
+		}
+
+		/* cleanup */
+		g_free (rt_members);
+		g_object_unref (rt);
+
+		/* safeguard againt the case where only one path is set for lowerdir.
+		 * OFS doesn't like that, so we always set the root path as source too. */
+		g_string_append_printf (mergedirs_str, "%s", LI_SW_ROOT_PREFIX);
+
+		tmp = g_strdup_printf ("lowerdir=%s", mergedirs_str->str);
 		res = mount ("overlay", LI_SW_ROOT_PREFIX,
 					"overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
 
 		g_free (tmp);
-		g_free (rt_path);
+		g_string_free (mergedirs_str, TRUE);
+
 		if (res != 0) {
 			fprintf (stderr, "Unable to mount runtime directory. %s\n", strerror (errno));
 			res = 1;
@@ -173,6 +193,7 @@ mount_overlay (const gchar *pkgid)
 		}
 	}
 
+	/* TODO: We don't need a workdir/upperdir here - adjust that later when the sandbox is implemented */
 	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", LI_SW_ROOT_PREFIX, main_data_path, wdir);
 	res = mount ("overlay", LI_SW_ROOT_PREFIX,
 				 "overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
