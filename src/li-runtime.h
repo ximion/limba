@@ -77,11 +77,13 @@ const gchar		*li_runtime_get_uuid (LiRuntime *rt);
 LiRuntime		*li_runtime_create_with_members (GPtrArray *members,
 												GError **error);
 
-GHashTable		*li_runtime_get_members (LiRuntime *rt);
 GHashTable		*li_runtime_get_requirements (LiRuntime *rt);
-void			li_runtime_set_requirements (LiRuntime *rt, GHashTable *reqs);
+GHashTable		*li_runtime_get_members (LiRuntime *rt);
+
 void			li_runtime_add_package (LiRuntime *rt,
-									   LiPkgInfo *pki);
+										LiPkgInfo *pki);
+void			li_runtime_remove_package (LiRuntime *rt,
+										LiPkgInfo *pki);
 
 gboolean		li_runtime_remove (LiRuntime *rt);
 

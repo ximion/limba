@@ -130,7 +130,7 @@ LiUpdateItem *
 li_update_item_new (void)
 {
 	LiUpdateItem *uitem;
-	uitem = g_object_new (LI_TYPE_PKG_INFO, NULL);
+	uitem = g_object_new (LI_TYPE_UPDATE_ITEM, NULL);
 	return LI_UPDATE_ITEM (uitem);
 }
 

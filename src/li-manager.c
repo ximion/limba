@@ -968,11 +968,11 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 
 		} else {
 			guint i;
-			_cleanup_ptrarray_unref_ GPtrArray *recreate_rts = NULL;
+			_cleanup_ptrarray_unref_ GPtrArray *update_rts = NULL;
 
 			g_debug ("Performing complex upgrade of '%s'", li_pkg_info_get_id (ipki));
 
-			recreate_rts = g_ptr_array_new_with_free_func (g_object_unref);
+			update_rts = g_ptr_array_new_with_free_func (g_object_unref);
 			for (i = 0; i < rts->len; i++) {
 				gchar **reqs;
 				guint j;
@@ -985,7 +985,7 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 
 					/* check if we can replace the package used by this runtime */
 					if (li_pkg_info_satisfies_requirement (apki, rt_req)) {
-						g_ptr_array_add (recreate_rts, g_object_ref (rt));
+						g_ptr_array_add (update_rts, g_object_ref (rt));
 						break;
 					}
 				}
@@ -993,7 +993,7 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 				g_free (reqs);
 			}
 
-			if (recreate_rts->len == 0) {
+			if (update_rts->len == 0) {
 				/* we can't upgrade, the new version would break runtimes */
 				g_debug ("Can not upgrade package '%s' as it would break all runtimes which are using it.", li_pkg_info_get_id (ipki));
 				continue;
@@ -1006,62 +1006,19 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 				return FALSE;
 			}
 
-			for (i = 0; i < recreate_rts->len; i++) {
-				GHashTable *members_ht;
-				gchar **members;
-				_cleanup_ptrarray_unref_ GPtrArray *array = NULL;
-				guint j;
-				_cleanup_object_unref_ LiRuntime *new_rt = NULL;
-				GList *ipkg_list;
-				GList *l;
-				LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (recreate_rts, i));
+			for (i = 0; i < update_rts->len; i++) {
+				LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (update_rts, i));
 
-				g_debug ("Replacing runtime '%s'", li_runtime_get_uuid (rt));
+				g_debug ("Updating runtime '%s'", li_runtime_get_uuid (rt));
 
-				members_ht = li_runtime_get_members (rt);
+				li_runtime_remove_package (rt, ipki);
+				li_runtime_add_package (rt, apki);
 
-				/* replace is faster than g_strcmp-ing later, although this looks a bit uglier */
-				g_hash_table_remove (members_ht, li_pkg_info_get_id (ipki));
-				g_hash_table_add (members_ht, g_strdup (li_pkg_info_get_id (apki)));
-
-				members = (gchar**) g_hash_table_get_keys_as_array (members_ht, NULL);
-				array = g_ptr_array_new_with_free_func (g_object_unref);
-				for (j = 0; members[j] != NULL; j++) {
-					LiPkgInfo *pki;
-					pki = li_pkg_info_new ();
-					/* meh... */
-					li_pkg_info_set_name (pki, members[j]);
-					li_pkg_info_set_id (pki, members[j]);
-
-					g_ptr_array_add (array, pki);
-				}
-
-				new_rt = li_runtime_create_with_members (array, &tmp_error);
+				li_runtime_save (rt, &tmp_error);
 				if (tmp_error != NULL) {
 					g_propagate_error (error, tmp_error);
 					return FALSE;
 				}
-
-				li_runtime_set_requirements (new_rt, li_runtime_get_requirements (rt));
-				li_runtime_save (new_rt, &tmp_error);
-				if (tmp_error != NULL) {
-					g_propagate_error (error, tmp_error);
-					return FALSE;
-				}
-
-				/* update runtime for dependent apps */
-				ipkg_list = g_hash_table_get_values (ipkgs);
-				for (l = ipkg_list; l != NULL; l = l->next) {
-					LiPkgInfo *pki = LI_PKG_INFO (l->data);
-
-					if (g_strcmp0 (li_pkg_info_get_runtime_dependency (pki), li_runtime_get_uuid (rt)) == 0) {
-						li_pkg_info_set_runtime_dependency (pki, li_runtime_get_uuid (new_rt));
-						li_pkg_info_save_changes (pki);
-					}
-				}
-
-				/* destroy the old runtime */
-				li_runtime_remove (rt);
 			}
 
 			/* TODO:
