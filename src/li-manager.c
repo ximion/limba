@@ -37,6 +37,8 @@
 #include "li-installer.h"
 #include "li-update-item.h"
 
+#define LI_CLEANUP_HINT_FNAME "/var/lib/limba/cleanup-needed"
+
 typedef struct _LiManagerPrivate	LiManagerPrivate;
 struct _LiManagerPrivate
 {
@@ -161,7 +163,6 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 
 				/* create new LiPkgInfo for an installed package */
 				pki = li_pkg_info_new ();
-				li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_INSTALLED);
 
 				li_pkg_info_load_file (pki, ctlfile, &tmp_error);
 				if (tmp_error != NULL) {
@@ -170,9 +171,8 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 				}
 
 				/* do not list as installed if the software is faded */
-				if (li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_FADED)) {
-					g_object_unref (pki);
-					continue;
+				if (!li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_FADED)) {
+					li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_INSTALLED);
 				}
 
 				g_hash_table_insert (pkgs,
@@ -600,6 +600,65 @@ li_manager_package_is_installed (LiManager *mgr, LiPkgInfo *pki)
 }
 
 /**
+ * li_manager_cleanup_broken_packages:
+ *
+ * Remove all invalid directories in /opt/software
+ **/
+static void
+li_manager_cleanup_broken_packages (LiManager *mgr, GError **error)
+{
+	GError *tmp_error = NULL;
+	GFile *fdir;
+	GFileEnumerator *enumerator = NULL;
+	GFileInfo *file_info;
+
+	if (!g_file_test (LI_SOFTWARE_ROOT, G_FILE_TEST_IS_DIR)) {
+		/* directory not found, no broken software to be found */
+		return;
+	}
+
+	/* get stuff in the software directory */
+	fdir = g_file_new_for_path (LI_SOFTWARE_ROOT);
+	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
+	if (tmp_error != NULL)
+		goto out;
+
+	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
+		_cleanup_free_ gchar *path = NULL;
+		if (tmp_error != NULL)
+			goto out;
+
+		/* the "runtimes" directory is special, never remove it */
+		if (g_strcmp0 (g_file_info_get_name (file_info), "runtimes") == 0)
+			continue;
+
+		path = g_build_filename (LI_SOFTWARE_ROOT,
+								 g_file_info_get_name (file_info),
+								 "control",
+								 NULL);
+
+		/* no control file means this is garbage, probably from a previous failed installation */
+		if (!g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
+			_cleanup_free_ gchar *tmp_path;
+			tmp_path = g_build_filename (LI_SOFTWARE_ROOT,
+									g_file_info_get_name (file_info),
+									NULL);
+			li_delete_dir_recursive (tmp_path);
+		}
+	}
+
+out:
+	g_object_unref (fdir);
+	if (enumerator != NULL)
+		g_object_unref (enumerator);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error,
+						tmp_error,
+						"Error while cleaning up software directories:");
+	}
+}
+
+/**
  * li_manager_cleanup:
  *
  * Remove unnecessary software.
@@ -607,39 +666,68 @@ li_manager_package_is_installed (LiManager *mgr, LiPkgInfo *pki)
 gboolean
 li_manager_cleanup (LiManager *mgr, GError **error)
 {
-	GHashTable *sws;
-	GHashTable *rts;
+	_cleanup_hashtable_unref_ GHashTable *sws = NULL;
+	_cleanup_hashtable_unref_ GHashTable *rts = NULL;
+	_cleanup_list_free_ GList *sw_list = NULL;
 	GPtrArray *rt_array;
-	GList *sw_list = NULL;
 	guint i;
 	GList *l;
-	GList *list = NULL;
+	_cleanup_list_free_ GList *list = NULL;
 	GError *tmp_error = NULL;
+	gboolean faded_sw_removed = FALSE;
 	gboolean ret = FALSE;
 
-	rts = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
-	sws = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
-
-	/* build hash tables */
-	sw_list = li_manager_get_software_list (mgr, &tmp_error);
+	/* cleanup software directory */
+	li_manager_cleanup_broken_packages (mgr, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;
 	}
 
+	rts = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	sws = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+
+	/* load software list */
+	sws = li_manager_get_installed_software (mgr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+	sw_list = g_hash_table_get_values (sws);
+
+	/* first, always remove software which has the "faded" flag */
 	for (l = sw_list; l != NULL; l = l->next) {
 		LiPkgInfo *pki = LI_PKG_INFO (l->data);
 
-		/* check if the package is actually installed */
-		if (!li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_INSTALLED))
+		if (li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_FADED)) {
+			g_debug ("Found faded package: %s", li_pkg_info_get_id (pki));
+			li_manager_remove_software (mgr, li_pkg_info_get_id (pki), &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
+			faded_sw_removed = TRUE;
 			continue;
-
-		g_hash_table_insert (sws,
-							g_strdup (li_pkg_info_get_id (pki)),
-							g_object_ref (pki));
+		}
 	}
 
-	/* remove every software from the list which is not member of a runtime */
+	/* update cache in case we removed software */
+	if (faded_sw_removed) {
+		/* installed software might have changed */
+		li_manager_reset_cached_data (mgr);
+
+		g_list_free (sw_list);
+		g_hash_table_unref (sws);
+		sws = li_manager_get_installed_software (mgr, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return FALSE;
+		}
+
+		sw_list = g_hash_table_get_values (sws);
+	}
+
+	/* remove every software from the list which is member of a runtime */
 	rt_array = li_manager_get_installed_runtimes (mgr);
 	for (i = 0; i < rt_array->len; i++) {
 		gchar **rt_members;
@@ -663,8 +751,9 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 	for (l = list; l != NULL; l = l->next) {
 		LiPkgInfo *pki = LI_PKG_INFO (l->data);
 
-		if (g_hash_table_lookup (rts, li_pkg_info_get_runtime_dependency (pki)) != NULL)
+		if (g_hash_table_lookup (rts, li_pkg_info_get_runtime_dependency (pki)) != NULL) {
 			g_hash_table_remove (sws, li_pkg_info_get_id (pki));
+		}
 	}
 	g_list_free (list);
 
@@ -674,22 +763,20 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 		if (error != NULL)
 			goto out;
 	}
-	g_list_free (list);
 
 	/* cleanup tmp dir */
 	li_delete_dir_recursive ("/var/tmp/limba");
 
-	/* installed software might have changed */
-	li_manager_reset_cached_data (mgr);
+	/* delete cleanup hint file, so the systemd service doesn't clean up if it is not necessary */
+	if (g_file_test (LI_CLEANUP_HINT_FNAME, G_FILE_TEST_IS_REGULAR)) {
+		if (g_remove (LI_CLEANUP_HINT_FNAME) != 0)
+			g_warning ("Could no remove cleanup-hint (%s)", LI_CLEANUP_HINT_FNAME);
+	}
 
 	ret = TRUE;
 out:
-	if (list != NULL)
-		g_list_free (list);
-	g_list_free (sw_list);
-
-	g_hash_table_unref (sws);
-	g_hash_table_unref (rts);
+	/* installed software might have changed */
+	li_manager_reset_cached_data (mgr);
 
 	return ret;
 }
@@ -964,7 +1051,8 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 			li_pkg_info_add_flag (ipki, LI_PACKAGE_FLAG_FADED);
 			li_pkg_info_save_changes (ipki);
 
-			/* TODO: touch /var/lib/limba/cleanup-needed */
+			/* tell the system to remove old packages on reboot */
+			g_file_set_contents (LI_CLEANUP_HINT_FNAME, "please clean removed packages", -1, NULL);
 
 		} else {
 			guint i;
@@ -1021,8 +1109,10 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 				}
 			}
 
+			/* tell the system to remove old packages on reboot */
+			g_file_set_contents (LI_CLEANUP_HINT_FNAME, "please clean removed packages", -1, NULL);
+
 			/* TODO:
-			 *   - touch /var/lib/limba/cleanup-needed
 			 *   - maybe explicitly flag ipki as crap if nothing uses it anymore?
 			 */
 		}

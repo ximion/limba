@@ -266,7 +266,7 @@ lipa_cleanup (void)
 
 	li_manager_cleanup (mgr, &error);
 	if (error != NULL) {
-		li_print_stderr ("Could not clean packages: %s", error->message);
+		li_print_stderr ("Could not cleanup cruft: %s", error->message);
 		g_error_free (error);
 		res = 1;
 	}
