@@ -1,0 +1,416 @@
+# French translation file for Limba
+# Copyright (C) 2015 Valentin OVD
+# This file is distributed under the same license as the Limba package.
+# Valentin OVD <vovd.tanglu@gmail.com>, 2015.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: limba\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-03-28 18:06+0100\n"
+"PO-Revision-Date: 2015-04-29 13:13+0100\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Last-Translator: Valentin OVD <vovd.tanglu@gmail.com>\n"
+"Language-Team: Valentin OVD <vovd.tanglu@gmail.com>\n"
+"X-Generator: ?\n"
+
+#, fuzzy
+msgid "Add a PGP key to the trusted database."
+msgstr "Ajouter une clé PGP à la base de données fiable."
+
+#, fuzzy, c-format
+msgid "Checksum for embedded package '%s' did not match."
+msgstr "Somme de contrôle pour les paquets embarqués '%s' ne correspondent pas."
+
+#, fuzzy
+msgid "Cleanup cruft packages"
+msgstr "Epuration des paquets"
+
+#, fuzzy, c-format
+msgid "Closing of file desriptor failed. Error: %s"
+msgstr "Fermeture du descripteur de fichier à échoué. Erreur: %s"
+
+#, fuzzy, c-format
+msgid "Command '%s' is unknown."
+msgstr "Commande '%s' inconnue."
+
+#, fuzzy, c-format
+msgid "Could not create directory structure '%s'. %s"
+msgstr "Impossible de créer la structure de dossier '%s'. %s"
+
+#, fuzzy, c-format
+msgid "Could not create directory structure for runtime. %s"
+msgstr "Impossible de crée la structure de dossier pour l'exécution. %s"
+
+#, fuzzy, c-format
+msgid "Could not create system directory: %s"
+msgstr "Impossible de créer le dossier système : %s"
+
+#, fuzzy, c-format
+msgid "Could not delete file '%s'"
+msgstr "Impossible de supprimer le fichier '%s'"
+
+#, fuzzy, c-format
+msgid "Could not determine package name."
+msgstr "Impossible de déterminer le nom du paquet."
+
+#, fuzzy, c-format
+msgid "Could not determine package version."
+msgstr "Impossible de déterminer la version du paquet."
+
+#, fuzzy, c-format
+msgid "Could not find AppStream metadata for the new package!"
+msgstr "La métadonnée d'AppStream pour le nouveau paquet est introuvable."
+
+#, fuzzy, c-format
+msgid "Could not find control file for the archive!"
+msgstr "Impossible de trouver le fichier de contrôle pour l'archive!"
+
+#, fuzzy, c-format
+msgid "Could not find dependency: %s"
+msgstr "Impossible de trouver la dépendance : %s"
+
+#, fuzzy, c-format
+msgid "Could not find package: %s"
+msgstr "Impossible de trouver le paquet : %s"
+
+#, fuzzy, c-format
+msgid "Could not find payload data in the 'inst_target' subdirectory."
+msgstr "Impossible de trouver les données de payload dans le sous-dossier 'inst_target'."
+
+#, fuzzy, c-format
+msgid "Could not find software: %s"
+msgstr "Impossible de trouver le logiciel : %s"
+
+#, fuzzy, c-format
+msgid "Could not find system component: '%s'. Please install it manually."
+msgstr "Impossible de trouver le composant system : '%s'. Merci de l'installer manuellement."
+
+#, fuzzy, c-format
+msgid "Could not generate package filename: AppStream metadata is missing."
+msgstr "Impossible de générer le nom de fichier du paquet : les métadonnées AppStream sont introuvable."
+
+#, fuzzy, c-format
+msgid "Could not install package: Component metadata is missing."
+msgstr "Impossible d'installer le paquet: La métadonnée composant est indisponible."
+
+#, fuzzy, c-format
+msgid "Could not install software: %s"
+msgstr "Impossible d'installer le logiciel : %s"
+
+#, fuzzy, c-format
+msgid "Could not open IPK file! Error: %s"
+msgstr "Impossible d'ouvrir le fichier IPK! Erreur : %s"
+
+#, fuzzy, c-format
+msgid "Could not open IPK payload! Error: %s"
+msgstr "Impossible d'ouvrir le payload de l'IPK! Erreur : %s"
+
+#, fuzzy, c-format
+msgid "Could not open file '%s' for writing."
+msgstr "Impossible d'ouvrir le fichier '%s' pour écriture."
+
+#, fuzzy, c-format
+msgid "Could not open metadata-file '%s' for reading."
+msgstr "Impossible d'ouvrir le fichier de métadonnée '%s' pour lecture."
+
+#, fuzzy, c-format
+msgid "Could not open package: %s"
+msgstr "Impossible d'ouvrir le paquet : %s"
+
+#, fuzzy, c-format
+msgid "Could not override file '%s'. The file already exists!"
+msgstr "Impossible de écrire sur le fichier '%s'. Le fichier existe déjà !"
+
+#, fuzzy, c-format
+msgid "Could not remove software directory."
+msgstr "Impossible de supprimer le dossier du logiciel."
+
+#, fuzzy, c-format
+msgid "Could not write to file: '%s'"
+msgstr "Impossible d'écrire sur le fichier : '%s'"
+
+#, fuzzy
+msgid "Create a new package using data found in DIRECTORY."
+msgstr "Créer un nouveau paquet en utilisant les données disponible dans DOSSIER."
+
+#, fuzzy
+msgid "Create sources for a new package."
+msgstr "Créer les sources pour un nouveau paquet."
+
+#, c-format
+msgid ""
+"Created project template in '%s'.\n"
+"\n"
+"Please edit the files in that directory, e.g. add a long description to your\n"
+"application and specify its run-time dependencies.\n"
+"When you are done with this, build your software with --prefix=%s\n"
+"and install it into the inst_target subdirectory of your 'lipkg' directory.\n"
+"Then run 'lipkgen build lipkg/' to create your package. \n"
+"If you want to embed dependencies, place their IPK packages in the 'repo/'\n"
+"subdirectory of 'lipkg/'"
+msgstr ""
+
+#, fuzzy
+msgid "Define a software name (human readable):"
+msgstr "Définir un nom de logiciel (lisible par l'Homme) :"
+
+#, fuzzy
+msgid "Define a software version:"
+msgstr "Définir une version de logiciel :"
+
+#, fuzzy
+msgid "Do not fail action with an error code."
+msgstr "Ne pas manquer l'action avec une code d'erreur."
+
+#, fuzzy
+msgid "Do not sign the package"
+msgstr "Ne pas signer le paquet"
+
+#, fuzzy, c-format
+msgid "Do you have an AppStream XML file for your software? [y/N]"
+msgstr "Avez-vous un fichier XML d'AppStream pour votre logiciel ? [o/N]"
+
+#, fuzzy
+msgid "Don't show \"fancy\" output"
+msgstr "Ne pas montrer la sortie \"fancy\""
+
+#, fuzzy, c-format
+msgid "Embedded package '%s' was not found."
+msgstr "Le paquet embarqué '%s' est introuvable."
+
+#, fuzzy, c-format
+msgid "File '%s' already exists."
+msgstr "Le fichier '%s' existe déjà."
+
+#, fuzzy
+msgid "Install a local software package"
+msgstr "Installer un paquet logiciel local"
+
+#, fuzzy
+msgid "Install software from a repository"
+msgstr "Install un logiciel depuis un dépôt"
+
+#, fuzzy, c-format
+msgid "Invalid package: Component metadata is missing."
+msgstr "Paquet invalide : Le composant de métadonnée est introuvable."
+
+#. : This is the header to the --help menu
+#, fuzzy
+msgid "Limba package builder"
+msgstr "Créateur de paquet Limba"
+
+#. : This is the header to the --help menu
+#, fuzzy
+msgid "Limba software manager"
+msgstr "Manager des logiciels Limba"
+
+#, fuzzy, c-format
+msgid "Limba version: %s"
+msgstr "Version de Limba : %s"
+
+#, fuzzy
+msgid "List installed software"
+msgstr "Liste des logiciels installés"
+
+#, fuzzy
+msgid "No package file given for extraction."
+msgstr "Aucun fichier de paquet donné pour extraction."
+
+#, fuzzy, c-format
+msgid "No package is loaded."
+msgstr "Aucun paquet n'est chargé."
+
+#, fuzzy
+msgid "No path given. Exiting."
+msgstr "Aucun chemin donné. Sortie."
+
+#, fuzzy, c-format
+msgid "Package file '%s' was not found."
+msgstr "Le fichier paquet '%s' est introuvable."
+
+#, fuzzy, c-format
+msgid "Package signed for \"%s\" [0x%s]\n"
+msgstr "Paquet signé pour \"%s\" [0x%s]\n"
+
+#, fuzzy, c-format
+msgid "Package signed for 0x%s\n"
+msgstr "Paquet signé pour 0x%s\n"
+
+#, fuzzy
+msgid "Please specify a path to the AppStream XML data:"
+msgstr "Merci de spécifier un chemin aux données XML d'AppStream :"
+
+#, fuzzy
+msgid "Refresh the cache of available packages"
+msgstr "Rafraichir le cache des paquets disponibles "
+
+#, fuzzy
+msgid "Remove an installed software package"
+msgstr "Supprimer un paquet de logiciel installé"
+
+#, fuzzy, c-format
+msgid "Removing '%s' would break at least '%s'."
+msgstr "Supprimer '%s' casserait au moins '%s'."
+
+#, fuzzy, c-format
+msgid "Run '%s --help' to see a full list of available command line options."
+msgstr "Lancer '%s --help' pour voir la liste des options de commandes disponibles."
+
+#, fuzzy, c-format
+msgid "Runtime '%s' is not valid. Could not find control file."
+msgstr "L'exécution '%s' 'n'est pas valide. Impossible de trouver le fichier de contrôle."
+
+#, fuzzy
+msgid "Show extra debugging information"
+msgstr "Afficher d'avantage d'information de débogage"
+
+#, fuzzy
+msgid "Show the program version"
+msgstr "Voir la version du programme"
+
+#, fuzzy, c-format
+msgid "Signing of package failed: %s"
+msgstr "La signature du paquet %s a échoué"
+
+#, fuzzy
+msgid "Software package"
+msgstr "Paquet logiciel"
+
+#, fuzzy
+msgid "Software was installed successfully."
+msgstr "Le logiciel a été installé avec succès."
+
+#, fuzzy
+msgid "Subcommands:"
+msgstr "Sous-commandes : "
+
+#, fuzzy
+msgid "The package is signed with a known, trusted key."
+msgstr "Ce paquet est signé avec une clé de confiance connu."
+
+#, fuzzy
+msgid "The package is signed with a trusted key."
+msgstr "Ce paquet est signé avec une clé de confiance."
+
+#, fuzzy
+msgid "The package is signed, but not explicitly trusted."
+msgstr "Ce paquet est signé mais pas avec une clé explicitement de confiance."
+
+#, fuzzy, c-format
+msgid "The package was built for a different architecture."
+msgstr "Ce paquet est construit pour une architecture différente."
+
+#, fuzzy
+msgid "The signature on this package is broken."
+msgstr "La signature de ce paquet est cassé."
+
+#, fuzzy
+msgid "This package can not be trusted. It likely is not signed."
+msgstr "Ce paquet ne peut pas être digne de confiance. Ce paquet n'est probablement pas signé."
+
+#, fuzzy, c-format
+msgid "This package has a broken signature."
+msgstr "Ce paquet a une signature cassé."
+
+#, fuzzy, c-format
+msgid "Unable to calculate checksum for: %s"
+msgstr "Impossible de calculer la somme de contrôle de : %s"
+
+#, fuzzy, c-format
+msgid "Unable to create directory. Error: %s"
+msgstr "Impossible de créer le dossier. Erreur : %s"
+
+#, fuzzy, c-format
+msgid "Unable to create link. Error: %s"
+msgstr "Impossible de créer le lien. Erreur : %s"
+
+#, fuzzy, c-format
+msgid "Unable to create symbolic link. Error: %s"
+msgstr "Impossible de créer un lien symbolique. Erreur : %s"
+
+#, fuzzy, c-format
+msgid "Unable to determine a valid package identifier."
+msgstr "Impossible de déterminer un valide identificateur de paquet."
+
+#, fuzzy, c-format
+msgid "Unable to determine package version."
+msgstr "Impossible de déterminer la version du paquet."
+
+#, fuzzy, c-format
+msgid "Unable to extract file. Error: %s"
+msgstr "Impossible d'extraire le fichier. Erreur : %s"
+
+#, fuzzy, c-format
+msgid "Unable to find or unpack package payload."
+msgstr "Impossible de trouver ou de déballer le payload du paquet."
+
+#, fuzzy, c-format
+msgid "Unable to open package. %s"
+msgstr "Impossible d'ouvrir le paquet. %s"
+
+#, fuzzy, c-format
+msgid "Unable to remove existing installation of '%s (%s)'."
+msgstr "Impossible de supprimer l'installation existante de '%s (%s)'."
+
+#, fuzzy, c-format
+msgid "Unable to set permissions on file '%s'. Error: %s"
+msgstr "Impossible de déterminer les permissions sur le fichier '%s'. Erreur : %s"
+
+#, fuzzy, c-format
+msgid "Unable to unpack package. %s"
+msgstr "Impossible de déballer le paquet. %s"
+
+#, fuzzy, c-format
+msgid "Unable to write 'control' file. %s"
+msgstr "Impossible d'écrire le fichier 'control'. %s"
+
+#, fuzzy, c-format
+msgid "Unable to write AppStream data. %s"
+msgstr "Impossible d'écrire les données AppStream. %s"
+
+#, fuzzy, c-format
+msgid "Unable to write signature: %s"
+msgstr "Impossible d'écrire la signature : %s"
+
+#, fuzzy
+msgid "Unpack the Limba package to a directory."
+msgstr "Déballer le paquet Limba dans un dossier."
+
+#, fuzzy
+msgid "Write a short summary (one sentence) about your software:"
+msgstr "Ecrire un court résumé (une phrase) à propos de votre logiciel :"
+
+#, fuzzy
+msgid "You need to specify a command."
+msgstr "Vous devez spécifier une commande."
+
+#, fuzzy
+msgid "You need to specify a directory with build-metadata."
+msgstr "Vous devez spécifier un dossier avec les métadonnées de construction."
+
+#, fuzzy
+msgid "You need to specify a key fingerprint."
+msgstr "Vous devez spécifier l'empreinte d'une clé."
+
+#, fuzzy
+msgid "You need to specify a package to install."
+msgstr "Vous devez spécifier un paquet à installer."
+
+#, fuzzy
+msgid "You need to specify a package to remove."
+msgstr "Vous devez spécifier un paquet à supprimer."
+
+#, fuzzy
+msgid ""
+"Your software needs a unique name.\n"
+"In case of a GUI application, this is its .desktop filename.\n"
+"Unique software name:"
+msgstr ""
+"Votre logiciel a besoin d'un nom unique.\n"
+"Dans le cas d'une application graphique, c'est le nom du fichier .desktop.\n"
+"Nom unique du logiciel :"
