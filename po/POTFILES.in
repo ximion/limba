@@ -13,9 +13,13 @@ src/li-manager.c
 src/li-pkg-builder.c
 src/li-pkg-info.c
 src/li-utils.c
+src/li-keyring.c
+src/li-pkg-cache.c
+src/li-repository.c
 # Tools
 tools/runapp/runapp.c
 tools/lipa/lipa.c
 tools/lipkgen/lipkgen.c
+tools/lirepo/lirepo.c
 # Mimetype
 data/mime/x-ipk.xml.in

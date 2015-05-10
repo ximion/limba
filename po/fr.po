@@ -2,29 +2,39 @@
 # Copyright (C) 2015 Valentin OVD
 # This file is distributed under the same license as the Limba package.
 # Valentin OVD <vovd.tanglu@gmail.com>, 2015.
-#
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: limba\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-03-28 18:06+0100\n"
+"POT-Creation-Date: 2015-05-10 18:30+0200\n"
 "PO-Revision-Date: 2015-04-29 13:13+0100\n"
+"Last-Translator: Valentin OVD <vovd.tanglu@gmail.com>\n"
+"Language-Team: Valentin OVD <vovd.tanglu@gmail.com>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-"Last-Translator: Valentin OVD <vovd.tanglu@gmail.com>\n"
-"Language-Team: Valentin OVD <vovd.tanglu@gmail.com>\n"
 "X-Generator: ?\n"
+
+#, c-format
+msgid ""
+"A package with the same name and version has already been installed into "
+"this repository."
+msgstr ""
 
 #, fuzzy
 msgid "Add a PGP key to the trusted database."
 msgstr "Ajouter une clé PGP à la base de données fiable."
 
+msgid "Add a package to the repository"
+msgstr ""
+
 #, fuzzy, c-format
 msgid "Checksum for embedded package '%s' did not match."
-msgstr "Somme de contrôle pour les paquets embarqués '%s' ne correspondent pas."
+msgstr ""
+"Somme de contrôle pour les paquets embarqués '%s' ne correspondent pas."
 
 #, fuzzy
 msgid "Cleanup cruft packages"
@@ -75,12 +85,22 @@ msgid "Could not find dependency: %s"
 msgstr "Impossible de trouver la dépendance : %s"
 
 #, fuzzy, c-format
+msgid "Could not find package matching id '%s'."
+msgstr "Impossible de trouver le paquet : %s"
+
+#, fuzzy, c-format
 msgid "Could not find package: %s"
 msgstr "Impossible de trouver le paquet : %s"
 
 #, fuzzy, c-format
 msgid "Could not find payload data in the 'inst_target' subdirectory."
-msgstr "Impossible de trouver les données de payload dans le sous-dossier 'inst_target'."
+msgstr ""
+"Impossible de trouver les données de payload dans le sous-dossier "
+"'inst_target'."
+
+#, fuzzy, c-format
+msgid "Could not find remote data '%s': %s."
+msgstr "Impossible de trouver le logiciel : %s"
 
 #, fuzzy, c-format
 msgid "Could not find software: %s"
@@ -88,15 +108,24 @@ msgstr "Impossible de trouver le logiciel : %s"
 
 #, fuzzy, c-format
 msgid "Could not find system component: '%s'. Please install it manually."
-msgstr "Impossible de trouver le composant system : '%s'. Merci de l'installer manuellement."
+msgstr ""
+"Impossible de trouver le composant system : '%s'. Merci de l'installer "
+"manuellement."
 
 #, fuzzy, c-format
 msgid "Could not generate package filename: AppStream metadata is missing."
-msgstr "Impossible de générer le nom de fichier du paquet : les métadonnées AppStream sont introuvable."
+msgstr ""
+"Impossible de générer le nom de fichier du paquet : les métadonnées "
+"AppStream sont introuvable."
+
+#, fuzzy, c-format
+msgid "Could not initialize CURL!"
+msgstr "Impossible d'installer le logiciel : %s"
 
 #, fuzzy, c-format
 msgid "Could not install package: Component metadata is missing."
-msgstr "Impossible d'installer le paquet: La métadonnée composant est indisponible."
+msgstr ""
+"Impossible d'installer le paquet: La métadonnée composant est indisponible."
 
 #, fuzzy, c-format
 msgid "Could not install software: %s"
@@ -130,13 +159,18 @@ msgstr "Impossible de écrire sur le fichier '%s'. Le fichier existe déjà !"
 msgid "Could not remove software directory."
 msgstr "Impossible de supprimer le dossier du logiciel."
 
+#, c-format
+msgid "Could not verify signature: They key could not be found or downloaded."
+msgstr ""
+
 #, fuzzy, c-format
 msgid "Could not write to file: '%s'"
 msgstr "Impossible d'écrire sur le fichier : '%s'"
 
 #, fuzzy
 msgid "Create a new package using data found in DIRECTORY."
-msgstr "Créer un nouveau paquet en utilisant les données disponible dans DOSSIER."
+msgstr ""
+"Créer un nouveau paquet en utilisant les données disponible dans DOSSIER."
 
 #, fuzzy
 msgid "Create sources for a new package."
@@ -146,7 +180,8 @@ msgstr "Créer les sources pour un nouveau paquet."
 msgid ""
 "Created project template in '%s'.\n"
 "\n"
-"Please edit the files in that directory, e.g. add a long description to your\n"
+"Please edit the files in that directory, e.g. add a long description to "
+"your\n"
 "application and specify its run-time dependencies.\n"
 "When you are done with this, build your software with --prefix=%s\n"
 "and install it into the inst_target subdirectory of your 'lipkg' directory.\n"
@@ -184,8 +219,29 @@ msgid "Embedded package '%s' was not found."
 msgstr "Le paquet embarqué '%s' est introuvable."
 
 #, fuzzy, c-format
+msgid "Failed to add package: %s"
+msgstr "Impossible de déballer le paquet. %s"
+
+#, c-format
+msgid "Failed to initialize repository: %s"
+msgstr ""
+
+#, c-format
+msgid "Failed to open repository: %s"
+msgstr ""
+
+#, fuzzy, c-format
 msgid "File '%s' already exists."
 msgstr "Le fichier '%s' existe déjà."
+
+#, fuzzy, c-format
+msgid "Importing of key failed: %s"
+msgstr "La signature du paquet %s a échoué"
+
+#, fuzzy
+msgid "Initialize a new repository in DIRECTORY."
+msgstr ""
+"Créer un nouveau paquet en utilisant les données disponible dans DOSSIER."
 
 #, fuzzy
 msgid "Install a local software package"
@@ -199,9 +255,26 @@ msgstr "Install un logiciel depuis un dépôt"
 msgid "Invalid package: Component metadata is missing."
 msgstr "Paquet invalide : Le composant de métadonnée est introuvable."
 
+#, fuzzy, c-format
+msgid "Invalid path to directory."
+msgstr "Déballer le paquet Limba dans un dossier."
+
+#, c-format
+msgid "Key lookup failed, could not find remote key."
+msgstr ""
+
+#, c-format
+msgid "Key lookup failed: %s"
+msgstr ""
+
 #. : This is the header to the --help menu
 #, fuzzy
 msgid "Limba package builder"
+msgstr "Créateur de paquet Limba"
+
+#. : This is the header to the --help menu
+#, fuzzy
+msgid "Limba repository builder"
 msgstr "Créateur de paquet Limba"
 
 #. : This is the header to the --help menu
@@ -217,6 +290,9 @@ msgstr "Version de Limba : %s"
 msgid "List installed software"
 msgstr "Liste des logiciels installés"
 
+msgid "No import result returned."
+msgstr ""
+
 #, fuzzy
 msgid "No package file given for extraction."
 msgstr "Aucun fichier de paquet donné pour extraction."
@@ -228,6 +304,9 @@ msgstr "Aucun paquet n'est chargé."
 #, fuzzy
 msgid "No path given. Exiting."
 msgstr "Aucun chemin donné. Sortie."
+
+msgid "No result received."
+msgstr ""
 
 #, fuzzy, c-format
 msgid "Package file '%s' was not found."
@@ -257,13 +336,20 @@ msgstr "Supprimer un paquet de logiciel installé"
 msgid "Removing '%s' would break at least '%s'."
 msgstr "Supprimer '%s' casserait au moins '%s'."
 
+#, c-format
+msgid "Repository '%s' (signed with key '%s') is untrusted."
+msgstr ""
+
 #, fuzzy, c-format
 msgid "Run '%s --help' to see a full list of available command line options."
-msgstr "Lancer '%s --help' pour voir la liste des options de commandes disponibles."
+msgstr ""
+"Lancer '%s --help' pour voir la liste des options de commandes disponibles."
 
 #, fuzzy, c-format
 msgid "Runtime '%s' is not valid. Could not find control file."
-msgstr "L'exécution '%s' 'n'est pas valide. Impossible de trouver le fichier de contrôle."
+msgstr ""
+"L'exécution '%s' 'n'est pas valide. Impossible de trouver le fichier de "
+"contrôle."
 
 #, fuzzy
 msgid "Show extra debugging information"
@@ -273,8 +359,28 @@ msgstr "Afficher d'avantage d'information de débogage"
 msgid "Show the program version"
 msgstr "Voir la version du programme"
 
+#, c-format
+msgid "Siganture on '%s' is invalid."
+msgstr ""
+
+#, c-format
+msgid "Signature validation failed. Signature is invalid or not a signature."
+msgstr ""
+
+#, c-format
+msgid "Signature validation failed. Signature is invalid. (%s)"
+msgstr ""
+
+#, fuzzy, c-format
+msgid "Signature validation failed: %s"
+msgstr "La signature du paquet %s a échoué"
+
 #, fuzzy, c-format
 msgid "Signing of package failed: %s"
+msgstr "La signature du paquet %s a échoué"
+
+#, fuzzy, c-format
+msgid "Signing of repository failed: %s"
 msgstr "La signature du paquet %s a échoué"
 
 #, fuzzy
@@ -288,6 +394,12 @@ msgstr "Le logiciel a été installé avec succès."
 #, fuzzy
 msgid "Subcommands:"
 msgstr "Sous-commandes : "
+
+#, c-format
+msgid ""
+"The package contains embedded dependencies. Packages with that property are "
+"not allowed in repositories, please add dependencies separately."
+msgstr ""
 
 #, fuzzy
 msgid "The package is signed with a known, trusted key."
@@ -311,7 +423,9 @@ msgstr "La signature de ce paquet est cassé."
 
 #, fuzzy
 msgid "This package can not be trusted. It likely is not signed."
-msgstr "Ce paquet ne peut pas être digne de confiance. Ce paquet n'est probablement pas signé."
+msgstr ""
+"Ce paquet ne peut pas être digne de confiance. Ce paquet n'est probablement "
+"pas signé."
 
 #, fuzzy, c-format
 msgid "This package has a broken signature."
@@ -322,16 +436,8 @@ msgid "Unable to calculate checksum for: %s"
 msgstr "Impossible de calculer la somme de contrôle de : %s"
 
 #, fuzzy, c-format
-msgid "Unable to create directory. Error: %s"
-msgstr "Impossible de créer le dossier. Erreur : %s"
-
-#, fuzzy, c-format
 msgid "Unable to create link. Error: %s"
 msgstr "Impossible de créer le lien. Erreur : %s"
-
-#, fuzzy, c-format
-msgid "Unable to create symbolic link. Error: %s"
-msgstr "Impossible de créer un lien symbolique. Erreur : %s"
 
 #, fuzzy, c-format
 msgid "Unable to determine a valid package identifier."
@@ -340,6 +446,10 @@ msgstr "Impossible de déterminer un valide identificateur de paquet."
 #, fuzzy, c-format
 msgid "Unable to determine package version."
 msgstr "Impossible de déterminer la version du paquet."
+
+#, c-format
+msgid "Unable to download data from '%s': %s."
+msgstr ""
 
 #, fuzzy, c-format
 msgid "Unable to extract file. Error: %s"
@@ -359,7 +469,8 @@ msgstr "Impossible de supprimer l'installation existante de '%s (%s)'."
 
 #, fuzzy, c-format
 msgid "Unable to set permissions on file '%s'. Error: %s"
-msgstr "Impossible de déterminer les permissions sur le fichier '%s'. Erreur : %s"
+msgstr ""
+"Impossible de déterminer les permissions sur le fichier '%s'. Erreur : %s"
 
 #, fuzzy, c-format
 msgid "Unable to unpack package. %s"
@@ -398,6 +509,10 @@ msgid "You need to specify a key fingerprint."
 msgstr "Vous devez spécifier l'empreinte d'une clé."
 
 #, fuzzy
+msgid "You need to specify a package file to add to the repository."
+msgstr "Vous devez spécifier un paquet à supprimer."
+
+#, fuzzy
 msgid "You need to specify a package to install."
 msgstr "Vous devez spécifier un paquet à installer."
 
@@ -414,3 +529,14 @@ msgstr ""
 "Votre logiciel a besoin d'un nom unique.\n"
 "Dans le cas d'une application graphique, c'est le nom du fichier .desktop.\n"
 "Nom unique du logiciel :"
+
+msgid "Zero results returned."
+msgstr ""
+
+#, fuzzy
+#~ msgid "Unable to create directory. Error: %s"
+#~ msgstr "Impossible de créer le dossier. Erreur : %s"
+
+#, fuzzy
+#~ msgid "Unable to create symbolic link. Error: %s"
+#~ msgstr "Impossible de créer un lien symbolique. Erreur : %s"

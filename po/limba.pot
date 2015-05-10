@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2015-05-10 18:24+0200\n"
+        "POT-Creation-Date: 2015-05-10 18:30+0200\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,7 +16,14 @@ msgstr  "Project-Id-Version: limba\n"
         "Content-Type: text/plain; charset=CHARSET\n"
         "Content-Transfer-Encoding: 8bit\n"
 
+#, c-format
+msgid   "A package with the same name and version has already been installed into this repository."
+msgstr  ""
+
 msgid   "Add a PGP key to the trusted database."
+msgstr  ""
+
+msgid   "Add a package to the repository"
 msgstr  ""
 
 #, c-format
@@ -71,11 +78,19 @@ msgid   "Could not find dependency: %s"
 msgstr  ""
 
 #, c-format
+msgid   "Could not find package matching id '%s'."
+msgstr  ""
+
+#, c-format
 msgid   "Could not find package: %s"
 msgstr  ""
 
 #, c-format
 msgid   "Could not find payload data in the 'inst_target' subdirectory."
+msgstr  ""
+
+#, c-format
+msgid   "Could not find remote data '%s': %s."
 msgstr  ""
 
 #, c-format
@@ -88,6 +103,10 @@ msgstr  ""
 
 #, c-format
 msgid   "Could not generate package filename: AppStream metadata is missing."
+msgstr  ""
+
+#, c-format
+msgid   "Could not initialize CURL!"
 msgstr  ""
 
 #, c-format
@@ -124,6 +143,10 @@ msgstr  ""
 
 #, c-format
 msgid   "Could not remove software directory."
+msgstr  ""
+
+#, c-format
+msgid   "Could not verify signature: They key could not be found or downloaded."
 msgstr  ""
 
 #, c-format
@@ -172,7 +195,26 @@ msgid   "Embedded package '%s' was not found."
 msgstr  ""
 
 #, c-format
+msgid   "Failed to add package: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Failed to initialize repository: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Failed to open repository: %s"
+msgstr  ""
+
+#, c-format
 msgid   "File '%s' already exists."
+msgstr  ""
+
+#, c-format
+msgid   "Importing of key failed: %s"
+msgstr  ""
+
+msgid   "Initialize a new repository in DIRECTORY."
 msgstr  ""
 
 msgid   "Install a local software package"
@@ -185,8 +227,24 @@ msgstr  ""
 msgid   "Invalid package: Component metadata is missing."
 msgstr  ""
 
+#, c-format
+msgid   "Invalid path to directory."
+msgstr  ""
+
+#, c-format
+msgid   "Key lookup failed, could not find remote key."
+msgstr  ""
+
+#, c-format
+msgid   "Key lookup failed: %s"
+msgstr  ""
+
 #. : This is the header to the --help menu
 msgid   "Limba package builder"
+msgstr  ""
+
+#. : This is the header to the --help menu
+msgid   "Limba repository builder"
 msgstr  ""
 
 #. : This is the header to the --help menu
@@ -200,6 +258,9 @@ msgstr  ""
 msgid   "List installed software"
 msgstr  ""
 
+msgid   "No import result returned."
+msgstr  ""
+
 msgid   "No package file given for extraction."
 msgstr  ""
 
@@ -208,6 +269,9 @@ msgid   "No package is loaded."
 msgstr  ""
 
 msgid   "No path given. Exiting."
+msgstr  ""
+
+msgid   "No result received."
 msgstr  ""
 
 #, c-format
@@ -236,6 +300,10 @@ msgid   "Removing '%s' would break at least '%s'."
 msgstr  ""
 
 #, c-format
+msgid   "Repository '%s' (signed with key '%s') is untrusted."
+msgstr  ""
+
+#, c-format
 msgid   "Run '%s --help' to see a full list of available command line options."
 msgstr  ""
 
@@ -250,7 +318,27 @@ msgid   "Show the program version"
 msgstr  ""
 
 #, c-format
+msgid   "Siganture on '%s' is invalid."
+msgstr  ""
+
+#, c-format
+msgid   "Signature validation failed. Signature is invalid or not a signature."
+msgstr  ""
+
+#, c-format
+msgid   "Signature validation failed. Signature is invalid. (%s)"
+msgstr  ""
+
+#, c-format
+msgid   "Signature validation failed: %s"
+msgstr  ""
+
+#, c-format
 msgid   "Signing of package failed: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Signing of repository failed: %s"
 msgstr  ""
 
 msgid   "Software package"
@@ -260,6 +348,10 @@ msgid   "Software was installed successfully."
 msgstr  ""
 
 msgid   "Subcommands:"
+msgstr  ""
+
+#, c-format
+msgid   "The package contains embedded dependencies. Packages with that property are not allowed in repositories, please add dependencies separately."
 msgstr  ""
 
 msgid   "The package is signed with a known, trusted key."
@@ -299,6 +391,10 @@ msgstr  ""
 
 #, c-format
 msgid   "Unable to determine package version."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to download data from '%s': %s."
 msgstr  ""
 
 #, c-format
@@ -352,6 +448,9 @@ msgstr  ""
 msgid   "You need to specify a key fingerprint."
 msgstr  ""
 
+msgid   "You need to specify a package file to add to the repository."
+msgstr  ""
+
 msgid   "You need to specify a package to install."
 msgstr  ""
 
@@ -361,4 +460,7 @@ msgstr  ""
 msgid   "Your software needs a unique name.\n"
         "In case of a GUI application, this is its .desktop filename.\n"
         "Unique software name:"
+msgstr  ""
+
+msgid   "Zero results returned."
 msgstr  ""
