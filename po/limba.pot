@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2015-03-28 18:06+0100\n"
+        "POT-Creation-Date: 2015-05-10 18:24+0200\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -290,15 +290,7 @@ msgid   "Unable to calculate checksum for: %s"
 msgstr  ""
 
 #, c-format
-msgid   "Unable to create directory. Error: %s"
-msgstr  ""
-
-#, c-format
 msgid   "Unable to create link. Error: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Unable to create symbolic link. Error: %s"
 msgstr  ""
 
 #, c-format
