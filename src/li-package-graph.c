@@ -272,6 +272,18 @@ li_package_graph_set_root_install_todo (LiPackageGraph *pg, LiPackage *pkg)
 }
 
 /**
+ * li_package_graph_get_install_todo_count:
+ *
+ * Get the number of packages which need to be installed.
+ */
+guint
+li_package_graph_get_install_todo_count (LiPackageGraph *pg)
+{
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+	return g_hash_table_size (priv->install_todo);
+}
+
+/**
  * li_package_graph_get_root:
  */
 GNode*

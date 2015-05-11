@@ -133,6 +133,19 @@ out:
 }
 
 /**
+ * li_installer_progress_cb:
+ */
+static void
+li_installer_progress_cb (LiInstaller *inst, guint percentage, const gchar *id, gpointer user_data)
+{
+	/* only catch the main progress */
+	if (id != NULL)
+		return;
+
+	g_print ("\rProgress: %i%s", (int) percentage, "%   ");
+}
+
+/**
  * lipa_install_package:
  */
 static gint
@@ -152,6 +165,9 @@ lipa_install_package (const gchar *pkgid)
 		return 2;
 
 	inst = li_installer_new ();
+	g_signal_connect (inst, "progress",
+						G_CALLBACK (li_installer_progress_cb), NULL);
+
 	li_installer_open_remote (inst, pkgid, &error);
 	if (error != NULL) {
 		li_print_stderr (_("Could not find package: %s"), error->message);
@@ -195,6 +211,9 @@ lipa_install_local_package (const gchar *fname)
 		return 2;
 
 	inst = li_installer_new ();
+	g_signal_connect (inst, "progress",
+						G_CALLBACK (li_installer_progress_cb), NULL);
+
 	li_installer_open_file (inst, fname, &error);
 	if (error != NULL) {
 		li_print_stderr (_("Could not open package: %s"), error->message);

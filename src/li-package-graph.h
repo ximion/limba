@@ -87,6 +87,8 @@ LiPackage			*li_package_graph_get_install_candidate (LiPackageGraph *pg,
 gboolean			li_package_graph_mark_installed (LiPackageGraph *pg,
 													LiPkgInfo *pki);
 
+guint				li_package_graph_get_install_todo_count (LiPackageGraph *pg);
+
 G_END_DECLS
 
 #endif /* __LI_PACKAGE_GRAPH_H */

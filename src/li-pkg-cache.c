@@ -35,6 +35,7 @@
 #include <appstream.h>
 #include <curl/curl.h>
 #include <errno.h>
+#include <math.h>
 
 #include "li-utils.h"
 #include "li-utils-private.h"
@@ -54,6 +55,14 @@ struct _LiPkgCachePrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPkgCache, li_pkg_cache, G_TYPE_OBJECT)
+
+enum {
+	SIGNAL_STATE_CHANGED,
+	SIGNAL_PROGRESS,
+	SIGNAL_LAST
+};
+
+static guint signals[SIGNAL_LAST] = { 0 };
 
 #define GET_PRIVATE(o) (li_pkg_cache_get_instance_private (o))
 
@@ -165,7 +174,12 @@ curl_dl_read_data (gpointer ptr, size_t size, size_t nmemb, FILE *stream)
 gint
 li_pkg_cache_curl_progress_cb (LiPkgCache *cache, double dltotal, double dlnow, double ultotal, double ulnow)
 {
-	/* TODO */
+	guint percentage;
+
+	percentage = round (100/dltotal*dlnow);
+	g_signal_emit (cache, signals[SIGNAL_PROGRESS], 0,
+					percentage, NULL);
+
 	return 0;
 }
 
@@ -633,6 +647,12 @@ li_pkg_cache_class_init (LiPkgCacheClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	object_class->finalize = li_pkg_cache_finalize;
+
+	signals[SIGNAL_PROGRESS] =
+		g_signal_new ("progress",
+				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
+				0, NULL, NULL, g_cclosure_marshal_VOID__UINT_POINTER,
+				G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_POINTER);
 }
 
 /**
