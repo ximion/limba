@@ -27,6 +27,7 @@
 
 #include <glib-object.h>
 #include "li-pkg-info.h"
+#include "li-pkg-cache.h"
 
 #define LI_TYPE_PACKAGE			(li_package_get_type())
 #define LI_PACKAGE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PACKAGE, LiPackage))
@@ -50,6 +51,7 @@ G_BEGIN_DECLS
  * @LI_PACKAGE_ERROR_CHECKSUM_MISMATCH:		A checksum did not match
  * @LI_PACKAGE_ERROR_WRONG_ARCHITECTURE:	The package was built for a different architecture
  * @LI_PACKAGE_ERROR_SIGNATURE_BROKEN:		The signature of this package is broken
+ * @LI_PACKAGE_ERROR_DOWNLOAD_NEEDED:		Package needs to be downloaded first before we can perfom this operation.
  *
  * The error type.
  **/
@@ -63,6 +65,7 @@ typedef enum {
 	LI_PACKAGE_ERROR_CHECKSUM_MISMATCH,
 	LI_PACKAGE_ERROR_WRONG_ARCHITECTURE,
 	LI_PACKAGE_ERROR_SIGNATURE_BROKEN,
+	LI_PACKAGE_ERROR_DOWNLOAD_NEEDED,
 	/*< private >*/
 	LI_PACKAGE_ERROR_LAST
 } LiPackageError;
@@ -120,6 +123,15 @@ LiPackage		*li_package_new		(void);
 gboolean		li_package_open_file (LiPackage *pkg,
 										const gchar *filename,
 										GError **error);
+gboolean		li_package_open_remote (LiPackage *pkg,
+										LiPkgCache *cache,
+										const gchar *pkid,
+										GError **error);
+
+gboolean		li_package_is_remote (LiPackage *pkg);
+gboolean		li_package_download (LiPackage *pkg,
+										GError **error);
+
 gboolean		li_package_install (LiPackage *pkg,
 										GError **error);
 

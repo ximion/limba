@@ -27,7 +27,6 @@
 
 #include <glib-object.h>
 #include "li-pkg-info.h"
-#include "li-package.h"
 
 #define LI_TYPE_PKG_CACHE			(li_pkg_cache_get_type())
 #define LI_PKG_CACHE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_CACHE, LiPkgCache))
@@ -92,8 +91,10 @@ void			li_pkg_cache_update (LiPkgCache *cache,
 									GError **error);
 
 GPtrArray		*li_pkg_cache_get_packages (LiPkgCache *cache);
+LiPkgInfo		*li_pkg_cache_get_pkg_info (LiPkgCache *cache,
+											const gchar *pkid);
 
-LiPackage		*li_pkg_cache_fetch_remote (LiPkgCache *cache,
+gchar			*li_pkg_cache_fetch_remote (LiPkgCache *cache,
 											const gchar *pkgid,
 											GError **error);
 

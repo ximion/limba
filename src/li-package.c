@@ -26,6 +26,7 @@
 #include "config.h"
 #include "li-package.h"
 
+#include <math.h>
 #include <glib/gi18n-lib.h>
 #include <archive_entry.h>
 #include <archive.h>
@@ -63,11 +64,25 @@ struct _LiPackagePrivate
 	gchar *sig_fpr;
 	LiTrustLevel tlevel;
 	GHashTable *contents_hash;
+
+	LiPkgCache *cache;
+	gboolean remote_package;
+
+	guint max_progress;
+	guint progress;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPackage, li_package, G_TYPE_OBJECT)
 
 #define GET_PRIVATE(o) (li_package_get_instance_private (o))
+
+enum {
+	SIGNAL_STATE_CHANGED,
+	SIGNAL_PROGRESS,
+	SIGNAL_LAST
+};
+
+static guint signals[SIGNAL_LAST] = { 0 };
 
 /**
  * li_package_finalize:
@@ -89,6 +104,12 @@ li_package_finalize (GObject *object)
 		li_delete_dir_recursive (priv->tmp_dir);
 		g_free (priv->tmp_dir);
 	}
+	if (priv->cache != NULL) {
+		/* avoid signals being transmitted to a non-existing LiPackage instance */
+		g_signal_handlers_disconnect_by_data (priv->cache, pkg);
+		g_object_unref (priv->cache);
+	}
+
 	g_free (priv->tmp_payload_path);
 	g_free (priv->signature_data);
 	g_free (priv->sig_fpr);
@@ -116,6 +137,46 @@ li_package_init (LiPackage *pkg)
 	priv->kr = li_keyring_new ();
 	priv->contents_hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
 	priv->tlevel = LI_TRUST_LEVEL_NONE;
+}
+
+/**
+ * li_package_emit_progress:
+ */
+static void
+li_package_emit_progress (LiPackage *pkg)
+{
+	guint percentage;
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+
+	percentage = round (100 / (double) priv->max_progress * priv->progress);
+	g_signal_emit (pkg, signals[SIGNAL_PROGRESS], 0,
+					percentage);
+}
+
+/**
+ * li_package_cache_progress_cb:
+ */
+static void
+li_package_cache_progress_cb (LiPkgCache *cache, guint cache_percentage, const gchar *id, LiPackage *pkg)
+{
+	guint percentage;
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+	g_assert (LI_IS_PACKAGE (pkg));
+
+	/* skip progress propagation if we don't know the maximum number of steps yet */
+	if (priv->max_progress == 0)
+		return;
+
+	/* check if this event is for us */
+	if (id == NULL)
+		return;
+	if (g_strcmp0 (priv->id, id) != 0)
+		return;
+
+	percentage = round (100 / (double) priv->max_progress * (priv->progress+cache_percentage));
+
+	g_signal_emit (pkg, signals[SIGNAL_PROGRESS], 0,
+					percentage);
 }
 
 /**
@@ -278,6 +339,14 @@ li_package_open_base_ipk (LiPackage *pkg, GError **error)
 	int res;
 	gchar *magic;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+
+	if ((priv->archive_file == NULL) && (priv->remote_package)) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DOWNLOAD_NEEDED,
+				_("The package needs to be downloaded first to perform this operation."));
+		return NULL;
+	}
 
 	/* create new archive object for reading */
 	ar = archive_read_new ();
@@ -510,6 +579,8 @@ li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 		goto out;
 	}
 
+	priv->max_progress += 100;
+
 	ret = TRUE;
 
 out:
@@ -517,6 +588,44 @@ out:
 	archive_read_free (ar);
 
 	return ret;
+}
+
+/**
+ * li_package_open_remote:
+ * @pkg: An instance of #LiPackage
+ * @cache: The #LiPkgCache to download the package from.
+ * @pkid: The id of the package to download.
+ * @error: A #GError
+ *
+ * Open a package from a remote cache. The package will be downloaded when the install()
+ * or verify() methods are run.
+ */
+gboolean
+li_package_open_remote (LiPackage *pkg, LiPkgCache *cache, const gchar *pkid, GError **error)
+{
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+
+	priv->info = li_pkg_cache_get_pkg_info (cache, pkid);
+	if (priv->info == NULL) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_NOT_FOUND,
+				_("A package with id '%s' was not found in the cache."), pkid);
+		return FALSE;
+	}
+	g_object_ref (priv->info);
+
+	priv->remote_package = TRUE;
+	priv->cache = g_object_ref (cache);
+	li_package_set_id (pkg, pkid);
+
+	/* connect cache signals */
+	g_signal_connect (priv->cache, "progress",
+						G_CALLBACK (li_package_cache_progress_cb), pkg);
+
+	priv->max_progress += 100;
+
+	return TRUE;
 }
 
 /**
@@ -594,6 +703,15 @@ li_package_install (LiPackage *pkg, GError **error)
 	const gchar *tmp_payload_path;
 	_cleanup_object_unref_ LiExporter *exp = NULL;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+
+	if (priv->remote_package) {
+		/* we first need to obtain this package from its remote source */
+		li_package_download (pkg, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return FALSE;
+		}
+	}
 
 	/* test if we have all data we need for extraction */
 	if (priv->cpt == NULL) {
@@ -745,7 +863,70 @@ li_package_install (LiPackage *pkg, GError **error)
 	g_free (tmp);
 	g_free (tmp2);
 
+	priv->progress += 100;
+	li_package_emit_progress (pkg);
+
 	return ret;
+}
+
+/**
+ * li_package_is_remote:
+ *
+ * Returns: %TRUE if this package needs to be downloaded before it can be installed.
+ */
+gboolean
+li_package_is_remote (LiPackage *pkg)
+{
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+	return priv->remote_package;
+}
+
+/**
+ * li_package_download:
+ *
+ * Downloads a package from the cache, in case we opened a
+ * remote package previously.
+ */
+gboolean
+li_package_download (LiPackage *pkg, GError **error)
+{
+	_cleanup_free_ gchar *pkg_fname = NULL;
+	GError *tmp_error = NULL;
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+
+	/* no remote package == nothing to do here */
+	if (!priv->remote_package) {
+		return TRUE;
+	}
+
+	/* check if we have already downloaded this file */
+	if (priv->archive_file != NULL) {
+		return TRUE;
+	}
+
+	priv->max_progress += 100;
+	pkg_fname = li_pkg_cache_fetch_remote (priv->cache, li_pkg_info_get_id (priv->info), &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error,
+								_("Unable to download package:"));
+		return FALSE;
+	}
+
+	li_package_open_file (pkg, pkg_fname, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	/* FIXME: Opening the file incremented our max_progress, so we decrease it again to get a 50/50 split between
+	 * download and installation. This is a bit ugly, and will have to be fixed when we emit progress for the installation
+	 * itself as well. */
+	priv->max_progress -= 100;
+
+	priv->progress += 100;
+	li_package_emit_progress (pkg);
+
+	return TRUE;
 }
 
 /**
@@ -1154,6 +1335,12 @@ li_package_class_init (LiPackageClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	object_class->finalize = li_package_finalize;
+
+	signals[SIGNAL_PROGRESS] =
+		g_signal_new ("progress",
+				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
+				0, NULL, NULL, g_cclosure_marshal_VOID__UINT,
+				G_TYPE_NONE, 1, G_TYPE_UINT);
 }
 
 /**

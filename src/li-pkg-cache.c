@@ -69,6 +69,11 @@ static guint signals[SIGNAL_LAST] = { 0 };
 #define LIMBA_CACHE_DIR "/var/cache/limba/"
 #define APPSTREAM_CACHE "/var/cache/app-info/xmls"
 
+typedef struct {
+	LiPkgCache *cache;
+	gchar *id;
+} LiCacheProgressHelper;
+
 /**
  * li_pkg_cache_finalize:
  **/
@@ -172,13 +177,13 @@ curl_dl_read_data (gpointer ptr, size_t size, size_t nmemb, FILE *stream)
  * li_pkg_cache_curl_progress_cb:
  */
 gint
-li_pkg_cache_curl_progress_cb (LiPkgCache *cache, double dltotal, double dlnow, double ultotal, double ulnow)
+li_pkg_cache_curl_progress_cb (LiCacheProgressHelper *helper, double dltotal, double dlnow, double ultotal, double ulnow)
 {
 	guint percentage;
 
 	percentage = round (100/dltotal*dlnow);
-	g_signal_emit (cache, signals[SIGNAL_PROGRESS], 0,
-					percentage, NULL);
+	g_signal_emit (helper->cache, signals[SIGNAL_PROGRESS], 0,
+					percentage, helper->id);
 
 	return 0;
 }
@@ -187,12 +192,13 @@ li_pkg_cache_curl_progress_cb (LiPkgCache *cache, double dltotal, double dlnow, 
  * li_pkg_cache_download_file_sync:
  */
 static void
-li_pkg_cache_download_file_sync (LiPkgCache *cache, const gchar *url, const gchar *dest, GError **error)
+li_pkg_cache_download_file_sync (LiPkgCache *cache, const gchar *url, const gchar *dest, const gchar *id, GError **error)
 {
 	CURL *curl;
 	CURLcode res;
 	FILE *outfile;
 	long http_code = 0;
+	LiCacheProgressHelper helper;
 
 	curl = curl_easy_init();
 	if (curl == NULL) {
@@ -214,6 +220,9 @@ li_pkg_cache_download_file_sync (LiPkgCache *cache, const gchar *url, const gcha
 		return;
 	}
 
+	helper.cache = g_object_ref (cache);
+	helper.id = g_strdup (id);
+
 	curl_easy_setopt (curl, CURLOPT_URL, url);
 	curl_easy_setopt (curl, CURLOPT_WRITEDATA, outfile);
 	curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, curl_dl_write_data);
@@ -221,7 +230,7 @@ li_pkg_cache_download_file_sync (LiPkgCache *cache, const gchar *url, const gcha
 	curl_easy_setopt (curl, CURLOPT_NOPROGRESS, FALSE);
 	curl_easy_setopt (curl, CURLOPT_FAILONERROR, TRUE);
 	curl_easy_setopt (curl, CURLOPT_PROGRESSFUNCTION, li_pkg_cache_curl_progress_cb);
-	curl_easy_setopt (curl, CURLOPT_PROGRESSDATA, cache);
+	curl_easy_setopt (curl, CURLOPT_PROGRESSDATA, &helper);
 
 	res = curl_easy_perform (curl);
 
@@ -246,6 +255,10 @@ li_pkg_cache_download_file_sync (LiPkgCache *cache, const gchar *url, const gcha
 	/* cleanup */
 	fclose (outfile);
 	curl_easy_cleanup (curl);
+
+	/* free our helper */
+	g_object_unref (helper.cache);
+	g_free (helper.id);
 }
 
 /**
@@ -357,7 +370,7 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		g_debug ("Updating cached data for repository: %s", url);
 
 		/* download indices */
-		li_pkg_cache_download_file_sync (cache, url_index_all, dest_index_all, &tmp_error);
+		li_pkg_cache_download_file_sync (cache, url_index_all, dest_index_all, NULL, &tmp_error);
 		if (tmp_error != NULL) {
 			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
 				/* we can ignore the error here, this repository is not for us */
@@ -369,7 +382,7 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 				return;
 			}
 		}
-		li_pkg_cache_download_file_sync (cache, url_index_arch, dest_index_arch, &tmp_error);
+		li_pkg_cache_download_file_sync (cache, url_index_arch, dest_index_arch, NULL, &tmp_error);
 		if (tmp_error != NULL) {
 			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
 				/* we can ignore the error here, this repository is not for us */
@@ -383,14 +396,14 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		}
 
 		/* download AppStream metadata */
-		li_pkg_cache_download_file_sync (cache, url_asdata, dest_asdata, &tmp_error);
+		li_pkg_cache_download_file_sync (cache, url_asdata, dest_asdata, NULL, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return;
 		}
 
 		/* download signature */
-		li_pkg_cache_download_file_sync (cache, url_signature, dest_signature, &tmp_error);
+		li_pkg_cache_download_file_sync (cache, url_signature, dest_signature, NULL, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return;
@@ -562,15 +575,40 @@ li_pkg_cache_get_packages (LiPkgCache *cache)
 }
 
 /**
+ * li_pkg_cache_get_pkg_info:
+ *
+ * Returns: The #LiPkgInfo for pkid, or %NULL in case no package
+ * with that id was found in the cache.
+ */
+LiPkgInfo*
+li_pkg_cache_get_pkg_info (LiPkgCache *cache, const gchar *pkid)
+{
+	guint i;
+	GPtrArray *pkgs;
+	LiPkgInfo *pki = NULL;
+
+	pkgs = li_pkg_cache_get_packages (cache);
+	for (i = 0; i < pkgs->len; i++) {
+		LiPkgInfo *tmp_pki = LI_PKG_INFO (g_ptr_array_index (pkgs, i));
+		if (g_strcmp0 (li_pkg_info_get_id (tmp_pki), pkid) == 0) {
+			pki = tmp_pki;
+			break;
+		}
+	}
+
+	return pki;
+}
+
+/**
  * li_pkg_cache_fetch_remote:
  * @cache: an instance of #LiPkgCache
  * @pkgid: id of the package to download
  *
- * Download and open a package from a remote source.
+ * Download a package from a remote source.
  *
- * Returns: (transfer full): A new #LiPackage, or %NULL in case of an error
+ * Returns: (transfer full): Path to the downloaded package file.
  */
-LiPackage*
+gchar*
 li_pkg_cache_fetch_remote (LiPkgCache *cache, const gchar *pkgid, GError **error)
 {
 	GPtrArray *pkgs;
@@ -579,7 +617,6 @@ li_pkg_cache_fetch_remote (LiPkgCache *cache, const gchar *pkgid, GError **error
 	LiPkgInfo *pki = NULL;
 	gchar *tmp;
 	_cleanup_free_ gchar *dest_fname = NULL;
-	LiPackage *pkg;
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	/* find our package metadata */
@@ -608,6 +645,7 @@ li_pkg_cache_fetch_remote (LiPkgCache *cache, const gchar *pkgid, GError **error
 	li_pkg_cache_download_file_sync (cache,
 								li_pkg_info_get_repo_location (pki),
 								dest_fname,
+								pkgid,
 								&tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
@@ -615,14 +653,8 @@ li_pkg_cache_fetch_remote (LiPkgCache *cache, const gchar *pkgid, GError **error
 	}
 	g_debug ("Package '%s' downloaded from remote.", pkgid);
 
-	pkg = li_package_new ();
-	li_package_open_file (pkg, dest_fname, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return NULL;
-	}
 
-	return pkg;
+	return g_strdup (dest_fname);
 }
 
 /**

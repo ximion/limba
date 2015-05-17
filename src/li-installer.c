@@ -27,7 +27,6 @@
 #include "li-installer.h"
 
 #include <glib/gi18n-lib.h>
-#include <math.h>
 
 #include "li-utils.h"
 #include "li-utils-private.h"
@@ -49,13 +48,12 @@ struct _LiInstallerPrivate
 	LiPkgCache *cache;
 	GHashTable *foundations;
 
-	guint max_progress;
-	guint main_progress;
-
 	gchar *fname;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
+
+#define GET_PRIVATE(o) (li_installer_get_instance_private (o))
 
 enum {
 	SIGNAL_STATE_CHANGED,
@@ -65,10 +63,8 @@ enum {
 
 static guint signals[SIGNAL_LAST] = { 0 };
 
-#define GET_PRIVATE(o) (li_installer_get_instance_private (o))
-
 static void li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error);
-static void li_installer_cache_progress_cb (LiPkgCache *cache, guint percentage, const gchar *id, LiInstaller *inst);
+static void li_installer_package_graph_progress_cb (LiPackageGraph *pg, guint percentage, const gchar *id, LiInstaller *inst);
 
 /**
  * li_installer_finalize:
@@ -104,27 +100,19 @@ li_installer_init (LiInstaller *inst)
 	priv->foundations = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
 
 	/* connect signals */
-	g_signal_connect (priv->cache, "progress",
-						G_CALLBACK (li_installer_cache_progress_cb), inst);
+	g_signal_connect (priv->pg, "progress",
+				G_CALLBACK (li_installer_package_graph_progress_cb), inst);
 }
 
 /**
- * li_installer_cache_progress_cb:
+ * li_installer_package_graph_progress_cb:
  */
 static void
-li_installer_cache_progress_cb (LiPkgCache *cache, guint percentage, const gchar *id, LiInstaller *inst)
+li_installer_package_graph_progress_cb (LiPackageGraph *pg, guint percentage, const gchar *id, LiInstaller *inst)
 {
-	guint main_percentage;
-	LiInstallerPrivate *priv = GET_PRIVATE (inst);
-
-	/* skip progress propagation if we don't know the maximum number of steps yet */
-	if (priv->max_progress == 0)
-		return;
-
-	main_percentage = round (100 / (double) priv->max_progress * (priv->main_progress+percentage));
-
+	/* just forward that stuff */
 	g_signal_emit (inst, signals[SIGNAL_PROGRESS], 0,
-					main_percentage, NULL);
+					percentage, id);
 }
 
 /**
@@ -191,23 +179,23 @@ out:
 }
 
 /**
- * li_installer_fetch_dependency_remote:
+ * li_installer_add_dependency_remote:
  */
 static gboolean
-li_installer_fetch_dependency_remote (LiInstaller *inst, GNode *root, LiPkgInfo *dep_pki, GError **error)
+li_installer_add_dependency_remote (LiInstaller *inst, GNode *root, LiPkgInfo *dep_pki, GError **error)
 {
 	GNode *node;
 	LiPackage *pkg;
 	GError *tmp_error = NULL;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
-	priv->max_progress += 100;
-	pkg = li_pkg_cache_fetch_remote (priv->cache, li_pkg_info_get_id (dep_pki), &tmp_error);
+	pkg = li_package_new ();
+	li_package_open_remote (pkg, priv->cache, li_pkg_info_get_id (dep_pki), &tmp_error);
 	if (tmp_error != NULL) {
-		g_propagate_prefixed_error (error, tmp_error, "Unable to download dependency:");
+		g_propagate_error (error, tmp_error);
+		g_object_unref (pkg);
 		return FALSE;
 	}
-	priv->main_progress += 100;
 
 	node = li_package_graph_add_package_install_todo (priv->pg, root, pkg, dep_pki);
 
@@ -431,7 +419,7 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 		} else if (li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_AVAILABLE)) {
 			g_debug ("Hit remote package: %s", li_pkg_info_get_id (ipki));
 
-			li_installer_fetch_dependency_remote (inst, root, dep, &tmp_error);
+			li_installer_add_dependency_remote (inst, root, dep, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				return;
@@ -499,7 +487,7 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 	if (!G_NODE_IS_ROOT (node))
 		li_pkg_info_add_flag (info, LI_PACKAGE_FLAG_AUTOMATIC);
 
-	/* now nstall the package */
+	/* now install the package */
 	li_package_install (pkg, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
@@ -534,11 +522,6 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 	}
 	/* store the changed metadata on disk */
 	li_pkg_info_save_changes (info);
-
-	/* emit progress */
-	priv->main_progress += 100;
-	g_signal_emit (inst, signals[SIGNAL_PROGRESS], 0,
-					round (100/priv->max_progress*priv->main_progress), NULL);
 
 	ret = TRUE;
 out:
@@ -694,7 +677,6 @@ li_installer_install (LiInstaller *inst, GError **error)
 	}
 
 	/* install the package tree */
-	priv->max_progress += 100*li_package_graph_get_install_todo_count (priv->pg);
 	ret = li_installer_install_node (inst, root, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
@@ -761,13 +743,14 @@ li_installer_open_remote (LiInstaller *inst, const gchar *pkgid, GError **error)
 		return FALSE;
 	}
 
-	priv->max_progress += 100;
-	pkg = li_pkg_cache_fetch_remote (priv->cache, pkgid, &tmp_error);
+	pkg = li_package_new ();
+	li_package_open_remote (pkg, priv->cache, pkgid, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
+		g_object_unref (pkg);
 		return FALSE;
 	}
-	priv->main_progress += 100;
+
 	li_installer_set_package (inst, pkg);
 	g_object_unref (pkg);
 

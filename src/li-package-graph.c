@@ -30,16 +30,29 @@
 #include "config.h"
 #include "li-package-graph.h"
 
+#include <math.h>
+
 typedef struct _LiPackageGraphPrivate	LiPackageGraphPrivate;
 struct _LiPackageGraphPrivate
 {
 	GNode *root_pkg;
 	GHashTable *install_todo;
+
+	guint progress;
+	guint max_progress;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPackageGraph, li_package_graph, G_TYPE_OBJECT)
 
 #define GET_PRIVATE(o) (li_package_graph_get_instance_private (o))
+
+enum {
+	SIGNAL_STATE_CHANGED,
+	SIGNAL_PROGRESS,
+	SIGNAL_LAST
+};
+
+static guint signals[SIGNAL_LAST] = { 0 };
 
 static void li_package_graph_teardown (GNode *root);
 
@@ -68,6 +81,26 @@ li_package_graph_init (LiPackageGraph *pg)
 
 	priv->root_pkg = g_node_new (NULL);
 	priv->install_todo = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+}
+
+/**
+ * li_package_graph_package_progress_cb:
+ */
+static void
+li_package_graph_package_progress_cb (LiPackage *pkg, guint percentage, LiPackageGraph *pg)
+{
+	guint main_percentage;
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+
+	main_percentage = round (100 / (double) priv->max_progress * (priv->progress+percentage));
+
+	/* emit individual progress */
+	g_signal_emit (pg, signals[SIGNAL_PROGRESS], 0,
+					percentage, li_package_get_id (pkg));
+
+	/* emit main progress */
+	g_signal_emit (pg, signals[SIGNAL_PROGRESS], 0,
+					main_percentage, NULL);
 }
 
 /**
@@ -140,14 +173,21 @@ li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, Li
 	ret = g_hash_table_insert (priv->install_todo,
 						g_strdup (li_package_get_id (pkg)),
 						g_object_ref (pkg));
-	if (ret)
+	if (ret) {
 		g_debug ("Package %s marked for installation.", li_package_get_id (pkg));
-	else
+
+		/* connect signals */
+		g_signal_connect (pkg, "progress",
+					G_CALLBACK (li_package_graph_package_progress_cb), pg);
+	} else {
 		g_debug ("Package %s already marked for installation.", li_package_get_id (pkg));
+	}
 
 	if (satisfied_dep != NULL)
 		li_pkg_info_set_version_relation (li_package_get_info (pkg),
 									li_pkg_info_get_version_relation (satisfied_dep));
+
+	priv->max_progress = g_hash_table_size (priv->install_todo)*100;
 
 	return node;
 }
@@ -179,6 +219,7 @@ li_package_graph_mark_installed (LiPackageGraph *pg, LiPkgInfo *pki)
 {
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
+	priv->progress += 100;
 	return g_hash_table_remove (priv->install_todo,
 						li_pkg_info_get_id (pki));
 }
@@ -264,11 +305,21 @@ li_package_graph_set_root (LiPackageGraph *pg, LiPkgInfo *data)
 void
 li_package_graph_set_root_install_todo (LiPackageGraph *pg, LiPackage *pkg)
 {
+	gboolean ret;
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+
 	li_package_graph_set_root (pg, li_package_get_info (pkg));
-	g_hash_table_insert (priv->install_todo,
+	ret = g_hash_table_insert (priv->install_todo,
 						g_strdup (li_package_get_id (pkg)),
 						g_object_ref (pkg));
+
+	if (ret) {
+		/* connect signals */
+		g_signal_connect (pkg, "progress",
+						G_CALLBACK (li_package_graph_package_progress_cb), pg);
+	}
+
+	priv->max_progress = g_hash_table_size (priv->install_todo)*100;
 }
 
 /**
@@ -301,6 +352,12 @@ li_package_graph_class_init (LiPackageGraphClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	object_class->finalize = li_package_graph_finalize;
+
+	signals[SIGNAL_PROGRESS] =
+		g_signal_new ("progress",
+				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
+				0, NULL, NULL, g_cclosure_marshal_VOID__UINT_POINTER,
+				G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_POINTER);
 }
 
 /**
