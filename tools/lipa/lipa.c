@@ -25,6 +25,8 @@
 #include <glib/gi18n-lib.h>
 #include <limba.h>
 
+#include "li-console-utils.h"
+
 static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
@@ -142,7 +144,7 @@ li_installer_progress_cb (LiInstaller *inst, guint percentage, const gchar *id, 
 	if (id != NULL)
 		return;
 
-	g_print ("\rProgress: %i%s", (int) percentage, "%   ");
+	li_draw_progress_bar ("Progress", percentage);
 }
 
 /**
