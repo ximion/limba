@@ -144,7 +144,37 @@ li_installer_progress_cb (LiInstaller *inst, guint percentage, const gchar *id, 
 	if (id != NULL)
 		return;
 
-	li_draw_progress_bar ("Progress", percentage);
+	li_draw_progress_bar (_("Progress"), percentage);
+}
+
+/**
+ * li_installer_stage_changed_cb:
+ */
+static void
+li_installer_stage_changed_cb (LiInstaller *inst, LiPackageStage stage, const gchar *id, gpointer user_data)
+{
+	/* we ignore global notifications */
+	if (id == NULL)
+		return;
+
+	switch (stage) {
+		case LI_PACKAGE_STAGE_DOWNLOADING:
+			li_write_progress_step (_("Downloading %s"), id);
+			return;
+		case LI_PACKAGE_STAGE_VERIFYING:
+			li_write_progress_step (_("Verifying %s"), id);
+			return;
+		case LI_PACKAGE_STAGE_INSTALLING:
+			li_write_progress_step (_("Installing %s"), id);
+			return;
+		case LI_PACKAGE_STAGE_FINISHED:
+			li_write_progress_step (_("Completed %s"), id);
+			return;
+		default:
+			return;
+	}
+
+
 }
 
 /**
@@ -169,9 +199,12 @@ lipa_install_package (const gchar *pkgid)
 	inst = li_installer_new ();
 	g_signal_connect (inst, "progress",
 						G_CALLBACK (li_installer_progress_cb), NULL);
+	g_signal_connect (inst, "stage-changed",
+						G_CALLBACK (li_installer_stage_changed_cb), NULL);
 
 	li_installer_open_remote (inst, pkgid, &error);
 	if (error != NULL) {
+		li_abort_progress_bar ();
 		li_print_stderr (_("Could not find package: %s"), error->message);
 		g_error_free (error);
 		res = 1;
@@ -180,6 +213,7 @@ lipa_install_package (const gchar *pkgid)
 
 	li_installer_install (inst, &error);
 	if (error != NULL) {
+		li_abort_progress_bar ();
 		li_print_stderr (_("Could not install software: %s"), error->message);
 		g_error_free (error);
 		res = 1;

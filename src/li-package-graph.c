@@ -47,7 +47,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiPackageGraph, li_package_graph, G_TYPE_OBJECT)
 #define GET_PRIVATE(o) (li_package_graph_get_instance_private (o))
 
 enum {
-	SIGNAL_STATE_CHANGED,
+	SIGNAL_STAGE_CHANGED,
 	SIGNAL_PROGRESS,
 	SIGNAL_LAST
 };
@@ -101,6 +101,17 @@ li_package_graph_package_progress_cb (LiPackage *pkg, guint percentage, LiPackag
 	/* emit main progress */
 	g_signal_emit (pg, signals[SIGNAL_PROGRESS], 0,
 					main_percentage, NULL);
+}
+
+/**
+ * li_package_graph_package_stage_changed_cb:
+ */
+static void
+li_package_graph_package_stage_changed_cb (LiPackage *pkg, LiPackageStage stage, LiPackageGraph *pg)
+{
+	/* forward the signal, with the package-id attached */
+	g_signal_emit (pg, signals[SIGNAL_STAGE_CHANGED], 0,
+					stage, li_package_get_id (pkg));
 }
 
 /**
@@ -179,6 +190,8 @@ li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, Li
 		/* connect signals */
 		g_signal_connect (pkg, "progress",
 					G_CALLBACK (li_package_graph_package_progress_cb), pg);
+		g_signal_connect (pkg, "stage-changed",
+						G_CALLBACK (li_package_graph_package_stage_changed_cb), pg);
 	} else {
 		g_debug ("Package %s already marked for installation.", li_package_get_id (pkg));
 	}
@@ -317,6 +330,8 @@ li_package_graph_set_root_install_todo (LiPackageGraph *pg, LiPackage *pkg)
 		/* connect signals */
 		g_signal_connect (pkg, "progress",
 						G_CALLBACK (li_package_graph_package_progress_cb), pg);
+		g_signal_connect (pkg, "stage-changed",
+						G_CALLBACK (li_package_graph_package_stage_changed_cb), pg);
 	}
 
 	priv->max_progress = g_hash_table_size (priv->install_todo)*100;
@@ -355,6 +370,12 @@ li_package_graph_class_init (LiPackageGraphClass *klass)
 
 	signals[SIGNAL_PROGRESS] =
 		g_signal_new ("progress",
+				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
+				0, NULL, NULL, g_cclosure_marshal_VOID__UINT_POINTER,
+				G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_POINTER);
+
+	signals[SIGNAL_STAGE_CHANGED] =
+		g_signal_new ("stage-changed",
 				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
 				0, NULL, NULL, g_cclosure_marshal_VOID__UINT_POINTER,
 				G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_POINTER);

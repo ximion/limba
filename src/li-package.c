@@ -77,7 +77,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiPackage, li_package, G_TYPE_OBJECT)
 #define GET_PRIVATE(o) (li_package_get_instance_private (o))
 
 enum {
-	SIGNAL_STATE_CHANGED,
+	SIGNAL_STAGE_CHANGED,
 	SIGNAL_PROGRESS,
 	SIGNAL_LAST
 };
@@ -151,6 +151,16 @@ li_package_emit_progress (LiPackage *pkg)
 	percentage = round (100 / (double) priv->max_progress * priv->progress);
 	g_signal_emit (pkg, signals[SIGNAL_PROGRESS], 0,
 					percentage);
+}
+
+/**
+ * li_package_emit_stage_change:
+ */
+static void
+li_package_emit_stage_change (LiPackage *pkg, LiPackageStage stage)
+{
+	g_signal_emit (pkg, signals[SIGNAL_STAGE_CHANGED], 0,
+					stage);
 }
 
 /**
@@ -760,6 +770,9 @@ li_package_install (LiPackage *pkg, GError **error)
 		}
 	}
 
+	/* change process state */
+	li_package_emit_stage_change (pkg, LI_PACKAGE_STAGE_INSTALLING);
+
 	/* create a new exporter to integrate the new software into the system */
 	exp = li_exporter_new ();
 	li_exporter_set_pkg_info (exp, priv->info);
@@ -903,6 +916,9 @@ li_package_download (LiPackage *pkg, GError **error)
 	if (priv->archive_file != NULL) {
 		return TRUE;
 	}
+
+	/* change process state */
+	li_package_emit_stage_change (pkg, LI_PACKAGE_STAGE_DOWNLOADING);
 
 	priv->max_progress += 100;
 	pkg_fname = li_pkg_cache_fetch_remote (priv->cache, li_pkg_info_get_id (priv->info), &tmp_error);
@@ -1109,6 +1125,9 @@ li_package_verify_signature (LiPackage *pkg, GError **error)
 	/* no signature == no trust level */
 	if (priv->signature_data == NULL)
 		return priv->tlevel;
+
+	/* change process state */
+	li_package_emit_stage_change (pkg, LI_PACKAGE_STAGE_VERIFYING);
 
 	/* we need a hash of the payload archive. That value is not automatically generated, since
 	 * the payload might be huge and generating the hash might take some time. In case the LiPackage
@@ -1328,6 +1347,30 @@ li_trust_level_to_text (LiTrustLevel level)
 }
 
 /**
+ * li_package_stage_to_string:
+ *
+ * Returns: A localized string for the #LiPackageStage.
+ */
+const gchar*
+li_package_stage_to_string (LiPackageStage stage)
+{
+	switch (stage) {
+		case LI_PACKAGE_STAGE_UNKNOWN:
+			return _("Unknown");
+		case LI_PACKAGE_STAGE_DOWNLOADING:
+			return _("Downloading");
+		case LI_PACKAGE_STAGE_VERIFYING:
+			return _("Verifying");
+		case LI_PACKAGE_STAGE_INSTALLING:
+			return _("Installing");
+		case LI_PACKAGE_STAGE_FINISHED:
+			return _("Finished");
+		default:
+			return "";
+	}
+}
+
+/**
  * li_package_class_init:
  **/
 static void
@@ -1338,6 +1381,12 @@ li_package_class_init (LiPackageClass *klass)
 
 	signals[SIGNAL_PROGRESS] =
 		g_signal_new ("progress",
+				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
+				0, NULL, NULL, g_cclosure_marshal_VOID__UINT,
+				G_TYPE_NONE, 1, G_TYPE_UINT);
+
+	signals[SIGNAL_STAGE_CHANGED] =
+		g_signal_new ("stage-changed",
 				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
 				0, NULL, NULL, g_cclosure_marshal_VOID__UINT,
 				G_TYPE_NONE, 1, G_TYPE_UINT);

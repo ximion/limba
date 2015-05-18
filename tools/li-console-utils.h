@@ -25,7 +25,9 @@
 
 G_BEGIN_DECLS
 
+void			li_write_progress_step (const gchar *format, ...);
 void			li_draw_progress_bar (const gchar *title, guint progress);
+void			li_abort_progress_bar (void);
 
 G_END_DECLS
 

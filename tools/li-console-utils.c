@@ -34,6 +34,49 @@
  * @short_description: Helper functions shared between Limba console applications
  */
 
+static gboolean
+li_is_verbose_mode (void)
+{
+	return g_getenv ("G_MESSAGES_DEBUG") != NULL;
+}
+
+/**
+ * li_write_progress_step:
+ */
+void
+li_write_progress_step (const gchar *format, ...)
+{
+	gint width;
+	gchar *space_str;
+	struct winsize ws;
+	va_list args;
+	gchar *text;
+
+	va_start (args, format);
+	text = g_strdup_vprintf (format, args);
+	va_end (args);
+
+	/* if this is no tty, just write the text and exit */
+	if ((!isatty (fileno (stdin))) || (li_is_verbose_mode ())) {
+		g_print ("%s\n", text);
+		g_free (text);
+		return;
+	}
+
+	ioctl (0, TIOCGWINSZ, &ws);
+	width = ws.ws_col;
+
+	/* wipe current line */
+	space_str = g_strnfill (width, ' ');
+	g_print ("\r%s", space_str);
+	g_free (space_str);
+
+	/* print our message */
+	g_print ("\r%s\n", text);
+
+	g_free (text);
+}
+
 /**
  * li_draw_progress_bar:
  */
@@ -49,7 +92,7 @@ li_draw_progress_bar (const gchar *title, guint progress)
 	struct winsize ws;
 
 	/* don't create a progress bar if we don't have a tty */
-	if (!isatty (fileno (stdin)))
+	if ((!isatty (fileno (stdin))) || (li_is_verbose_mode ()))
 		return;
 
 	ioctl (0, TIOCGWINSZ, &ws);
@@ -58,7 +101,7 @@ li_draw_progress_bar (const gchar *title, guint progress)
 	bar_width = width - 2 - 5;
 
 	/* only continue if we have space to draw the progress bar */
-	if (width < 0)
+	if (width <= 0)
 		return;
 
 	if (bar_width <= 0) {
@@ -86,4 +129,30 @@ li_draw_progress_bar (const gchar *title, guint progress)
 
 	g_free (bar_fill_str);
 	g_free (bar_space_str);
+
+	if (progress >= 100)
+		g_print ("\n");
+}
+
+/**
+ * li_abort_progress_bar:
+ */
+void
+li_abort_progress_bar (void)
+{
+	gint width;
+	struct winsize ws;
+
+	/* don't create a progress bar if we don't have a tty */
+	if ((!isatty (fileno (stdin))) || (li_is_verbose_mode ()))
+		return;
+
+	ioctl (0, TIOCGWINSZ, &ws);
+	width = ws.ws_col - 2;
+
+	/* make a rough estimate if there is a progress bar at all, which we could cancel */
+	if (width - 2 - 5 <= 0)
+		return;
+
+	g_print ("\n");
 }

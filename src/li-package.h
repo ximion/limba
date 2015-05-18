@@ -95,6 +95,29 @@ typedef enum {
 
 const gchar	*li_trust_level_to_text (LiTrustLevel level);
 
+/**
+ * LiPackageStage:
+ * @LI_PACKAGE_STAGE_UNKNOWN:		Unknown stage
+ * @LI_PACKAGE_STAGE_DOWNLOADING:	Package is being downloaded
+ * @LI_PACKAGE_STAGE_VERIFYING:		A signature is being verified
+ * @LI_PACKAGE_STAGE_INSTALLING:	Package is being installed
+ * @LI_PACKAGE_STAGE_FINISHED:		All tasks have finished
+ *
+ * Stages emitted when performing actions on a #LiPackage which consist of several
+ * smaller steps, like installing the package.
+ **/
+typedef enum {
+	LI_PACKAGE_STAGE_UNKNOWN,
+	LI_PACKAGE_STAGE_DOWNLOADING,
+	LI_PACKAGE_STAGE_VERIFYING,
+	LI_PACKAGE_STAGE_INSTALLING,
+	LI_PACKAGE_STAGE_FINISHED,
+	/*< private >*/
+	LI_PACKAGE_STAGE_LAST
+} LiPackageStage;
+
+const gchar	*li_package_stage_to_string (LiPackageStage stage);
+
 typedef struct _LiPackage		LiPackage;
 typedef struct _LiPackageClass	LiPackageClass;
 

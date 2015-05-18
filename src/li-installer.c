@@ -56,7 +56,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
 #define GET_PRIVATE(o) (li_installer_get_instance_private (o))
 
 enum {
-	SIGNAL_STATE_CHANGED,
+	SIGNAL_STAGE_CHANGED,
 	SIGNAL_PROGRESS,
 	SIGNAL_LAST
 };
@@ -65,6 +65,7 @@ static guint signals[SIGNAL_LAST] = { 0 };
 
 static void li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error);
 static void li_installer_package_graph_progress_cb (LiPackageGraph *pg, guint percentage, const gchar *id, LiInstaller *inst);
+static void li_installer_package_graph_stage_changed_cb (LiPackageGraph *pg, LiPackageStage stage, const gchar *id, LiInstaller *inst);
 
 /**
  * li_installer_finalize:
@@ -102,6 +103,8 @@ li_installer_init (LiInstaller *inst)
 	/* connect signals */
 	g_signal_connect (priv->pg, "progress",
 				G_CALLBACK (li_installer_package_graph_progress_cb), inst);
+	g_signal_connect (priv->pg, "stage-changed",
+				G_CALLBACK (li_installer_package_graph_stage_changed_cb), inst);
 }
 
 /**
@@ -113,6 +116,17 @@ li_installer_package_graph_progress_cb (LiPackageGraph *pg, guint percentage, co
 	/* just forward that stuff */
 	g_signal_emit (inst, signals[SIGNAL_PROGRESS], 0,
 					percentage, id);
+}
+
+/**
+ * li_installer_package_graph_stage_changed_cb:
+ */
+static void
+li_installer_package_graph_stage_changed_cb (LiPackageGraph *pg, LiPackageStage stage, const gchar *id, LiInstaller *inst)
+{
+	/* just forward that stuff */
+	g_signal_emit (inst, signals[SIGNAL_STAGE_CHANGED], 0,
+					stage, id);
 }
 
 /**
@@ -823,6 +837,12 @@ li_installer_class_init (LiInstallerClass *klass)
 
 	signals[SIGNAL_PROGRESS] =
 		g_signal_new ("progress",
+				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
+				0, NULL, NULL, g_cclosure_marshal_VOID__UINT_POINTER,
+				G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_POINTER);
+
+	signals[SIGNAL_STAGE_CHANGED] =
+		g_signal_new ("stage-changed",
 				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
 				0, NULL, NULL, g_cclosure_marshal_VOID__UINT_POINTER,
 				G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_POINTER);
