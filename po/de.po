@@ -3,20 +3,20 @@
 # This file is distributed under the same license as the PACKAGE package.
 # 
 # Translators:
-# Valentin OVD <vovd.tanglu@gmail.com>, 2015
+# Matthias K. <matthias@tenstral.net>, 2015
 msgid ""
 msgstr ""
 "Project-Id-Version: Limba\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-05-19 00:32+0200\n"
-"PO-Revision-Date: 2015-05-18 22:33+0000\n"
+"PO-Revision-Date: 2015-05-18 22:35+0000\n"
 "Last-Translator: Matthias K. <matthias@tenstral.net>\n"
-"Language-Team: French (http://www.transifex.com/projects/p/limba/language/fr/)\n"
+"Language-Team: German (http://www.transifex.com/projects/p/limba/language/de/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: fr\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #, c-format
 msgid "A package with id '%s' was not found in the cache."
@@ -26,28 +26,28 @@ msgstr ""
 msgid ""
 "A package with the same name and version has already been installed into "
 "this repository."
-msgstr "Un paquet avec le même nom et la même version a déjà était installé dans ce dépôt."
+msgstr ""
 
 msgid "Add a PGP key to the trusted database."
-msgstr "Ajouter une clé PGP à la base de données fiable."
+msgstr ""
 
 msgid "Add a package to the repository"
-msgstr "Ajouter un paquet dans le dépôt"
+msgstr ""
 
 #, c-format
 msgid "Checksum for embedded package '%s' did not match."
-msgstr "Somme de contrôle pour les paquets embarqués '%s' ne correspondent pas."
+msgstr ""
 
 msgid "Cleanup cruft packages"
-msgstr "Epuration des paquets"
+msgstr ""
 
 #, c-format
 msgid "Closing of file desriptor failed. Error: %s"
-msgstr "Fermeture du descripteur de fichier à échoué. Erreur: %s"
+msgstr ""
 
 #, c-format
 msgid "Command '%s' is unknown."
-msgstr "Commande '%s' inconnue."
+msgstr "Befehl '%s' ist unbekannt."
 
 #, c-format
 msgid "Completed %s"
@@ -55,107 +55,107 @@ msgstr ""
 
 #, c-format
 msgid "Could not create directory structure '%s'. %s"
-msgstr "Impossible de créer la structure de dossier '%s'. %s"
+msgstr ""
 
 #, c-format
 msgid "Could not create directory structure for runtime. %s"
-msgstr "Impossible de crée la structure de dossier pour l'exécution. %s"
+msgstr ""
 
 #, c-format
 msgid "Could not create system directory: %s"
-msgstr "Impossible de créer le dossier système : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not delete file '%s'"
-msgstr "Impossible de supprimer le fichier '%s'"
+msgstr ""
 
 #, c-format
 msgid "Could not determine package name."
-msgstr "Impossible de déterminer le nom du paquet."
+msgstr ""
 
 #, c-format
 msgid "Could not determine package version."
-msgstr "Impossible de déterminer la version du paquet."
+msgstr ""
 
 #, c-format
 msgid "Could not find AppStream metadata for the new package!"
-msgstr "La métadonnée d'AppStream pour le nouveau paquet est introuvable."
+msgstr ""
 
 #, c-format
 msgid "Could not find control file for the archive!"
-msgstr "Impossible de trouver le fichier de contrôle pour l'archive!"
+msgstr ""
 
 #, c-format
 msgid "Could not find dependency: %s"
-msgstr "Impossible de trouver la dépendance : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not find package matching id '%s'."
-msgstr "Impossible de trouver le paquet : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not find package: %s"
-msgstr "Impossible de trouver le paquet : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not find payload data in the 'inst_target' subdirectory."
-msgstr "Impossible de trouver les données de payload dans le sous-dossier 'inst_target'."
+msgstr ""
 
 #, c-format
 msgid "Could not find remote data '%s': %s."
-msgstr "Impossible de trouver le logiciel : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not find software: %s"
-msgstr "Impossible de trouver le logiciel : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not find system component: '%s'. Please install it manually."
-msgstr "Impossible de trouver le composant system : '%s'. Merci de l'installer manuellement."
+msgstr ""
 
 #, c-format
 msgid "Could not generate package filename: AppStream metadata is missing."
-msgstr "Impossible de générer le nom de fichier du paquet : les métadonnées AppStream sont introuvable."
+msgstr ""
 
 #, c-format
 msgid "Could not initialize CURL!"
-msgstr "Impossible d'installer le logiciel : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not install package: Component metadata is missing."
-msgstr "Impossible d'installer le paquet: La métadonnée composant est indisponible."
+msgstr ""
 
 #, c-format
 msgid "Could not install software: %s"
-msgstr "Impossible d'installer le logiciel : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not open IPK file! Error: %s"
-msgstr "Impossible d'ouvrir le fichier IPK! Erreur : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not open IPK payload! Error: %s"
-msgstr "Impossible d'ouvrir le payload de l'IPK! Erreur : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not open file '%s' for writing."
-msgstr "Impossible d'ouvrir le fichier '%s' pour écriture."
+msgstr ""
 
 #, c-format
 msgid "Could not open metadata-file '%s' for reading."
-msgstr "Impossible d'ouvrir le fichier de métadonnée '%s' pour lecture."
+msgstr ""
 
 #, c-format
 msgid "Could not open package: %s"
-msgstr "Impossible d'ouvrir le paquet : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not override file '%s'. The file already exists!"
-msgstr "Impossible de écrire sur le fichier '%s'. Le fichier existe déjà !"
+msgstr ""
 
 #, c-format
 msgid "Could not remove software directory."
-msgstr "Impossible de supprimer le dossier du logiciel."
+msgstr ""
 
 #, c-format
 msgid "Could not verify signature: They key could not be found or downloaded."
@@ -163,13 +163,13 @@ msgstr ""
 
 #, c-format
 msgid "Could not write to file: '%s'"
-msgstr "Impossible d'écrire sur le fichier : '%s'"
+msgstr ""
 
 msgid "Create a new package using data found in DIRECTORY."
-msgstr "Créer un nouveau paquet en utilisant les données disponible dans DOSSIER."
+msgstr ""
 
 msgid "Create sources for a new package."
-msgstr "Créer les sources pour un nouveau paquet."
+msgstr ""
 
 #, c-format
 msgid ""
@@ -185,23 +185,23 @@ msgid ""
 msgstr ""
 
 msgid "Define a software name (human readable):"
-msgstr "Définir un nom de logiciel (lisible par l'Homme) :"
+msgstr ""
 
 msgid "Define a software version:"
-msgstr "Définir une version de logiciel :"
+msgstr ""
 
 msgid "Do not fail action with an error code."
-msgstr "Ne pas manquer l'action avec une code d'erreur."
+msgstr ""
 
 msgid "Do not sign the package"
-msgstr "Ne pas signer le paquet"
+msgstr ""
 
 #, c-format
 msgid "Do you have an AppStream XML file for your software? [y/N]"
-msgstr "Avez-vous un fichier XML d'AppStream pour votre logiciel ? [o/N]"
+msgstr ""
 
 msgid "Don't show \"fancy\" output"
-msgstr "Ne pas montrer la sortie \"fancy\""
+msgstr ""
 
 msgid "Downloading"
 msgstr ""
@@ -212,11 +212,11 @@ msgstr ""
 
 #, c-format
 msgid "Embedded package '%s' was not found."
-msgstr "Le paquet embarqué '%s' est introuvable."
+msgstr ""
 
 #, c-format
 msgid "Failed to add package: %s"
-msgstr "Impossible de déballer le paquet. %s"
+msgstr ""
 
 #, c-format
 msgid "Failed to initialize repository: %s"
@@ -228,23 +228,23 @@ msgstr ""
 
 #, c-format
 msgid "File '%s' already exists."
-msgstr "Le fichier '%s' existe déjà."
+msgstr ""
 
 msgid "Finished"
 msgstr ""
 
 #, c-format
 msgid "Importing of key failed: %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
 msgid "Initialize a new repository in DIRECTORY."
-msgstr "Créer un nouveau paquet en utilisant les données disponible dans DOSSIER."
+msgstr ""
 
 msgid "Install a local software package"
-msgstr "Installer un paquet logiciel local"
+msgstr ""
 
 msgid "Install software from a repository"
-msgstr "Install un logiciel depuis un dépôt"
+msgstr ""
 
 msgid "Installing"
 msgstr ""
@@ -255,11 +255,11 @@ msgstr ""
 
 #, c-format
 msgid "Invalid package: Component metadata is missing."
-msgstr "Paquet invalide : Le composant de métadonnée est introuvable."
+msgstr ""
 
 #, c-format
 msgid "Invalid path to directory."
-msgstr "Déballer le paquet Limba dans un dossier."
+msgstr ""
 
 #, c-format
 msgid "Key lookup failed, could not find remote key."
@@ -271,66 +271,66 @@ msgstr ""
 
 #. : This is the header to the --help menu
 msgid "Limba package builder"
-msgstr "Créateur de paquet Limba"
+msgstr ""
 
 #. : This is the header to the --help menu
 msgid "Limba repository builder"
-msgstr "Créateur de paquet Limba"
+msgstr ""
 
 #. : This is the header to the --help menu
 msgid "Limba software manager"
-msgstr "Manager des logiciels Limba"
+msgstr ""
 
 #, c-format
 msgid "Limba version: %s"
-msgstr "Version de Limba : %s"
+msgstr ""
 
 msgid "List installed software"
-msgstr "Liste des logiciels installés"
+msgstr ""
 
 msgid "No import result returned."
 msgstr ""
 
 msgid "No package file given for extraction."
-msgstr "Aucun fichier de paquet donné pour extraction."
+msgstr ""
 
 #, c-format
 msgid "No package is loaded."
-msgstr "Aucun paquet n'est chargé."
+msgstr ""
 
 msgid "No path given. Exiting."
-msgstr "Aucun chemin donné. Sortie."
+msgstr ""
 
 msgid "No result received."
-msgstr "Aucun résultat reçu."
+msgstr ""
 
 #, c-format
 msgid "Package file '%s' was not found."
-msgstr "Le fichier paquet '%s' est introuvable."
+msgstr ""
 
 #, c-format
 msgid "Package signed for \"%s\" [0x%s]\n"
-msgstr "Paquet signé pour \"%s\" [0x%s]\n"
+msgstr ""
 
 #, c-format
 msgid "Package signed for 0x%s\n"
-msgstr "Paquet signé pour 0x%s\n"
+msgstr ""
 
 msgid "Please specify a path to the AppStream XML data:"
-msgstr "Merci de spécifier un chemin aux données XML d'AppStream :"
+msgstr ""
 
 msgid "Progress"
 msgstr ""
 
 msgid "Refresh the cache of available packages"
-msgstr "Rafraichir le cache des paquets disponibles "
+msgstr ""
 
 msgid "Remove an installed software package"
-msgstr "Supprimer un paquet de logiciel installé"
+msgstr ""
 
 #, c-format
 msgid "Removing '%s' would break at least '%s'."
-msgstr "Supprimer '%s' casserait au moins '%s'."
+msgstr ""
 
 #, c-format
 msgid "Repository '%s' (signed with key '%s') is untrusted."
@@ -338,17 +338,17 @@ msgstr ""
 
 #, c-format
 msgid "Run '%s --help' to see a full list of available command line options."
-msgstr "Lancer '%s --help' pour voir la liste des options de commandes disponibles."
+msgstr ""
 
 #, c-format
 msgid "Runtime '%s' is not valid. Could not find control file."
-msgstr "L'exécution '%s' 'n'est pas valide. Impossible de trouver le fichier de contrôle."
+msgstr ""
 
 msgid "Show extra debugging information"
-msgstr "Afficher d'avantage d'information de débogage"
+msgstr ""
 
 msgid "Show the program version"
-msgstr "Voir la version du programme"
+msgstr ""
 
 #, c-format
 msgid "Siganture on '%s' is invalid."
@@ -364,24 +364,24 @@ msgstr ""
 
 #, c-format
 msgid "Signature validation failed: %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
 #, c-format
 msgid "Signing of package failed: %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
 #, c-format
 msgid "Signing of repository failed: %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
 msgid "Software package"
-msgstr "Paquet logiciel"
+msgstr ""
 
 msgid "Software was installed successfully."
-msgstr "Le logiciel a été installé avec succès."
+msgstr ""
 
 msgid "Subcommands:"
-msgstr "Sous-commandes : "
+msgstr ""
 
 #, c-format
 msgid ""
@@ -390,13 +390,13 @@ msgid ""
 msgstr ""
 
 msgid "The package is signed with a known, trusted key."
-msgstr "Ce paquet est signé avec une clé de confiance connu."
+msgstr ""
 
 msgid "The package is signed with a trusted key."
-msgstr "Ce paquet est signé avec une clé de confiance."
+msgstr ""
 
 msgid "The package is signed, but not explicitly trusted."
-msgstr "Ce paquet est signé mais pas avec une clé explicitement de confiance."
+msgstr ""
 
 #, c-format
 msgid "The package needs to be downloaded first to perform this operation."
@@ -404,82 +404,82 @@ msgstr ""
 
 #, c-format
 msgid "The package was built for a different architecture."
-msgstr "Ce paquet est construit pour une architecture différente."
+msgstr ""
 
 msgid "The signature on this package is broken."
-msgstr "La signature de ce paquet est cassé."
+msgstr ""
 
 msgid "This package can not be trusted. It likely is not signed."
-msgstr "Ce paquet ne peut pas être digne de confiance. Ce paquet n'est probablement pas signé."
+msgstr ""
 
 #, c-format
 msgid "This package has a broken signature."
-msgstr "Ce paquet a une signature cassé."
+msgstr ""
 
 #, c-format
 msgid "Unable to calculate checksum for: %s"
-msgstr "Impossible de calculer la somme de contrôle de : %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to create link. Error: %s"
-msgstr "Impossible de créer le lien. Erreur : %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to determine a valid package identifier."
-msgstr "Impossible de déterminer un valide identificateur de paquet."
+msgstr ""
 
 #, c-format
 msgid "Unable to determine package version."
-msgstr "Impossible de déterminer la version du paquet."
+msgstr ""
 
 #, c-format
 msgid "Unable to download data from '%s': %s."
-msgstr "Impossible de télécharger les données de '%s': %s."
+msgstr ""
 
 msgid "Unable to download package:"
 msgstr ""
 
 #, c-format
 msgid "Unable to extract file. Error: %s"
-msgstr "Impossible d'extraire le fichier. Erreur : %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to find or unpack package payload."
-msgstr "Impossible de trouver ou de déballer le payload du paquet."
+msgstr ""
 
 #, c-format
 msgid "Unable to open package. %s"
-msgstr "Impossible d'ouvrir le paquet. %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to remove existing installation of '%s (%s)'."
-msgstr "Impossible de supprimer l'installation existante de '%s (%s)'."
+msgstr ""
 
 #, c-format
 msgid "Unable to set permissions on file '%s'. Error: %s"
-msgstr "Impossible de déterminer les permissions sur le fichier '%s'. Erreur : %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to unpack package. %s"
-msgstr "Impossible de déballer le paquet. %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to write 'control' file. %s"
-msgstr "Impossible d'écrire le fichier 'control'. %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to write AppStream data. %s"
-msgstr "Impossible d'écrire les données AppStream. %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to write signature: %s"
-msgstr "Impossible d'écrire la signature : %s"
+msgstr ""
 
 msgid "Unknown"
 msgstr ""
 
 msgid "Unpack the Limba package to a directory."
-msgstr "Déballer le paquet Limba dans un dossier."
+msgstr ""
 
 msgid "Verifying"
 msgstr ""
@@ -489,31 +489,31 @@ msgid "Verifying %s"
 msgstr ""
 
 msgid "Write a short summary (one sentence) about your software:"
-msgstr "Ecrire un court résumé (une phrase) à propos de votre logiciel :"
+msgstr ""
 
 msgid "You need to specify a command."
-msgstr "Vous devez spécifier une commande."
+msgstr ""
 
 msgid "You need to specify a directory with build-metadata."
-msgstr "Vous devez spécifier un dossier avec les métadonnées de construction."
+msgstr ""
 
 msgid "You need to specify a key fingerprint."
-msgstr "Vous devez spécifier l'empreinte d'une clé."
+msgstr ""
 
 msgid "You need to specify a package file to add to the repository."
-msgstr "Vous devez spécifier un paquet à supprimer."
+msgstr ""
 
 msgid "You need to specify a package to install."
-msgstr "Vous devez spécifier un paquet à installer."
+msgstr ""
 
 msgid "You need to specify a package to remove."
-msgstr "Vous devez spécifier un paquet à supprimer."
+msgstr ""
 
 msgid ""
 "Your software needs a unique name.\n"
 "In case of a GUI application, this is its .desktop filename.\n"
 "Unique software name:"
-msgstr "Votre logiciel a besoin d'un nom unique.\nDans le cas d'une application graphique, c'est le nom du fichier .desktop.\nNom unique du logiciel :"
+msgstr ""
 
 msgid "Zero results returned."
-msgstr "résultats zéro retournés."
+msgstr ""
