@@ -26,6 +26,7 @@
 #include "config.h"
 #include "li-package.h"
 
+#include <glib/gstdio.h>
 #include <math.h>
 #include <glib/gi18n-lib.h>
 #include <archive_entry.h>
@@ -1030,7 +1031,7 @@ li_package_extract_embedded_package (LiPackage *pkg, LiPkgInfo *pki, GError **er
 /**
  * li_package_extract_contents:
  *
- * Extracts the package contants into a directory.
+ * Extracts the package contents into a directory.
  * Useful to inspect the package structure manually.
  */
 void
@@ -1061,6 +1062,109 @@ li_package_extract_contents (LiPackage *pkg, const gchar *dest_dir, GError **err
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			goto out;
+		}
+	}
+
+out:
+	archive_read_close (ar);
+	archive_read_free (ar);
+}
+
+/**
+ * li_package_extract_appstream_icons:
+ *
+ * Extracts the icons of this package into a directory and name
+ * them after the package.
+ * This will only extract icons in the sizes mandated by the AppStream spec,
+ * 128x128 and 64x64.
+ */
+void
+li_package_extract_appstream_icons (LiPackage *pkg, const gchar *dest_dir, GError **error)
+{
+	struct archive *ar;
+	struct archive_entry* e;
+	gint res;
+	const gchar *tmp_payload_path;
+	_cleanup_free_ gchar *icon_dest_name = NULL;
+	GError *tmp_error = NULL;
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+
+	g_assert_nonnull (dest_dir);
+
+	if (priv->id == NULL) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_FAILED,
+				_("No id was found for this package."));
+		return;
+	}
+
+	/* extract payload (if necessary) */
+	tmp_payload_path = li_package_extract_payload_archive (pkg, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	/* open the payload archive */
+	ar = archive_read_new ();
+	/* the payload is an xz compressed tar archive */
+	archive_read_support_filter_xz (ar);
+	archive_read_support_format_tar (ar);
+
+	/* open the file, exit on error */
+	res = archive_read_open_filename (ar, tmp_payload_path, DEFAULT_BLOCK_SIZE);
+	if (res != ARCHIVE_OK) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_ARCHIVE,
+				_("Could not open IPK payload! Error: %s"), archive_error_string (ar));
+		archive_read_free (ar);
+		return;
+	}
+
+	icon_dest_name = g_strdup_printf ("%s.%s", priv->id, "png");
+
+	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
+		_cleanup_free_ gchar *tmp = NULL;
+		gchar *dest = NULL;
+
+		if (!g_str_has_suffix (archive_entry_pathname (e), ".png"))
+			continue;
+
+		tmp = g_path_get_dirname (archive_entry_pathname (e));
+
+		if (g_str_has_prefix (tmp, "share/icons/hicolor/128x128")) {
+			dest = g_build_filename (dest_dir,  "128x128", NULL);
+		} else if (g_str_has_prefix (tmp, "share/icons/hicolor/64x64")) {
+			dest = g_build_filename (dest_dir,  "64x64", NULL);
+		}
+
+		if (dest != NULL) {
+			_cleanup_free_ gchar *fname = NULL;
+			_cleanup_free_ gchar *src_fname = NULL;
+			_cleanup_free_ gchar *dest_fname = NULL;
+			g_mkdir_with_parents (dest, 0755);
+
+			fname = g_path_get_basename (archive_entry_pathname (e));
+			src_fname = g_build_filename (dest, fname, NULL);
+			dest_fname = g_build_filename (dest, icon_dest_name, NULL);
+
+			li_package_extract_entry_to (pkg, ar, e, dest, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
+
+			if (g_rename (src_fname, dest_fname) != 0) {
+				g_set_error (error,
+					LI_PACKAGE_ERROR,
+					LI_PACKAGE_ERROR_FAILED,
+					_("Unable to rename file."));
+				goto out;
+			}
+
+			g_free (dest);
 		}
 	}
 

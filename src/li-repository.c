@@ -432,6 +432,10 @@ li_repository_save (LiRepository *repo, GError **error)
 	g_mkdir_with_parents (dir, 0755);
 	g_free (dir);
 
+	dir = g_build_filename (priv->repo_path, "assets", NULL);
+	g_mkdir_with_parents (dir, 0755);
+	g_free (dir);
+
 	dir = g_build_filename (priv->repo_path, "pool", NULL);
 	g_mkdir_with_parents (dir, 0755);
 	g_free (dir);
@@ -502,6 +506,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	gunichar c;
 	guint i;
 	_cleanup_free_ gchar *dest_path = NULL;
+	_cleanup_free_ gchar *icon_dir = NULL;
 	_cleanup_free_ gchar *hash = NULL;
 	AsComponent *cpt;
 	LiPkgIndex *index;
@@ -571,6 +576,19 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	hash = li_compute_checksum_for_file (pkg_fname);
 	li_pkg_info_set_checksum_sha256 (pki, hash);
 
+	/* extract the icons */
+	icon_dir = g_build_filename (priv->repo_path,
+									"assets",
+									li_pkg_info_get_id (pki),
+									"icons",
+									NULL);
+	li_package_extract_appstream_icons (pkg, icon_dir, &tmp_error);
+	if (tmp_error != NULL) {
+		g_free (tmp);
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
 	/* now copy the file */
 	li_copy_file (pkg_fname, tmp, &tmp_error);
 	if (tmp_error != NULL) {
@@ -578,6 +596,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
+	g_free (tmp);
 
 	/* set a unique AppStream package name */
 	cpt = li_package_get_appstream_cpt (pkg);

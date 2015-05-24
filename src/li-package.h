@@ -182,6 +182,10 @@ void			li_package_extract_contents (LiPackage *pkg,
 											const gchar *dest_dir,
 											GError **error);
 
+void			li_package_extract_appstream_icons (LiPackage *pkg,
+											const gchar *dest_dir,
+											GError **error);
+
 G_END_DECLS
 
 #endif /* __LI_PACKAGE_H */
