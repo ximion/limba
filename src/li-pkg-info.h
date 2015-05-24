@@ -161,6 +161,10 @@ gchar			*li_pkg_info_get_name_relation_string (LiPkgInfo *pki);
 gboolean		li_pkg_info_satisfies_requirement (LiPkgInfo *pki,
 													LiPkgInfo *req);
 
+const gchar		*li_pkg_info_get_repository (LiPkgInfo *pki);
+void			li_pkg_info_set_repository (LiPkgInfo *pki,
+									const gchar *repo_name);
+
 G_END_DECLS
 
 #endif /* __LI_PKG_INFO_H */
