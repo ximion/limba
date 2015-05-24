@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2015-05-19 00:32+0200\n"
+        "POT-Creation-Date: 2015-05-24 16:19+0200\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,45 +16,11 @@ msgstr  "Project-Id-Version: limba\n"
         "Content-Type: text/plain; charset=CHARSET\n"
         "Content-Transfer-Encoding: 8bit\n"
 
-#, c-format
-msgid   "A package with id '%s' was not found in the cache."
+msgid   "Software package"
 msgstr  ""
 
 #, c-format
-msgid   "A package with the same name and version has already been installed into this repository."
-msgstr  ""
-
-msgid   "Add a PGP key to the trusted database."
-msgstr  ""
-
-msgid   "Add a package to the repository"
-msgstr  ""
-
-#, c-format
-msgid   "Checksum for embedded package '%s' did not match."
-msgstr  ""
-
-msgid   "Cleanup cruft packages"
-msgstr  ""
-
-#, c-format
-msgid   "Closing of file desriptor failed. Error: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Command '%s' is unknown."
-msgstr  ""
-
-#, c-format
-msgid   "Completed %s"
-msgstr  ""
-
-#, c-format
-msgid   "Could not create directory structure '%s'. %s"
-msgstr  ""
-
-#, c-format
-msgid   "Could not create directory structure for runtime. %s"
+msgid   "File '%s' already exists."
 msgstr  ""
 
 #, c-format
@@ -62,7 +28,96 @@ msgid   "Could not create system directory: %s"
 msgstr  ""
 
 #, c-format
+msgid   "Could not find dependency: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Could not find system component: '%s'. Please install it manually."
+msgstr  ""
+
+#, c-format
+msgid   "No package is loaded."
+msgstr  ""
+
+#, c-format
+msgid   "Key lookup failed: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Key lookup failed, could not find remote key."
+msgstr  ""
+
+#, c-format
+msgid   "Importing of key failed: %s"
+msgstr  ""
+
+msgid   "No import result returned."
+msgstr  ""
+
+msgid   "Zero results returned."
+msgstr  ""
+
+#, c-format
+msgid   "Signature validation failed: %s"
+msgstr  ""
+
+msgid   "No result received."
+msgstr  ""
+
+#, c-format
+msgid   "Signature validation failed. Signature is invalid or not a signature."
+msgstr  ""
+
+#, c-format
+msgid   "Could not verify signature: They key could not be found or downloaded."
+msgstr  ""
+
+#, c-format
+msgid   "Signature validation failed. Signature is invalid. (%s)"
+msgstr  ""
+
+#, c-format
 msgid   "Could not delete file '%s'"
+msgstr  ""
+
+#, c-format
+msgid   "Could not find software: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Removing '%s' would break at least '%s'."
+msgstr  ""
+
+#, c-format
+msgid   "Could not remove software directory."
+msgstr  ""
+
+#, c-format
+msgid   "Could not override file '%s'. The file already exists!"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to create link. Error: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to extract file. Error: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Closing of file desriptor failed. Error: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to set permissions on file '%s'. Error: %s"
+msgstr  ""
+
+#, c-format
+msgid   "The package needs to be downloaded first to perform this operation."
+msgstr  ""
+
+#, c-format
+msgid   "Could not open IPK file! Error: %s"
 msgstr  ""
 
 #, c-format
@@ -74,7 +129,124 @@ msgid   "Could not determine package version."
 msgstr  ""
 
 #, c-format
-msgid   "Could not find AppStream metadata for the new package!"
+msgid   "Package file '%s' was not found."
+msgstr  ""
+
+#, c-format
+msgid   "Invalid package: Component metadata is missing."
+msgstr  ""
+
+#, c-format
+msgid   "A package with id '%s' was not found in the cache."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to find or unpack package payload."
+msgstr  ""
+
+#, c-format
+msgid   "Could not install package: Component metadata is missing."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to determine package version."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to determine a valid package identifier."
+msgstr  ""
+
+#, c-format
+msgid   "The package was built for a different architecture."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to remove existing installation of '%s (%s)'."
+msgstr  ""
+
+#, c-format
+msgid   "Could not open IPK payload! Error: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Could not create directory structure '%s'. %s"
+msgstr  ""
+
+msgid   "Unable to download package:"
+msgstr  ""
+
+#, c-format
+msgid   "Embedded package '%s' was not found."
+msgstr  ""
+
+#, c-format
+msgid   "Checksum for embedded package '%s' did not match."
+msgstr  ""
+
+#, c-format
+msgid   "This package has a broken signature."
+msgstr  ""
+
+msgid   "This package can not be trusted. It likely is not signed."
+msgstr  ""
+
+msgid   "The signature on this package is broken."
+msgstr  ""
+
+msgid   "The package is signed, but not explicitly trusted."
+msgstr  ""
+
+msgid   "The package is signed with a trusted key."
+msgstr  ""
+
+msgid   "The package is signed with a known, trusted key."
+msgstr  ""
+
+msgid   "Unknown"
+msgstr  ""
+
+msgid   "Downloading"
+msgstr  ""
+
+msgid   "Verifying"
+msgstr  ""
+
+msgid   "Installing"
+msgstr  ""
+
+msgid   "Finished"
+msgstr  ""
+
+#, c-format
+msgid   "Could not open file '%s' for writing."
+msgstr  ""
+
+#, c-format
+msgid   "Could not write to file: '%s'"
+msgstr  ""
+
+#, c-format
+msgid   "Could not open metadata-file '%s' for reading."
+msgstr  ""
+
+#, c-format
+msgid   "Package signed for \"%s\" [0x%s]\n"
+msgstr  ""
+
+#, c-format
+msgid   "Package signed for 0x%s\n"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to calculate checksum for: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Signing of package failed: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to write signature: %s"
 msgstr  ""
 
 #, c-format
@@ -82,31 +254,11 @@ msgid   "Could not find control file for the archive!"
 msgstr  ""
 
 #, c-format
-msgid   "Could not find dependency: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Could not find package matching id '%s'."
-msgstr  ""
-
-#, c-format
-msgid   "Could not find package: %s"
-msgstr  ""
-
-#, c-format
 msgid   "Could not find payload data in the 'inst_target' subdirectory."
 msgstr  ""
 
 #, c-format
-msgid   "Could not find remote data '%s': %s."
-msgstr  ""
-
-#, c-format
-msgid   "Could not find software: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Could not find system component: '%s'. Please install it manually."
+msgid   "Could not find AppStream metadata for the new package!"
 msgstr  ""
 
 #, c-format
@@ -118,53 +270,180 @@ msgid   "Could not initialize CURL!"
 msgstr  ""
 
 #, c-format
-msgid   "Could not install package: Component metadata is missing."
+msgid   "Could not find remote data '%s': %s."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to download data from '%s': %s."
+msgstr  ""
+
+#, c-format
+msgid   "Repository '%s' (signed with key '%s') is untrusted."
+msgstr  ""
+
+#, c-format
+msgid   "Siganture on '%s' is invalid."
+msgstr  ""
+
+#, c-format
+msgid   "Could not find package matching id '%s'."
+msgstr  ""
+
+#, c-format
+msgid   "Invalid path to directory."
+msgstr  ""
+
+#, c-format
+msgid   "Signing of repository failed: %s"
+msgstr  ""
+
+#, c-format
+msgid   "The package contains embedded dependencies. Packages with that property are not allowed in repositories, please add dependencies separately."
+msgstr  ""
+
+#, c-format
+msgid   "A package with the same name and version has already been installed into this repository."
+msgstr  ""
+
+#, c-format
+msgid   "Runtime '%s' is not valid. Could not find control file."
+msgstr  ""
+
+#, c-format
+msgid   "Could not create directory structure for runtime. %s"
+msgstr  ""
+
+msgid   "Progress"
+msgstr  ""
+
+#, c-format
+msgid   "Downloading %s"
+msgstr  ""
+
+#, c-format
+msgid   "Verifying %s"
+msgstr  ""
+
+#, c-format
+msgid   "Installing %s"
+msgstr  ""
+
+#, c-format
+msgid   "Completed %s"
+msgstr  ""
+
+msgid   "You need to specify a package to install."
+msgstr  ""
+
+#, c-format
+msgid   "Could not find package: %s"
 msgstr  ""
 
 #, c-format
 msgid   "Could not install software: %s"
 msgstr  ""
 
-#, c-format
-msgid   "Could not open IPK file! Error: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Could not open IPK payload! Error: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Could not open file '%s' for writing."
-msgstr  ""
-
-#, c-format
-msgid   "Could not open metadata-file '%s' for reading."
+msgid   "Software was installed successfully."
 msgstr  ""
 
 #, c-format
 msgid   "Could not open package: %s"
 msgstr  ""
 
-#, c-format
-msgid   "Could not override file '%s'. The file already exists!"
+msgid   "You need to specify a package to remove."
+msgstr  ""
+
+msgid   "You need to specify a key fingerprint."
+msgstr  ""
+
+#. : This is the header to the --help menu
+msgid   "Limba software manager"
+msgstr  ""
+
+msgid   "Subcommands:"
+msgstr  ""
+
+msgid   "List installed software"
+msgstr  ""
+
+msgid   "Install software from a repository"
+msgstr  ""
+
+msgid   "Install a local software package"
+msgstr  ""
+
+msgid   "Remove an installed software package"
+msgstr  ""
+
+msgid   "Refresh the cache of available packages"
+msgstr  ""
+
+msgid   "Cleanup cruft packages"
+msgstr  ""
+
+msgid   "Add a PGP key to the trusted database."
+msgstr  ""
+
+msgid   "Show the program version"
+msgstr  ""
+
+msgid   "Show extra debugging information"
+msgstr  ""
+
+msgid   "Don't show \"fancy\" output"
+msgstr  ""
+
+msgid   "Do not fail action with an error code."
 msgstr  ""
 
 #, c-format
-msgid   "Could not remove software directory."
+msgid   "Run '%s --help' to see a full list of available command line options."
 msgstr  ""
 
 #, c-format
-msgid   "Could not verify signature: They key could not be found or downloaded."
+msgid   "Limba version: %s"
+msgstr  ""
+
+msgid   "You need to specify a command."
 msgstr  ""
 
 #, c-format
-msgid   "Could not write to file: '%s'"
+msgid   "Command '%s' is unknown."
 msgstr  ""
 
-msgid   "Create a new package using data found in DIRECTORY."
+msgid   "You need to specify a directory with build-metadata."
 msgstr  ""
 
-msgid   "Create sources for a new package."
+#, c-format
+msgid   "Do you have an AppStream XML file for your software? [y/N]"
+msgstr  ""
+
+msgid   "Please specify a path to the AppStream XML data:"
+msgstr  ""
+
+msgid   "No path given. Exiting."
+msgstr  ""
+
+msgid   "Your software needs a unique name.\n"
+        "In case of a GUI application, this is its .desktop filename.\n"
+        "Unique software name:"
+msgstr  ""
+
+msgid   "Define a software name (human readable):"
+msgstr  ""
+
+msgid   "Define a software version:"
+msgstr  ""
+
+msgid   "Write a short summary (one sentence) about your software:"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to write AppStream data. %s"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to write 'control' file. %s"
 msgstr  ""
 
 #, c-format
@@ -179,265 +458,7 @@ msgid   "Created project template in '%s'.\n"
         "subdirectory of 'lipkg/'"
 msgstr  ""
 
-msgid   "Define a software name (human readable):"
-msgstr  ""
-
-msgid   "Define a software version:"
-msgstr  ""
-
-msgid   "Do not fail action with an error code."
-msgstr  ""
-
-msgid   "Do not sign the package"
-msgstr  ""
-
-#, c-format
-msgid   "Do you have an AppStream XML file for your software? [y/N]"
-msgstr  ""
-
-msgid   "Don't show \"fancy\" output"
-msgstr  ""
-
-msgid   "Downloading"
-msgstr  ""
-
-#, c-format
-msgid   "Downloading %s"
-msgstr  ""
-
-#, c-format
-msgid   "Embedded package '%s' was not found."
-msgstr  ""
-
-#, c-format
-msgid   "Failed to add package: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Failed to initialize repository: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Failed to open repository: %s"
-msgstr  ""
-
-#, c-format
-msgid   "File '%s' already exists."
-msgstr  ""
-
-msgid   "Finished"
-msgstr  ""
-
-#, c-format
-msgid   "Importing of key failed: %s"
-msgstr  ""
-
-msgid   "Initialize a new repository in DIRECTORY."
-msgstr  ""
-
-msgid   "Install a local software package"
-msgstr  ""
-
-msgid   "Install software from a repository"
-msgstr  ""
-
-msgid   "Installing"
-msgstr  ""
-
-#, c-format
-msgid   "Installing %s"
-msgstr  ""
-
-#, c-format
-msgid   "Invalid package: Component metadata is missing."
-msgstr  ""
-
-#, c-format
-msgid   "Invalid path to directory."
-msgstr  ""
-
-#, c-format
-msgid   "Key lookup failed, could not find remote key."
-msgstr  ""
-
-#, c-format
-msgid   "Key lookup failed: %s"
-msgstr  ""
-
-#. : This is the header to the --help menu
-msgid   "Limba package builder"
-msgstr  ""
-
-#. : This is the header to the --help menu
-msgid   "Limba repository builder"
-msgstr  ""
-
-#. : This is the header to the --help menu
-msgid   "Limba software manager"
-msgstr  ""
-
-#, c-format
-msgid   "Limba version: %s"
-msgstr  ""
-
-msgid   "List installed software"
-msgstr  ""
-
-msgid   "No import result returned."
-msgstr  ""
-
 msgid   "No package file given for extraction."
-msgstr  ""
-
-#, c-format
-msgid   "No package is loaded."
-msgstr  ""
-
-msgid   "No path given. Exiting."
-msgstr  ""
-
-msgid   "No result received."
-msgstr  ""
-
-#, c-format
-msgid   "Package file '%s' was not found."
-msgstr  ""
-
-#, c-format
-msgid   "Package signed for \"%s\" [0x%s]\n"
-msgstr  ""
-
-#, c-format
-msgid   "Package signed for 0x%s\n"
-msgstr  ""
-
-msgid   "Please specify a path to the AppStream XML data:"
-msgstr  ""
-
-msgid   "Progress"
-msgstr  ""
-
-msgid   "Refresh the cache of available packages"
-msgstr  ""
-
-msgid   "Remove an installed software package"
-msgstr  ""
-
-#, c-format
-msgid   "Removing '%s' would break at least '%s'."
-msgstr  ""
-
-#, c-format
-msgid   "Repository '%s' (signed with key '%s') is untrusted."
-msgstr  ""
-
-#, c-format
-msgid   "Run '%s --help' to see a full list of available command line options."
-msgstr  ""
-
-#, c-format
-msgid   "Runtime '%s' is not valid. Could not find control file."
-msgstr  ""
-
-msgid   "Show extra debugging information"
-msgstr  ""
-
-msgid   "Show the program version"
-msgstr  ""
-
-#, c-format
-msgid   "Siganture on '%s' is invalid."
-msgstr  ""
-
-#, c-format
-msgid   "Signature validation failed. Signature is invalid or not a signature."
-msgstr  ""
-
-#, c-format
-msgid   "Signature validation failed. Signature is invalid. (%s)"
-msgstr  ""
-
-#, c-format
-msgid   "Signature validation failed: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Signing of package failed: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Signing of repository failed: %s"
-msgstr  ""
-
-msgid   "Software package"
-msgstr  ""
-
-msgid   "Software was installed successfully."
-msgstr  ""
-
-msgid   "Subcommands:"
-msgstr  ""
-
-#, c-format
-msgid   "The package contains embedded dependencies. Packages with that property are not allowed in repositories, please add dependencies separately."
-msgstr  ""
-
-msgid   "The package is signed with a known, trusted key."
-msgstr  ""
-
-msgid   "The package is signed with a trusted key."
-msgstr  ""
-
-msgid   "The package is signed, but not explicitly trusted."
-msgstr  ""
-
-#, c-format
-msgid   "The package needs to be downloaded first to perform this operation."
-msgstr  ""
-
-#, c-format
-msgid   "The package was built for a different architecture."
-msgstr  ""
-
-msgid   "The signature on this package is broken."
-msgstr  ""
-
-msgid   "This package can not be trusted. It likely is not signed."
-msgstr  ""
-
-#, c-format
-msgid   "This package has a broken signature."
-msgstr  ""
-
-#, c-format
-msgid   "Unable to calculate checksum for: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Unable to create link. Error: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Unable to determine a valid package identifier."
-msgstr  ""
-
-#, c-format
-msgid   "Unable to determine package version."
-msgstr  ""
-
-#, c-format
-msgid   "Unable to download data from '%s': %s."
-msgstr  ""
-
-msgid   "Unable to download package:"
-msgstr  ""
-
-#, c-format
-msgid   "Unable to extract file. Error: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Unable to find or unpack package payload."
 msgstr  ""
 
 #, c-format
@@ -445,67 +466,46 @@ msgid   "Unable to open package. %s"
 msgstr  ""
 
 #, c-format
-msgid   "Unable to remove existing installation of '%s (%s)'."
-msgstr  ""
-
-#, c-format
-msgid   "Unable to set permissions on file '%s'. Error: %s"
-msgstr  ""
-
-#, c-format
 msgid   "Unable to unpack package. %s"
 msgstr  ""
 
-#, c-format
-msgid   "Unable to write 'control' file. %s"
+#. : This is the header to the --help menu
+msgid   "Limba package builder"
 msgstr  ""
 
-#, c-format
-msgid   "Unable to write AppStream data. %s"
+msgid   "Create a new package using data found in DIRECTORY."
 msgstr  ""
 
-#, c-format
-msgid   "Unable to write signature: %s"
-msgstr  ""
-
-msgid   "Unknown"
+msgid   "Create sources for a new package."
 msgstr  ""
 
 msgid   "Unpack the Limba package to a directory."
 msgstr  ""
 
-msgid   "Verifying"
+msgid   "Do not sign the package"
 msgstr  ""
 
 #, c-format
-msgid   "Verifying %s"
-msgstr  ""
-
-msgid   "Write a short summary (one sentence) about your software:"
-msgstr  ""
-
-msgid   "You need to specify a command."
-msgstr  ""
-
-msgid   "You need to specify a directory with build-metadata."
-msgstr  ""
-
-msgid   "You need to specify a key fingerprint."
+msgid   "Failed to initialize repository: %s"
 msgstr  ""
 
 msgid   "You need to specify a package file to add to the repository."
 msgstr  ""
 
-msgid   "You need to specify a package to install."
+#, c-format
+msgid   "Failed to open repository: %s"
 msgstr  ""
 
-msgid   "You need to specify a package to remove."
+#, c-format
+msgid   "Failed to add package: %s"
 msgstr  ""
 
-msgid   "Your software needs a unique name.\n"
-        "In case of a GUI application, this is its .desktop filename.\n"
-        "Unique software name:"
+#. : This is the header to the --help menu
+msgid   "Limba repository builder"
 msgstr  ""
 
-msgid   "Zero results returned."
+msgid   "Initialize a new repository in DIRECTORY."
+msgstr  ""
+
+msgid   "Add a package to the repository"
 msgstr  ""
