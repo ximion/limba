@@ -491,12 +491,9 @@ gboolean
 li_repository_save (LiRepository *repo, GError **error)
 {
 	gchar *dir;
-	_cleanup_free_ gchar *fname = NULL;
 	GError *tmp_error = NULL;
 	LiIndexSaveHelper helper;
 	_cleanup_string_free_ GString *sigtext = NULL;
-	_cleanup_free_ gchar *internal_name = NULL;
-	_cleanup_free_ gchar *checksum = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	/* prepare variable to store checksums */
