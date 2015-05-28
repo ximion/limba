@@ -45,7 +45,7 @@ typedef struct _LiRepositoryPrivate	LiRepositoryPrivate;
 struct _LiRepositoryPrivate
 {
 	GHashTable *indices;
-	AsMetadata *metad;
+	GHashTable *asmeta;
 	gchar *repo_path;
 
 	LiConfigData *rconfig;
@@ -66,7 +66,7 @@ li_repository_finalize (GObject *object)
 
 	g_free (priv->repo_path);
 	g_hash_table_unref (priv->indices);
-	g_object_unref (priv->metad);
+	g_hash_table_unref (priv->asmeta);
 	g_object_unref (priv->rconfig);
 
 	G_OBJECT_CLASS (li_repository_parent_class)->finalize (object);
@@ -81,11 +81,8 @@ li_repository_init (LiRepository *repo)
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	priv->indices = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
-	priv->metad = as_metadata_new ();
+	priv->asmeta = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	priv->rconfig = li_config_data_new ();
-
-	/* we do not want to filter languages */
-	as_metadata_set_locale (priv->metad, "ALL");
 }
 
 /**
@@ -104,6 +101,27 @@ li_repository_get_index (LiRepository *repo, const gchar *arch)
 	}
 
 	return index;
+}
+
+/**
+ * li_repository_get_asmeta:
+ */
+static AsMetadata*
+li_repository_get_asmeta (LiRepository *repo, const gchar *arch)
+{
+	AsMetadata *metad;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	metad = g_hash_table_lookup (priv->asmeta, arch);
+	if (metad == NULL) {
+		metad = as_metadata_new ();
+		/* we do not want to filter languages */
+		as_metadata_set_locale (metad, "ALL");
+
+		g_hash_table_insert (priv->asmeta, g_strdup (arch), metad);
+	}
+
+	return metad;
 }
 
 /**
@@ -146,23 +164,48 @@ li_repository_load_indices (LiRepository *repo, const gchar* dir, GError **error
 			_cleanup_free_ gchar *arch = NULL;
 			_cleanup_free_ gchar *fname = NULL;
 			GFile *file;
-			LiPkgIndex *index;
 
 			/* our directory name is the architecture */
 			arch = g_path_get_basename (path);
 
+			/* load IPK package index */
 			fname = g_build_filename (path, "Index.gz", NULL);
 			file = g_file_new_for_path (fname);
 			if (g_file_query_exists (file, NULL)) {
+				LiPkgIndex *index;
+
 				index = li_pkg_index_new ();
 				li_pkg_index_load_file (index, file, &tmp_error);
-				g_hash_table_insert (priv->indices, g_strdup (arch), index);
+				if (tmp_error == NULL)
+					g_hash_table_insert (priv->indices, g_strdup (arch), index);
 			}
 			g_object_unref (file);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
 			}
+			g_free (fname);
+
+			/* load AppStream metadata (if present) */
+			fname = g_build_filename (path, "Metadata.xml.gz", NULL);
+			file = g_file_new_for_path (fname);
+			if (g_file_query_exists (file, NULL)) {
+				AsMetadata *metad;
+
+				metad = as_metadata_new ();
+				/* we do not want to filter languages */
+				as_metadata_set_locale (metad, "ALL");
+
+				as_metadata_parse_file (metad, file, &tmp_error);
+				if (tmp_error == NULL)
+					g_hash_table_insert (priv->asmeta, g_strdup (arch), metad);
+			}
+			g_object_unref (file);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
+
 		}
 	}
 
@@ -192,7 +235,7 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 	}
 
 	/* cleanup everything */
-	as_metadata_clear_components (priv->metad);
+	g_hash_table_remove_all (priv->asmeta);
 	g_hash_table_remove_all (priv->indices);
 	g_object_unref (priv->rconfig);
 	priv->rconfig = li_config_data_new ();
@@ -214,19 +257,6 @@ li_repository_open (LiRepository *repo, const gchar *directory, GError **error)
 	fname = g_build_filename (directory, "indices", NULL);
 	li_repository_load_indices (repo, fname, &tmp_error);
 	g_free (fname);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
-	}
-
-	/* load AppStream metadata (if present) */
-	fname = g_build_filename (directory, "indices", "Metadata.xml.gz", NULL);
-	file = g_file_new_for_path (fname);
-	g_free (fname);
-	if (g_file_query_exists (file, NULL)) {
-		as_metadata_parse_file (priv->metad, file, &tmp_error);
-	}
-	g_object_unref (file);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;
@@ -367,7 +397,7 @@ typedef struct {
 /**
  * li_repository_save_indices:
  *
- * Helper function to save the hash-table on disk
+ * Helper function to save the package-index hashtable on disk
  */
 static void
 li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiIndexSaveHelper *helper)
@@ -387,6 +417,51 @@ li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiIndexSaveHelper *h
 
 	fname = g_build_filename (dir, "Index.gz", NULL);
 	li_pkg_index_save_to_file (index, fname);
+
+	if (g_str_has_prefix (fname, priv->repo_path)) {
+		internal_name = g_strdup (&fname[strlen (priv->repo_path) + 1]);
+	} else {
+		internal_name = g_path_get_basename (fname);
+	}
+
+	checksum = li_compute_checksum_for_file (fname);
+	if (checksum == NULL) {
+		g_set_error (&helper->error,
+			LI_REPOSITORY_ERROR,
+			LI_REPOSITORY_ERROR_SIGN,
+			_("Unable to calculate checksum for: %s"),
+			internal_name);
+		return;
+	}
+
+	g_string_append_printf (helper->sigtext, "%s\t%s\n", checksum, internal_name);
+}
+
+/**
+ * li_repository_save_asmeta:
+ *
+ * Helper function to save the AppStream metadata hashtable on disk
+ */
+static void
+li_repository_save_asmeta (gchar *arch, AsMetadata *metad, LiIndexSaveHelper *helper)
+{
+	_cleanup_free_ gchar *fname = NULL;
+	_cleanup_free_ gchar *dir = NULL;
+	_cleanup_free_ gchar *checksum = NULL;
+	_cleanup_free_ gchar *internal_name = NULL;
+	LiRepositoryPrivate *priv = GET_PRIVATE (helper->repo);
+
+	/* don't continue if we already have an error */
+	if (helper->error != NULL)
+		return;
+
+	dir = g_build_filename (priv->repo_path, "indices", arch, NULL);
+	g_mkdir_with_parents (dir, 0755);
+
+	fname = g_build_filename (dir, "Metadata.xml.gz", NULL);
+	as_metadata_save_distro_xml (metad, fname, &helper->error);
+	if (helper->error != NULL)
+		return;
 
 	if (g_str_has_prefix (fname, priv->repo_path)) {
 		internal_name = g_strdup (&fname[strlen (priv->repo_path) + 1]);
@@ -448,6 +523,7 @@ li_repository_save (LiRepository *repo, GError **error)
 	helper.repo = repo;
 	helper.sigtext = sigtext;
 	helper.error = NULL;
+
 	g_hash_table_foreach (priv->indices,
 						(GHFunc) li_repository_save_indices,
 						&helper);
@@ -457,28 +533,13 @@ li_repository_save (LiRepository *repo, GError **error)
 	}
 
 	/* save AppStream metadata */
-	fname = g_build_filename (priv->repo_path, "indices", "Metadata.xml.gz", NULL);
-	as_metadata_save_distro_xml (priv->metad, fname, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	g_hash_table_foreach (priv->asmeta,
+						(GHFunc) li_repository_save_asmeta,
+						&helper);
+	if (helper.error != NULL) {
+		g_propagate_error (error, helper.error);
 		return FALSE;
 	}
-
-	if (g_str_has_prefix (fname, priv->repo_path)) {
-		internal_name = g_strdup (&fname[strlen (priv->repo_path) + 1]);
-	} else {
-		internal_name = g_path_get_basename (fname);
-	}
-	checksum = li_compute_checksum_for_file (fname);
-	if (checksum == NULL) {
-		g_set_error (error,
-			LI_REPOSITORY_ERROR,
-			LI_REPOSITORY_ERROR_SIGN,
-			_("Unable to calculate checksum for: %s"),
-			internal_name);
-		return FALSE;
-	}
-	g_string_append_printf (sigtext, "%s\t%s\n", checksum, internal_name);
 
 	/* now sign the package */
 	li_repository_sign (repo, sigtext->str, &tmp_error);
@@ -510,6 +571,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	_cleanup_free_ gchar *hash = NULL;
 	AsComponent *cpt;
 	LiPkgIndex *index;
+	AsMetadata *metad;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	pkg = li_package_new ();
@@ -608,7 +670,9 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	/* add to indices */
 	index = li_repository_get_index (repo, pkgarch);
 	li_pkg_index_add_package (index, pki);
-	as_metadata_add_component (priv->metad, cpt);
+
+	metad = li_repository_get_asmeta (repo, pkgarch);
+	as_metadata_add_component (metad, cpt);
 
 	return TRUE;
 }

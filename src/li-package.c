@@ -1392,6 +1392,7 @@ li_package_get_appstream_data (LiPackage *pkg)
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 	if (priv->cpt == NULL)
 		return NULL;
+
 	metad = as_metadata_new ();
 	as_metadata_add_component (metad, priv->cpt);
 	xml = as_metadata_component_to_upstream_xml (metad);
