@@ -49,6 +49,9 @@ struct _LiInstallerPrivate
 	GHashTable *foundations;
 
 	gchar *fname;
+	GMainLoop *loop;
+	GError *proxy_error;
+	LimbaInstaller *bus_proxy;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
@@ -83,6 +86,11 @@ li_installer_finalize (GObject *object)
 	if (priv->pkg != NULL)
 		g_object_unref (priv->pkg);
 	g_free (priv->fname);
+	g_main_loop_unref (priv->loop);
+	if (priv->proxy_error != NULL)
+		g_error_free (priv->proxy_error);
+	if (priv->bus_proxy != NULL)
+		g_object_unref (priv->bus_proxy);
 
 	G_OBJECT_CLASS (li_installer_parent_class)->finalize (object);
 }
@@ -99,6 +107,7 @@ li_installer_init (LiInstaller *inst)
 	priv->pg = li_package_graph_new ();
 	priv->cache = li_pkg_cache_new ();
 	priv->foundations = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+	priv->loop = g_main_loop_new (NULL, FALSE);
 
 	/* connect signals */
 	g_signal_connect (priv->pg, "progress",
@@ -622,6 +631,59 @@ li_installer_update_foundations_table (LiInstaller *inst, GError **error)
 }
 
 /**
+ * li_installer_dbus_install_local_ready_cb:
+ *
+ * Helper callback for install() method.
+ */
+static void
+li_installer_dbus_install_local_ready_cb (GObject *source_object, GAsyncResult *res, LiInstaller *inst)
+{
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	/* ensure no error is set */
+	if (priv->proxy_error != NULL) {
+		g_error_free (priv->proxy_error);
+		priv->proxy_error = NULL;
+	}
+
+	limba_installer_call_install_local_finish (priv->bus_proxy, res, &priv->proxy_error);
+	g_main_loop_quit (priv->loop);
+}
+
+/**
+ * li_installer_dbus_install_ready_cb:
+ *
+ * Helper callback for install() method.
+ */
+static void
+li_installer_dbus_install_ready_cb (GObject *source_object, GAsyncResult *res, LiInstaller *inst)
+{
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	/* ensure no error is set */
+	if (priv->proxy_error != NULL) {
+		g_error_free (priv->proxy_error);
+		priv->proxy_error = NULL;
+	}
+
+	limba_installer_call_install_finish (priv->bus_proxy, res, &priv->proxy_error);
+	g_main_loop_quit (priv->loop);
+}
+
+/**
+ * li_installer_progress_cb:
+ */
+static void
+li_installer_proxy_progress_cb (LimbaInstaller *inst_bus, const gchar *id, gint percentage, LiInstaller *inst)
+{
+	if (g_strcmp0 (id, "") == 0)
+		id = NULL;
+
+	g_signal_emit (inst, signals[SIGNAL_PROGRESS], 0,
+					percentage, id);
+}
+
+/**
  * li_installer_install:
  */
 gboolean
@@ -630,37 +692,57 @@ li_installer_install (LiInstaller *inst, GError **error)
 	gboolean ret = FALSE;
 	GError *tmp_error = NULL;
 	GNode *root;
-	LimbaInstaller *inst_bus = NULL;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	if (!li_utils_is_root ()) {
 		/* we do not have root privileges - call the helper daemon to install the package */
 		g_debug ("Calling Limba DBus service.");
 
-		inst_bus = limba_installer_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+		if (priv->bus_proxy == NULL) {
+			/* looks like we do not yet have a bus connection, so we create one */
+			priv->bus_proxy = limba_installer_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
 											G_DBUS_PROXY_FLAGS_NONE,
 											"org.freedesktop.Limba",
 											"/org/freedesktop/Limba/Installer",
 											NULL,
 											&tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
-			goto out;
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
+
+			/* Installations might take quite long, so we set an infinite connection timeout. Maybe there is a better way to solve this? */
+			g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (priv->bus_proxy), G_MAXINT);
+
+			g_signal_connect (priv->bus_proxy, "progress",
+						G_CALLBACK (li_installer_proxy_progress_cb), inst);
+		}
+
+		/* ensure no error is set */
+		if (priv->proxy_error != NULL) {
+			g_error_free (priv->proxy_error);
+			priv->proxy_error = NULL;
 		}
 
 		if (priv->fname != NULL) {
 			/* we install a local package, so call the respective DBus method */
-			limba_installer_call_local_install_sync (inst_bus, priv->fname, NULL, &tmp_error);
+			limba_installer_call_install_local (priv->bus_proxy,
+											priv->fname, NULL,
+											(GAsyncReadyCallback) li_installer_dbus_install_local_ready_cb, inst);
 		} else {
 			const gchar *pkid;
 
 			/* we install package from a repository */
 			pkid = li_package_get_id (priv->pkg);
-			limba_installer_call_install_sync (inst_bus, pkid, NULL, &tmp_error);
+			limba_installer_call_install (priv->bus_proxy,
+										pkid, NULL,
+										(GAsyncReadyCallback) li_installer_dbus_install_ready_cb, inst);
+			g_main_loop_run (priv->loop);
 		}
 
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		if (priv->proxy_error != NULL) {
+			g_propagate_error (error, priv->proxy_error);
+			priv->proxy_error = NULL;
 			goto out;
 		}
 
@@ -709,8 +791,6 @@ li_installer_install (LiInstaller *inst, GError **error)
 out:
 	/* teardown current dependency tree */
 	li_package_graph_reset (priv->pg);
-	if (inst_bus != NULL)
-		g_object_unref (inst_bus);
 
 	return ret;
 }

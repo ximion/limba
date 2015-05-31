@@ -7,13 +7,13 @@
 	-->
 	<interface name="org.freedesktop.Limba.Installer">
 		<!--
-			LocalInstall:
+			InstallLocal:
 			@fname: Absolute path to a package file
 			@since: 0.4
 
 			Install a local Limba package file.
 		-->
-		<method name="LocalInstall">
+		<method name="InstallLocal">
 			<arg direction="in" type="s" name="fname"/>
 		</method>
 
@@ -28,6 +28,19 @@
 		<method name="Install">
 			<arg direction="in" type="s" name="pkid"/>
 		</method>
+
+		<!--
+			Progress:
+			@id: Identifier for the package this progress belongs to.
+			@percentage: Progress percentage.
+			@since: 0.5
+
+			Progress information about the current step.
+		-->
+		<signal name="Progress">
+			<arg name="id" type="s"/>
+			<arg name="percentage" type="i"/>
+		</signal>
 	</interface>
 
 	<!-- org.freedesktop.Limba.Manager:

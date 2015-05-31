@@ -45,10 +45,21 @@ li_daemon_reset_timer (LiHelperDaemon *helper)
 }
 
 /**
- * on_installer_local_install:
+ * li_installer_progress_cb:
+ */
+static void
+li_installer_progress_cb (LiInstaller *inst, guint percentage, const gchar *id, LimbaInstaller *inst_bus)
+{
+	if (id == NULL)
+		id = "";
+	limba_installer_emit_progress (inst_bus, id, percentage);
+}
+
+/**
+ * bus_installer_install_local_cb:
  */
 static gboolean
-on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *fname, LiHelperDaemon *helper)
+bus_installer_install_local_cb (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *fname, LiHelperDaemon *helper)
 {
 	GError *error = NULL;
 	LiInstaller *inst = NULL;
@@ -94,6 +105,8 @@ on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *con
 	}
 
 	inst = li_installer_new ();
+	g_signal_connect (inst, "progress",
+						G_CALLBACK (li_installer_progress_cb), inst_bus);
 
 	li_installer_open_file (inst, fname, &error);
 	if (error != NULL) {
@@ -107,7 +120,7 @@ on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *con
 		goto out;
 	}
 
-	limba_installer_complete_local_install (inst_bus, context);
+	limba_installer_complete_install_local (inst_bus, context);
 
  out:
 	if (inst != NULL)
@@ -115,16 +128,18 @@ on_installer_local_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *con
 	if (pres != NULL)
 		g_object_unref (pres);
 
+	li_daemon_reset_timer (helper);
+
 	return TRUE;
 }
 
 /**
- * on_installer_install:
+ * bus_installer_install_cb:
  */
 static gboolean
-on_installer_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
+bus_installer_install_cb (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
 {
-	GError *error = NULL;
+GError *error = NULL;
 	LiInstaller *inst = NULL;
 	PolkitAuthorizationResult *pres = NULL;
 	PolkitSubject *subject;
@@ -162,6 +177,8 @@ on_installer_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, 
 	}
 
 	inst = li_installer_new ();
+	g_signal_connect (inst, "progress",
+						G_CALLBACK (li_installer_progress_cb), inst_bus);
 
 	li_installer_open_remote (inst, pkid, &error);
 	if (error != NULL) {
@@ -182,6 +199,8 @@ on_installer_install (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, 
 		g_object_unref (inst);
 	if (pres != NULL)
 		g_object_unref (pres);
+
+	li_daemon_reset_timer (helper);
 
 	return TRUE;
 }
@@ -212,13 +231,13 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 	g_object_unref (inst_bus);
 
 	g_signal_connect (inst_bus,
-					"handle-local-install",
-					G_CALLBACK (on_installer_local_install),
+					"handle-install-local",
+					G_CALLBACK (bus_installer_install_local_cb),
 					helper);
 
 	g_signal_connect (inst_bus,
 					"handle-install",
-					G_CALLBACK (on_installer_install),
+					G_CALLBACK (bus_installer_install_cb),
 					helper);
 
 	/* export the object */
