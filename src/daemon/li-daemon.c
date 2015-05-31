@@ -133,10 +133,10 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 	helper->authority = polkit_authority_get_sync (NULL, &error);
 	g_assert_no_error (error); /* TODO: Meh... Needs smart error handling. */
 
-	helper->obj_manager = g_dbus_object_manager_server_new ("/org/test/Limba");
+	helper->obj_manager = g_dbus_object_manager_server_new ("/org/freedesktop/Limba");
 
 	/* create the Installer object */
-	object = limba_object_skeleton_new ("/org/test/Limba/Installer");
+	object = limba_object_skeleton_new ("/org/freedesktop/Limba/Installer");
 
 	inst_bus = limba_installer_skeleton_new ();
 	limba_object_skeleton_set_installer (object, inst_bus);
@@ -145,14 +145,14 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 	g_signal_connect (inst_bus,
 					"handle-local-install",
 					G_CALLBACK (on_installer_local_install),
-					NULL);
+					helper);
 
 	/* export the object */
 	g_dbus_object_manager_server_export (helper->obj_manager, G_DBUS_OBJECT_SKELETON (object));
 	g_object_unref (object);
 
 	/* create the Manager object */
-	object = limba_object_skeleton_new ("/org/test/Limba/Manager");
+	object = limba_object_skeleton_new ("/org/freedesktop/Limba/Manager");
 
 	mgr_bus = limba_manager_skeleton_new ();
 	limba_object_skeleton_set_manager (object, mgr_bus);
