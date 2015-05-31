@@ -1,40 +1,52 @@
 <node>
-  <!-- org.freedesktop.Limba.Installer:
-       @short_description: Install Limba packages
-       @since: 0.4
+	<!-- org.freedesktop.Limba.Installer:
+		@short_description: Install Limba packages
+		@since: 0.4
 
-       Allows an unprivileged application to install a software package.
-    -->
-  <interface name="org.freedesktop.Limba.Installer">
-    <!--
-        Install:
-        @fname: Absolute path to a package file
-        @since: 0.4
+		Allows an unprivileged application to install a software package.
+	-->
+	<interface name="org.freedesktop.Limba.Installer">
+		<!--
+			LocalInstall:
+			@fname: Absolute path to a package file
+			@since: 0.4
 
-        Install a local Limba package file.
-      -->
-    <method name="LocalInstall">
-      <arg direction="in" type="s" name="fname"/>
-    </method>
-  </interface>
+			Install a local Limba package file.
+		-->
+		<method name="LocalInstall">
+			<arg direction="in" type="s" name="fname"/>
+		</method>
 
-  <!-- org.freedesktop.Limba.Manager:
-       @short_description: Manage Limba packages
-       @since: 0.4
+		<!--
+			Install:
+			@pkid: A Limba bundle identifier
+			@since: 0.5
 
-       Allows an unprivileged application to manage Limba packages,
-       e.g. remove them.
-    -->
-  <interface name="org.freedesktop.Limba.Manager">
-    <!--
-        Remove:
-        @pkid: A package identifier
-        @since: 0.4
+			Install a Limba package from a trusted remote
+			source.
+		-->
+		<method name="Install">
+			<arg direction="in" type="s" name="pkid"/>
+		</method>
+	</interface>
 
-        Remove a Limba package.
-      -->
-    <method name="Remove">
-      <arg direction="in" type="s" name="pkid"/>
-    </method>
-  </interface>
+	<!-- org.freedesktop.Limba.Manager:
+		@short_description: Manage Limba packages
+		@since: 0.4
+
+		Allows an unprivileged application to manage Limba packages,
+		e.g. remove them.
+	-->
+	<interface name="org.freedesktop.Limba.Manager">
+		<!--
+			Remove:
+			@pkid: A package identifier
+			@since: 0.4
+
+			Remove a Limba package.
+		-->
+		<method name="Remove">
+			<arg direction="in" type="s" name="pkid"/>
+		</method>
+	</interface>
 </node>

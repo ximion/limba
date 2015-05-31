@@ -648,7 +648,16 @@ li_installer_install (LiInstaller *inst, GError **error)
 			goto out;
 		}
 
-		limba_installer_call_local_install_sync (inst_bus, priv->fname, NULL, &tmp_error);
+		if (priv->fname != NULL) {
+			/* we install a local package, so call the respective DBus method */
+			limba_installer_call_local_install_sync (inst_bus, priv->fname, NULL, &tmp_error);
+		} else {
+			const gchar *pkid;
+
+			/* we install package from a repository */
+			pkid = li_package_get_id (priv->pkg);
+			limba_installer_call_install_sync (inst_bus, pkid, NULL, &tmp_error);
+		}
 
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
