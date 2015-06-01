@@ -199,12 +199,10 @@ out:
 }
 
 /**
- * li_manager_get_software_list:
- *
- * Returns: (transfer container) (element-type LiPkgInfo): A list of installed and available software
- **/
-GList*
-li_manager_get_software_list (LiManager *mgr, GError **error)
+ * li_manager_update_packages_table:
+ */
+static void
+li_manager_update_software_table (LiManager *mgr, GError **error)
 {
 	_cleanup_object_unref_ LiPkgCache *cache = NULL;
 	GPtrArray *apkgs;
@@ -215,7 +213,7 @@ li_manager_get_software_list (LiManager *mgr, GError **error)
 
 	if (g_hash_table_size (priv->pkgs) > 0) {
 		/* we have cached data, so no need to search for it again */
-		goto out;
+		return;
 	}
 
 	cache = li_pkg_cache_new ();
@@ -223,14 +221,14 @@ li_manager_get_software_list (LiManager *mgr, GError **error)
 	li_pkg_cache_open (cache, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
-		return NULL;
+		return;
 	}
 
 	/* populate table with installed packages */
 	ipkgs = li_manager_get_installed_software (mgr, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
-		return NULL;
+		return;
 	}
 
 	if (ipkgs != NULL) {
@@ -250,9 +248,46 @@ li_manager_get_software_list (LiManager *mgr, GError **error)
 								g_object_ref (pki));
 		}
 	}
+}
 
-out:
+/**
+ * li_manager_get_software_list:
+ *
+ * Returns: (transfer container) (element-type LiPkgInfo): A list of installed and available software
+ **/
+GList*
+li_manager_get_software_list (LiManager *mgr, GError **error)
+{
+	GError *tmp_error = NULL;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	li_manager_update_software_table (mgr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+
 	return g_hash_table_get_values (priv->pkgs);
+}
+
+/**
+ * li_manager_get_software_by_id:
+ *
+ * Returns: (transfer none): A #LiPkgInfo or %NULL if no software was found.
+ **/
+LiPkgInfo*
+li_manager_get_software_by_pkid (LiManager *mgr, const gchar *pkid, GError **error)
+{
+	GError *tmp_error = NULL;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	li_manager_update_software_table (mgr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return NULL;
+	}
+
+	return g_hash_table_lookup (priv->pkgs, pkid);
 }
 
 /**
@@ -316,6 +351,7 @@ out:
 		g_object_unref (enumerator);
 	if (tmp_error != NULL) {
 		g_printerr ("Error while searching for installed runtimes: %s\n", tmp_error->message);
+		g_error_free (tmp_error);
 		return FALSE;
 	}
 

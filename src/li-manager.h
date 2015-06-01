@@ -86,6 +86,9 @@ LiManager		*li_manager_new		(void);
 GList			*li_manager_get_software_list (LiManager *mgr,
 											GError **error);
 GPtrArray		*li_manager_get_installed_runtimes (LiManager *mgr);
+LiPkgInfo		*li_manager_get_software_by_pkid (LiManager *mgr,
+											const gchar *pkid,
+											GError **error);
 
 LiRuntime		*li_manager_find_runtime_with_members (LiManager *mgr,
 													GPtrArray *members);
