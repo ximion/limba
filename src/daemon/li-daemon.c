@@ -206,6 +206,83 @@ GError *error = NULL;
 }
 
 /**
+ * li_manager_progress_cb:
+ */
+static void
+li_manager_progress_cb (LiManager *mgr, guint percentage, const gchar *id, LimbaManager *mgr_bus)
+{
+	if (id == NULL)
+		id = "";
+	limba_manager_emit_progress (mgr_bus, id, percentage);
+}
+
+/**
+ * bus_manager_remove_software_cb:
+ */
+static gboolean
+bus_manager_remove_software_cb (LimbaManager *mgr_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
+{
+	GError *error = NULL;
+	LiManager *mgr = NULL;
+	PolkitAuthorizationResult *pres = NULL;
+	PolkitSubject *subject;
+	const gchar *sender;
+
+	li_daemon_reset_timer (helper);
+
+	sender = g_dbus_method_invocation_get_sender (context);
+
+	subject = polkit_system_bus_name_new (sender);
+	pres = polkit_authority_check_authorization_sync (helper->authority,
+													subject,
+													"org.freedesktop.limba.remove-package",
+													NULL,
+													POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+													NULL,
+													&error);
+	g_object_unref (subject);
+
+	if (error != NULL) {
+		g_dbus_method_invocation_take_error (context, error);
+		goto out;
+	}
+
+	if (!polkit_authorization_result_get_is_authorized (pres)) {
+		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Manager.Error.NotAuthorized",
+													"Authorization failed.");
+		goto out;
+	}
+
+	if (pkid == NULL) {
+		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Manager.Error.Failed",
+													"The bundle identifier was NULL.");
+		goto out;
+	}
+
+	mgr = li_manager_new ();
+	g_signal_connect (mgr, "progress",
+						G_CALLBACK (li_manager_progress_cb), mgr_bus);
+
+	li_manager_remove_software (mgr, pkid, &error);
+	if (error != NULL) {
+		g_dbus_method_invocation_take_error (context, error);
+		goto out;
+	}
+
+	limba_manager_complete_remove_software (mgr_bus, context);
+
+ out:
+	if (mgr != NULL)
+		g_object_unref (mgr);
+	if (pres != NULL)
+		g_object_unref (pres);
+
+	li_daemon_reset_timer (helper);
+
+	return TRUE;
+}
+
+/**
  * on_bus_acquired:
  */
 static void
@@ -250,6 +327,11 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 	mgr_bus = limba_manager_skeleton_new ();
 	limba_object_skeleton_set_manager (object, mgr_bus);
 	g_object_unref (mgr_bus);
+
+	g_signal_connect (mgr_bus,
+					"handle-remove-software",
+					G_CALLBACK (bus_manager_remove_software_cb),
+					helper);
 
 	/* export the object */
 	g_dbus_object_manager_server_export (helper->obj_manager, G_DBUS_OBJECT_SKELETON (object));

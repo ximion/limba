@@ -37,6 +37,8 @@
 #include "li-installer.h"
 #include "li-update-item.h"
 
+#include "li-dbus-interface.h"
+
 #define LI_CLEANUP_HINT_FNAME "/var/lib/limba/cleanup-needed"
 
 typedef struct _LiManagerPrivate	LiManagerPrivate;
@@ -45,11 +47,23 @@ struct _LiManagerPrivate
 	GHashTable *pkgs; /* key:utf8;value:LiPkgInfo */
 	GPtrArray *rts; /* of LiRuntime */
 	GHashTable *updates; /* of LiUpdateItem */
+
+	/* DBus helper */
+	GMainLoop *loop;
+	LimbaManager *bus_proxy;
+	GError *proxy_error;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiManager, li_manager, G_TYPE_OBJECT)
 
 #define GET_PRIVATE(o) (li_manager_get_instance_private (o))
+
+enum {
+	SIGNAL_PROGRESS,
+	SIGNAL_LAST
+};
+
+static guint signals[SIGNAL_LAST] = { 0 };
 
 /**
  * li_manager_finalize:
@@ -63,6 +77,12 @@ li_manager_finalize (GObject *object)
 	g_hash_table_unref (priv->pkgs);
 	g_ptr_array_unref (priv->rts);
 	g_hash_table_unref (priv->updates);
+
+	g_main_loop_unref (priv->loop);
+	if (priv->proxy_error != NULL)
+		g_error_free (priv->proxy_error);
+	if (priv->bus_proxy != NULL)
+		g_object_unref (priv->bus_proxy);
 
 	G_OBJECT_CLASS (li_manager_parent_class)->finalize (object);
 }
@@ -103,6 +123,7 @@ li_manager_init (LiManager *mgr)
 									(GEqualFunc) li_pki_equal_func,
 									g_object_unref,
 									g_object_unref);
+	priv->loop = g_main_loop_new (NULL, FALSE);
 }
 
 /**
@@ -503,6 +524,39 @@ out:
 }
 
 /**
+ * li_manager_proxy_progress_cb:
+ */
+static void
+li_manager_proxy_progress_cb (LimbaManager *mgr_bus, const gchar *id, gint percentage, LiManager *mgr)
+{
+	if (g_strcmp0 (id, "") == 0)
+		id = NULL;
+
+	g_signal_emit (mgr, signals[SIGNAL_PROGRESS], 0,
+					percentage, id);
+}
+
+/**
+ * li_manager_dbus_remove_software_ready_cb:
+ *
+ * Helper callback for removeSoftware() method.
+ */
+static void
+li_manager_dbus_remove_software_ready_cb (GObject *source_object, GAsyncResult *res, LiManager *mgr)
+{
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	/* ensure no error is set */
+	if (priv->proxy_error != NULL) {
+		g_error_free (priv->proxy_error);
+		priv->proxy_error = NULL;
+	}
+
+	limba_manager_call_remove_software_finish (priv->bus_proxy, res, &priv->proxy_error);
+	g_main_loop_quit (priv->loop);
+}
+
+/**
  * li_manager_remove_software:
  **/
 gboolean
@@ -516,6 +570,51 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	GFile *ctlfile;
 	LiPkgInfo *pki;
 	LiRuntime *rt;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	if (!li_utils_is_root ()) {
+		/* we do not have root privileges - call the helper daemon to install the package */
+		g_debug ("Calling Limba DBus service.");
+
+		if (priv->bus_proxy == NULL) {
+			/* looks like we do not yet have a bus connection, so we create one */
+			priv->bus_proxy = limba_manager_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+											G_DBUS_PROXY_FLAGS_NONE,
+											"org.freedesktop.Limba",
+											"/org/freedesktop/Limba/Manager",
+											NULL,
+											&tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
+
+			/* Installations might take quite long, so we set an infinite connection timeout. Maybe there is a better way to solve this? */
+			g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (priv->bus_proxy), G_MAXINT);
+
+			g_signal_connect (priv->bus_proxy, "progress",
+						G_CALLBACK (li_manager_proxy_progress_cb), mgr);
+		}
+
+		/* ensure no error is set */
+		if (priv->proxy_error != NULL) {
+			g_error_free (priv->proxy_error);
+			priv->proxy_error = NULL;
+		}
+
+		limba_manager_call_remove_software (priv->bus_proxy,
+										pkgid, NULL,
+										(GAsyncReadyCallback) li_manager_dbus_remove_software_ready_cb, mgr);
+		g_main_loop_run (priv->loop);
+
+		if (priv->proxy_error != NULL) {
+			g_propagate_error (error, priv->proxy_error);
+			priv->proxy_error = NULL;
+			goto out;
+		}
+
+		goto out;
+	}
 
 	swpath = g_build_filename (LI_SOFTWARE_ROOT, pkgid, NULL);
 
@@ -611,6 +710,7 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	/* we need to recreate the caches, now that the installed software has changed */
 	li_manager_reset_cached_data (mgr);
 
+out:
 	return TRUE;
 }
 
@@ -1179,6 +1279,12 @@ li_manager_class_init (LiManagerClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	object_class->finalize = li_manager_finalize;
+
+	signals[SIGNAL_PROGRESS] =
+		g_signal_new ("progress",
+				G_TYPE_FROM_CLASS (object_class), G_SIGNAL_RUN_LAST,
+				0, NULL, NULL, g_cclosure_marshal_VOID__UINT_POINTER,
+				G_TYPE_NONE, 2, G_TYPE_UINT, G_TYPE_POINTER);
 }
 
 /**

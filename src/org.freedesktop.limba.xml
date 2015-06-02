@@ -52,14 +52,27 @@
 	-->
 	<interface name="org.freedesktop.Limba.Manager">
 		<!--
-			Remove:
+			RemoveSoftware:
 			@pkid: A package identifier
 			@since: 0.4
 
 			Remove a Limba package.
 		-->
-		<method name="Remove">
+		<method name="RemoveSoftware">
 			<arg direction="in" type="s" name="pkid"/>
 		</method>
+
+		<!--
+			Progress:
+			@id: Identifier for the package this progress belongs to.
+			@percentage: Progress percentage.
+			@since: 0.5
+
+			Progress information about the current step.
+		-->
+		<signal name="Progress">
+			<arg name="id" type="s"/>
+			<arg name="percentage" type="i"/>
+		</signal>
 	</interface>
 </node>
