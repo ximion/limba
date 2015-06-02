@@ -48,18 +48,18 @@ li_daemon_reset_timer (LiHelperDaemon *helper)
  * li_installer_progress_cb:
  */
 static void
-li_installer_progress_cb (LiInstaller *inst, guint percentage, const gchar *id, LimbaInstaller *inst_bus)
+li_installer_progress_cb (LiInstaller *inst, guint percentage, const gchar *id, LiProxyInstaller *inst_bus)
 {
 	if (id == NULL)
 		id = "";
-	limba_installer_emit_progress (inst_bus, id, percentage);
+	li_proxy_installer_emit_progress (inst_bus, id, percentage);
 }
 
 /**
  * bus_installer_install_local_cb:
  */
 static gboolean
-bus_installer_install_local_cb (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *fname, LiHelperDaemon *helper)
+bus_installer_install_local_cb (LiProxyInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *fname, LiHelperDaemon *helper)
 {
 	GError *error = NULL;
 	LiInstaller *inst = NULL;
@@ -120,7 +120,7 @@ bus_installer_install_local_cb (LimbaInstaller *inst_bus, GDBusMethodInvocation 
 		goto out;
 	}
 
-	limba_installer_complete_install_local (inst_bus, context);
+	li_proxy_installer_complete_install_local (inst_bus, context);
 
  out:
 	if (inst != NULL)
@@ -137,7 +137,7 @@ bus_installer_install_local_cb (LimbaInstaller *inst_bus, GDBusMethodInvocation 
  * bus_installer_install_cb:
  */
 static gboolean
-bus_installer_install_cb (LimbaInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
+bus_installer_install_cb (LiProxyInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
 {
 GError *error = NULL;
 	LiInstaller *inst = NULL;
@@ -192,7 +192,7 @@ GError *error = NULL;
 		goto out;
 	}
 
-	limba_installer_complete_install (inst_bus, context);
+	li_proxy_installer_complete_install (inst_bus, context);
 
  out:
 	if (inst != NULL)
@@ -209,18 +209,18 @@ GError *error = NULL;
  * li_manager_progress_cb:
  */
 static void
-li_manager_progress_cb (LiManager *mgr, guint percentage, const gchar *id, LimbaManager *mgr_bus)
+li_manager_progress_cb (LiManager *mgr, guint percentage, const gchar *id, LiProxyManager *mgr_bus)
 {
 	if (id == NULL)
 		id = "";
-	limba_manager_emit_progress (mgr_bus, id, percentage);
+	li_proxy_manager_emit_progress (mgr_bus, id, percentage);
 }
 
 /**
  * bus_manager_remove_software_cb:
  */
 static gboolean
-bus_manager_remove_software_cb (LimbaManager *mgr_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
+bus_manager_remove_software_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
 {
 	GError *error = NULL;
 	LiManager *mgr = NULL;
@@ -269,7 +269,7 @@ bus_manager_remove_software_cb (LimbaManager *mgr_bus, GDBusMethodInvocation *co
 		goto out;
 	}
 
-	limba_manager_complete_remove_software (mgr_bus, context);
+	li_proxy_manager_complete_remove_software (mgr_bus, context);
 
  out:
 	if (mgr != NULL)
@@ -288,9 +288,9 @@ bus_manager_remove_software_cb (LimbaManager *mgr_bus, GDBusMethodInvocation *co
 static void
 on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon *helper)
 {
-	LimbaObjectSkeleton *object;
-	LimbaInstaller *inst_bus;
-	LimbaManager *mgr_bus;
+	LiProxyObjectSkeleton *object;
+	LiProxyInstaller *inst_bus;
+	LiProxyManager *mgr_bus;
 	GError *error = NULL;
 
 	g_print ("Acquired a message bus connection\n");
@@ -301,10 +301,10 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 	helper->obj_manager = g_dbus_object_manager_server_new ("/org/freedesktop/Limba");
 
 	/* create the Installer object */
-	object = limba_object_skeleton_new ("/org/freedesktop/Limba/Installer");
+	object = li_proxy_object_skeleton_new ("/org/freedesktop/Limba/Installer");
 
-	inst_bus = limba_installer_skeleton_new ();
-	limba_object_skeleton_set_installer (object, inst_bus);
+	inst_bus = li_proxy_installer_skeleton_new ();
+	li_proxy_object_skeleton_set_installer (object, inst_bus);
 	g_object_unref (inst_bus);
 
 	g_signal_connect (inst_bus,
@@ -322,10 +322,10 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 	g_object_unref (object);
 
 	/* create the Manager object */
-	object = limba_object_skeleton_new ("/org/freedesktop/Limba/Manager");
+	object = li_proxy_object_skeleton_new ("/org/freedesktop/Limba/Manager");
 
-	mgr_bus = limba_manager_skeleton_new ();
-	limba_object_skeleton_set_manager (object, mgr_bus);
+	mgr_bus = li_proxy_manager_skeleton_new ();
+	li_proxy_object_skeleton_set_manager (object, mgr_bus);
 	g_object_unref (mgr_bus);
 
 	g_signal_connect (mgr_bus,

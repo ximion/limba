@@ -51,7 +51,7 @@ struct _LiInstallerPrivate
 	gchar *fname;
 	GMainLoop *loop;
 	GError *proxy_error;
-	LimbaInstaller *bus_proxy;
+	LiProxyInstaller *bus_proxy;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
@@ -646,7 +646,7 @@ li_installer_dbus_install_local_ready_cb (GObject *source_object, GAsyncResult *
 		priv->proxy_error = NULL;
 	}
 
-	limba_installer_call_install_local_finish (priv->bus_proxy, res, &priv->proxy_error);
+	li_proxy_installer_call_install_local_finish (priv->bus_proxy, res, &priv->proxy_error);
 	g_main_loop_quit (priv->loop);
 }
 
@@ -666,7 +666,7 @@ li_installer_dbus_install_ready_cb (GObject *source_object, GAsyncResult *res, L
 		priv->proxy_error = NULL;
 	}
 
-	limba_installer_call_install_finish (priv->bus_proxy, res, &priv->proxy_error);
+	li_proxy_installer_call_install_finish (priv->bus_proxy, res, &priv->proxy_error);
 	g_main_loop_quit (priv->loop);
 }
 
@@ -674,7 +674,7 @@ li_installer_dbus_install_ready_cb (GObject *source_object, GAsyncResult *res, L
  * li_installer_progress_cb:
  */
 static void
-li_installer_proxy_progress_cb (LimbaInstaller *inst_bus, const gchar *id, gint percentage, LiInstaller *inst)
+li_installer_proxy_progress_cb (LiProxyInstaller *inst_bus, const gchar *id, gint percentage, LiInstaller *inst)
 {
 	if (g_strcmp0 (id, "") == 0)
 		id = NULL;
@@ -700,7 +700,7 @@ li_installer_install (LiInstaller *inst, GError **error)
 
 		if (priv->bus_proxy == NULL) {
 			/* looks like we do not yet have a bus connection, so we create one */
-			priv->bus_proxy = limba_installer_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+			priv->bus_proxy = li_proxy_installer_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
 											G_DBUS_PROXY_FLAGS_NONE,
 											"org.freedesktop.Limba",
 											"/org/freedesktop/Limba/Installer",
@@ -726,7 +726,7 @@ li_installer_install (LiInstaller *inst, GError **error)
 
 		if (priv->fname != NULL) {
 			/* we install a local package, so call the respective DBus method */
-			limba_installer_call_install_local (priv->bus_proxy,
+			li_proxy_installer_call_install_local (priv->bus_proxy,
 											priv->fname, NULL,
 											(GAsyncReadyCallback) li_installer_dbus_install_local_ready_cb, inst);
 		} else {
@@ -734,7 +734,7 @@ li_installer_install (LiInstaller *inst, GError **error)
 
 			/* we install package from a repository */
 			pkid = li_package_get_id (priv->pkg);
-			limba_installer_call_install (priv->bus_proxy,
+			li_proxy_installer_call_install (priv->bus_proxy,
 										pkid, NULL,
 										(GAsyncReadyCallback) li_installer_dbus_install_ready_cb, inst);
 			g_main_loop_run (priv->loop);

@@ -50,7 +50,7 @@ struct _LiManagerPrivate
 
 	/* DBus helper */
 	GMainLoop *loop;
-	LimbaManager *bus_proxy;
+	LiProxyManager *bus_proxy;
 	GError *proxy_error;
 };
 
@@ -527,7 +527,7 @@ out:
  * li_manager_proxy_progress_cb:
  */
 static void
-li_manager_proxy_progress_cb (LimbaManager *mgr_bus, const gchar *id, gint percentage, LiManager *mgr)
+li_manager_proxy_progress_cb (LiProxyManager *mgr_bus, const gchar *id, gint percentage, LiManager *mgr)
 {
 	if (g_strcmp0 (id, "") == 0)
 		id = NULL;
@@ -552,7 +552,7 @@ li_manager_dbus_remove_software_ready_cb (GObject *source_object, GAsyncResult *
 		priv->proxy_error = NULL;
 	}
 
-	limba_manager_call_remove_software_finish (priv->bus_proxy, res, &priv->proxy_error);
+	li_proxy_manager_call_remove_software_finish (priv->bus_proxy, res, &priv->proxy_error);
 	g_main_loop_quit (priv->loop);
 }
 
@@ -578,7 +578,7 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 
 		if (priv->bus_proxy == NULL) {
 			/* looks like we do not yet have a bus connection, so we create one */
-			priv->bus_proxy = limba_manager_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+			priv->bus_proxy = li_proxy_manager_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
 											G_DBUS_PROXY_FLAGS_NONE,
 											"org.freedesktop.Limba",
 											"/org/freedesktop/Limba/Manager",
@@ -602,7 +602,7 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 			priv->proxy_error = NULL;
 		}
 
-		limba_manager_call_remove_software (priv->bus_proxy,
+		li_proxy_manager_call_remove_software (priv->bus_proxy,
 										pkgid, NULL,
 										(GAsyncReadyCallback) li_manager_dbus_remove_software_ready_cb, mgr);
 		g_main_loop_run (priv->loop);

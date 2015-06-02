@@ -71,7 +71,7 @@ set_target_properties(limba PROPERTIES VERSION ${LILIB_VERSION} SOVERSION ${LIMB
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.h ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.c
 	MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/org.freedesktop.limba.xml
 	COMMAND ${GDBUS_CODEGEN} --interface-prefix org.freedesktop.Limba --generate-c-code li-dbus-interface
-		--c-namespace Limba --c-generate-object-manager ${CMAKE_CURRENT_SOURCE_DIR}/org.freedesktop.limba.xml
+		--c-namespace LiProxy --c-generate-object-manager ${CMAKE_CURRENT_SOURCE_DIR}/org.freedesktop.limba.xml
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_BINARY_DIR}/li-dbus-interface.h)
