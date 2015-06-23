@@ -589,7 +589,7 @@ li_installer_update_foundations_table (LiInstaller *inst, GError **error)
 	if (g_file_query_exists (file, NULL)) {
 		li_config_data_load_file (fdconf, file, &tmp_error);
 	} else {
-		g_warning ("No foundation (system-component) was defined. Continueing without that knowledge.");
+		g_warning ("No foundation (system-component) was defined. Continuing without that knowledge.");
 	}
 	g_object_unref (file);
 	if (tmp_error != NULL) {
