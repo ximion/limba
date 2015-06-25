@@ -34,6 +34,9 @@
 #include <gpgme.h>
 #include <appstream.h>
 #include <errno.h>
+#include <archive_entry.h>
+#include <archive.h>
+#include <fcntl.h>
 
 #include "li-config-data.h"
 #include "li-utils-private.h"
@@ -672,6 +675,176 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	as_metadata_add_component (metad, cpt);
 
 	return TRUE;
+}
+
+/**
+ * li_repository_find_icons:
+ */
+static GPtrArray*
+li_repository_find_icons (const gchar* repo_dir, const gchar *icon_size, GError **error)
+{
+	GError *tmp_error = NULL;
+	GFileInfo *file_info;
+	GFileEnumerator *enumerator = NULL;
+	GFile *fdir;
+	GPtrArray *icon_paths = NULL;
+	_cleanup_free_ gchar *asset_dir = NULL;
+
+	if (!g_file_test (repo_dir, G_FILE_TEST_EXISTS))
+		return NULL;
+
+	asset_dir = g_build_filename (repo_dir, "assets", NULL);
+	if (!g_file_test (asset_dir, G_FILE_TEST_EXISTS))
+		return NULL;
+
+	fdir =  g_file_new_for_path (asset_dir);
+	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	icon_paths = g_ptr_array_new_with_free_func (g_free);
+
+	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
+		_cleanup_free_ gchar *path = NULL;
+
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+
+		if (g_file_info_get_is_hidden (file_info))
+			continue;
+		path = g_build_filename (asset_dir,
+								g_file_info_get_name (file_info),
+								NULL);
+
+		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
+			_cleanup_free_ gchar *icon_dir = NULL;
+			GPtrArray *png_files;
+			guint i;
+
+			icon_dir = g_build_filename (path, "icons", icon_size, NULL);
+			if (!g_file_test (icon_dir, G_FILE_TEST_EXISTS))
+				continue;
+
+			png_files = li_utils_find_files_matching (icon_dir, "*.png", FALSE);
+			if (png_files == NULL)
+				continue;
+
+			for (i = 0; i < png_files->len; i++) {
+				const gchar *fname = (const gchar *) g_ptr_array_index (png_files, i);
+
+				g_ptr_array_add (icon_paths, g_strdup (fname));
+			}
+			g_ptr_array_unref (png_files);
+		}
+	}
+
+out:
+	g_object_unref (fdir);
+	if (enumerator != NULL)
+		g_object_unref (enumerator);
+
+	return icon_paths;
+}
+
+/**
+ * li_repository_create_icon_tarball:
+ */
+static gboolean
+li_repository_create_icon_tarball (LiRepository *repo, const gchar *icon_size, GError **error)
+{
+	struct archive *a;
+	struct archive_entry *entry;
+	struct stat st;
+	char buff[8192];
+	int len;
+	int fd;
+	guint i;
+	_cleanup_ptrarray_unref_ GPtrArray *files = NULL;
+	_cleanup_free_ gchar *tarball_fname = NULL;
+	gchar *tmp;
+	GError *tmp_error = NULL;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	files = li_repository_find_icons (priv->repo_path, icon_size, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	if (files == NULL)
+		return TRUE;
+
+	tmp = g_strdup_printf ("icons_%s.tar.gz", icon_size);
+	tarball_fname = g_build_filename (priv->repo_path, "indices", tmp, NULL);
+	g_free (tmp);
+
+	a = archive_write_new ();
+	archive_write_add_filter_gzip (a);
+	archive_write_set_format_pax_restricted (a);
+	archive_write_open_filename (a, tarball_fname);
+
+	for (i = 0; i < files->len; i++) {
+		gchar *ar_fname;
+		const gchar *fname = (const gchar *) g_ptr_array_index (files, i);
+
+		ar_fname = g_path_get_basename (fname);
+
+		stat(fname, &st);
+		entry = archive_entry_new ();
+		archive_entry_set_pathname (entry, ar_fname);
+		g_free (ar_fname);
+
+		archive_entry_copy_stat (entry, &st);
+		archive_write_header (a, entry);
+
+		fd = open (fname, O_RDONLY);
+		if (fd < 0) {
+			g_warning ("Could not open file '%s' for reading. Skipping it.", fname);
+			archive_entry_free (entry);
+			continue;
+		}
+
+		len = read (fd, buff, sizeof (buff));
+		while (len > 0) {
+			archive_write_data (a, buff, len);
+			len = read(fd, buff, sizeof (buff));
+		}
+		close (fd);
+		archive_entry_free (entry);
+	}
+
+	archive_write_close(a);
+	archive_write_free(a);
+
+	return TRUE;
+}
+
+/**
+ * li_repository_create_icon_tarballs:
+ */
+gboolean
+li_repository_create_icon_tarballs (LiRepository *repo, GError **error)
+{
+	gboolean ret;
+	GError *tmp_error = NULL;
+
+	ret = li_repository_create_icon_tarball (repo, "64x64", &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	ret = li_repository_create_icon_tarball (repo, "128x128", &tmp_error) || ret;
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	return ret;
 }
 
 /**

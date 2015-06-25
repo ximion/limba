@@ -146,7 +146,14 @@ lirepo_add_package (const gchar *fname, const gchar *repodir)
 
 	li_repository_save (repo, &error);
 	if (error != NULL) {
-		li_print_stderr (_("Failed to initialize repository: %s"), error->message);
+		li_print_stderr (_("Failed to save repository indices: %s"), error->message);
+		res = 1;
+		goto out;
+	}
+
+	li_repository_create_icon_tarballs (repo, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Failed to update icon tarball: %s"), error->message);
 		res = 1;
 		goto out;
 	}

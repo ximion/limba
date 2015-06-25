@@ -94,6 +94,9 @@ gboolean		li_repository_add_package (LiRepository *repo,
 									const gchar *pkg_fname,
 									GError **error);
 
+gboolean		li_repository_create_icon_tarballs (LiRepository *repo,
+									GError **error);
+
 G_END_DECLS
 
 #endif /* __LI_REPOSITORY_H */
