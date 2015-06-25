@@ -660,8 +660,16 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	}
 	g_free (tmp);
 
-	/* set a unique AppStream package name */
 	cpt = li_package_get_appstream_cpt (pkg);
+	/* set an icon name */
+	if (g_file_test (icon_dir, G_FILE_TEST_EXISTS)) {
+		tmp = g_strdup_printf ("%s.png", li_pkg_info_get_id (pki));
+		/* TODO: Determine which sizes we exported, and set that information correctly */
+		as_component_add_icon (cpt, AS_ICON_KIND_CACHED, 0, 0, tmp);
+		g_free (tmp);
+	}
+
+	/* set a unique AppStream bundle name */
 	as_component_add_bundle_id (cpt, AS_BUNDLE_KIND_LIMBA,
 							li_pkg_info_get_id (pki));
 	/* remove all package names - just in case */
