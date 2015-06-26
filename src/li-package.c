@@ -94,7 +94,7 @@ li_package_finalize (GObject *object)
 	LiPackage *pkg = LI_PACKAGE (object);
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
-	g_object_unref (priv->info);
+	g_clear_object (&priv->info);
 	if (priv->archive_file != NULL)
 		fclose (priv->archive_file);
 	if (priv->cpt != NULL)
