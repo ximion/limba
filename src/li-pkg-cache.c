@@ -36,11 +36,16 @@
 #include <curl/curl.h>
 #include <errno.h>
 #include <math.h>
+#include <archive_entry.h>
+#include <archive.h>
+#include <fcntl.h>
 
 #include "li-utils.h"
 #include "li-utils-private.h"
 #include "li-pkg-index.h"
 #include "li-keyring.h"
+
+#define DEFAULT_BLOCK_SIZE 65536
 
 typedef struct _LiPkgCachePrivate	LiPkgCachePrivate;
 struct _LiPkgCachePrivate
@@ -66,7 +71,7 @@ static guint signals[SIGNAL_LAST] = { 0 };
 #define GET_PRIVATE(o) (li_pkg_cache_get_instance_private (o))
 
 #define LIMBA_CACHE_DIR "/var/cache/limba/"
-#define APPSTREAM_CACHE "/var/cache/app-info/xmls"
+#define APPSTREAM_CACHE "/var/cache/app-info/"
 
 typedef struct {
 	LiPkgCache *cache;
@@ -291,6 +296,168 @@ _li_pkg_cache_signature_hash_matches (gchar **sigparts, const gchar *fname, cons
 }
 
 /**
+ * li_pkg_cache_extract_icon_tarball:
+ */
+static void
+li_pkg_cache_extract_icon_tarball (LiPkgCache *cache, const gchar *tarball_fname, const gchar *dest_dir, GError **error)
+{
+	struct archive *ar;
+	struct archive_entry* e;
+	gint res;
+	_cleanup_free_ gchar *icon_dest_name = NULL;
+
+	/* open the archive */
+	ar = archive_read_new ();
+	archive_read_support_filter_gzip (ar);
+	archive_read_support_format_tar (ar);
+
+	/* open the file, exit on error */
+	res = archive_read_open_filename (ar, tarball_fname, DEFAULT_BLOCK_SIZE);
+	if (res != ARCHIVE_OK) {
+		g_set_error (error,
+				LI_PKG_CACHE_ERROR,
+				LI_PKG_CACHE_ERROR_UNPACK,
+				_("Could not open icon tarball! Error: %s"), archive_error_string (ar));
+		archive_read_free (ar);
+		return;
+	}
+
+	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
+		_cleanup_free_ gchar *fname = NULL;
+		_cleanup_free_ gchar *dest_fname = NULL;
+		gint fd;
+		gboolean ret;
+
+		const void *buff = NULL;
+		gsize size = 0UL;
+		off_t offset = {0};
+		off_t output_offset = {0};
+		gsize bytes_to_write = 0UL;
+		gssize bytes_written = 0L;
+
+		if (!g_str_has_suffix (archive_entry_pathname (e), ".png"))
+			continue;
+
+		g_mkdir_with_parents (dest_dir, 0755);
+
+		fname = g_path_get_basename (archive_entry_pathname (e));
+		dest_fname = g_build_filename (dest_dir, fname, NULL);
+
+		fd = open (dest_fname, (O_CREAT | O_WRONLY) | O_TRUNC, ((S_IRUSR | S_IWUSR) | S_IRGRP) | S_IROTH);
+		if (fd < 0) {
+			g_set_error (error,
+					LI_PKG_CACHE_ERROR,
+					LI_PKG_CACHE_ERROR_UNPACK,
+					_("Unable to extract file. Error: %s"), g_strerror (errno));
+			goto out;
+		}
+
+		ret = TRUE;
+		while (archive_read_data_block (ar, &buff, &size, &offset) == ARCHIVE_OK) {
+			if (offset > output_offset) {
+				lseek (fd, offset - output_offset, SEEK_CUR);
+				output_offset = offset;
+			}
+			while (size > (gssize) 0) {
+				bytes_to_write = size;
+				if (bytes_to_write > DEFAULT_BLOCK_SIZE)
+					bytes_to_write = DEFAULT_BLOCK_SIZE;
+
+				bytes_written = write (fd, buff, bytes_to_write);
+				if (bytes_written < ((gssize) 0)) {
+					g_set_error (error,
+						LI_PKG_CACHE_ERROR,
+						LI_PKG_CACHE_ERROR_UNPACK,
+						_("Unable to extract file. Error: %s"), g_strerror (errno));
+					ret = FALSE;
+					break;
+				}
+				output_offset += bytes_written;
+				buff += bytes_written;
+				size -= bytes_written;
+			}
+			if (!ret)
+				break;
+		}
+
+		if (close (fd) != 0) {
+			g_set_error (error,
+				LI_PKG_CACHE_ERROR,
+				LI_PKG_CACHE_ERROR_UNPACK,
+				_("Closing of file desriptor failed. Error: %s"), g_strerror (errno));
+			goto out;
+		}
+	}
+
+out:
+	archive_read_close (ar);
+	archive_read_free (ar);
+}
+
+/**
+ * li_pkg_cache_update_icon_cache_for_size:
+ */
+static void
+li_pkg_cache_update_icon_cache_for_size (LiPkgCache *cache, const gchar *tmp_dir, const gchar *url, const gchar *destination, const gchar *size, GError **error)
+{
+	_cleanup_free_ gchar *icon_url = NULL;
+	_cleanup_free_ gchar *tar_dest = NULL;
+	_cleanup_free_ gchar *icons_dest = NULL;
+	GError *tmp_error = NULL;
+
+	/* download and extract icons */
+	icon_url = g_strdup_printf ("%s/indices/icons_%s.tar.gz", url, size);
+	tar_dest = g_strdup_printf ("%s/icons_%s.tar.gz", tmp_dir, size);
+	li_pkg_cache_download_file_sync (cache, icon_url, tar_dest, NULL, &tmp_error);
+	if (tmp_error != NULL) {
+		if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
+			/* we can ignore the error here, no icons found */
+			g_debug ("Skipping '%s' icons for repository: %s", size, url);
+			g_error_free (tmp_error);
+			tmp_error = NULL;
+			return;
+		} else {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+	}
+	icons_dest = g_build_filename (destination, size, NULL);
+	li_pkg_cache_extract_icon_tarball (cache, tar_dest, icons_dest, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+}
+
+/**
+ * li_pkg_cache_update_icon_cache:
+ */
+static void
+li_pkg_cache_update_icon_cache (LiPkgCache *cache, const gchar *repo_cache, const gchar *url, const gchar *destination, GError **error)
+{
+	_cleanup_free_ gchar *tmp_dir = NULL;
+	GError *tmp_error = NULL;
+
+	tmp_dir = g_build_filename (repo_cache, "icon-tmp", NULL);
+	g_mkdir_with_parents (tmp_dir, 0755);
+
+	li_pkg_cache_update_icon_cache_for_size (cache, tmp_dir, url, destination, "64x64", &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	li_pkg_cache_update_icon_cache_for_size (cache, tmp_dir, url, destination, "128x128", &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	/* cleanup */
+	li_delete_dir_recursive (tmp_dir);
+}
+
+/**
  * li_pkg_cache_update:
  *
  * Update the package cache by downloading new package indices from the web.
@@ -333,12 +500,13 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		_cleanup_free_ gchar *fpr = NULL;
 		_cleanup_object_unref_ AsMetadata *metad = NULL;
 		_cleanup_free_ gchar *dest_ascache = NULL;
+		_cleanup_free_ gchar *md5sum = NULL;
 		gboolean index_read;
 		GPtrArray *pkgs;
 		guint j;
 		gchar *tmp;
 		gchar *tmp2;
-		gchar *md5sum;
+
 		LiTrustLevel tlevel;
 
 		url = (const gchar*) g_ptr_array_index (priv->repo_urls, i);
@@ -364,10 +532,10 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 		/* set AppStream target file */
 		tmp = g_strdup_printf ("limba_%s.xml.gz", md5sum);
-		dest_ascache = g_build_filename (APPSTREAM_CACHE, tmp, NULL);
+		dest_ascache = g_build_filename (APPSTREAM_CACHE, "xmls", tmp, NULL);
 		g_free (tmp);
-		g_free (md5sum);
 		g_mkdir_with_parents (dest, 0755);
+		g_mkdir_with_parents (dest_ascache, 0755);
 
 		dest_index_all = g_build_filename (dest, "Index-all.gz", NULL);
 		dest_index_arch = g_strdup_printf ("%s/Index-%s.gz", dest, current_arch);
@@ -509,7 +677,6 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 			}
 		}
 
-
 		/* load index */
 		idxfile = g_file_new_for_path (dest_index_all);
 		if (g_file_query_exists (idxfile, NULL)) {
@@ -555,6 +722,23 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 		if (!index_read)
 			g_warning ("Repository '%s' does not seem to contain any index file!", url);
+
+		/* ensure we have a somewhat sane metadata origin */
+		if (as_metadata_get_origin (metad) == NULL)
+			as_metadata_set_origin (metad, md5sum);
+
+		/* fetch icons */
+		tmp = g_build_filename (APPSTREAM_CACHE,
+								"icons",
+								as_metadata_get_origin (metad),
+								NULL);
+		g_debug ("Icon cache target set: %s", tmp);
+		li_pkg_cache_update_icon_cache (cache, dest, url, tmp, &tmp_error);
+		g_free (tmp);
+		if (tmp_error != NULL) {
+			g_propagate_prefixed_error (error, tmp_error, "Unable to fetch AppStream icons:");
+			return;
+		}
 
 		/* ensure that all locations are set properly */
 		pkgs = li_pkg_index_get_packages (tmp_index);

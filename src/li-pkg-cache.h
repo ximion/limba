@@ -45,6 +45,7 @@ G_BEGIN_DECLS
  * @LI_PKG_CACHE_ERROR_WRITE:				Writing to cache was not possible
  * @LI_PKG_CACHE_ERROR_NOT_FOUND:			A cache entity was not found
  * @LI_PKG_CACHE_ERROR_VERIFICATION:		Validation of repository data failed.
+ * @LI_PKG_CACHE_ERROR_UNPACK:				Unpacking of data (e.g. from the icon tarball) has failed.
  *
  * The error type.
  **/
@@ -55,6 +56,7 @@ typedef enum {
 	LI_PKG_CACHE_ERROR_NOT_FOUND,
 	LI_PKG_CACHE_ERROR_WRITE,
 	LI_PKG_CACHE_ERROR_VERIFICATION,
+	LI_PKG_CACHE_ERROR_UNPACK,
 	/*< private >*/
 	LI_PKG_CACHE_ERROR_LAST
 } LiPkgCacheError;
