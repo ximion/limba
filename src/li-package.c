@@ -358,6 +358,7 @@ li_package_open_base_ipk (LiPackage *pkg, GError **error)
 				_("The package needs to be downloaded first to perform this operation."));
 		return NULL;
 	}
+	g_assert_nonnull (priv->archive_file);
 
 	/* create new archive object for reading */
 	ar = archive_read_new ();
