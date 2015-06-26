@@ -5,7 +5,7 @@ Limba Release Notes
 git shortlog LIMBA_0_4_2.. | grep -i -v trivial | grep -v Merge > NEWS.new
 
 --------------------------------------------------------------------------------
-Version 0.4.3
+Version 0.5.0
 ~~~~~~~~~~~~~~
 Released: 2015-xx-xx
 
@@ -20,12 +20,12 @@ Bugfixes:
 
 3. Commit changes in Limba git:
 
-git commit -a -m "Release version 0.4.3"
-git tag -s -f -m "Release 0.4.3" LIMBA_0_4_3 <gpg password>
+git commit -a -m "Release version 0.5.0"
+git tag -s -f -m "Release 0.5.0" LIMBA_0_5_0 <gpg password>
 git push --tags
 git push
 
-4. run './release.sh --version=0.4.3 --git-tag=LIMBA_0_4_3 --sign'
+4. run './release.sh --version=0.5.0 --git-tag=LIMBA_0_5_0 --sign'
 
 5. Upload tarball: scp -r *.tar.xz* annarchy.freedesktop.org:~/public_html/releases/limba
 
@@ -37,7 +37,7 @@ git commit -a -m "trivial: post release version bump"
 git push
 
 =================================================
-Limba 0.4.3 released!
+Limba 0.5.0 released!
 
 Tarballs available here: http://people.freedesktop.org/~mak/limba/releases/
 

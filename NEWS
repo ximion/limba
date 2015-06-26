@@ -1,3 +1,31 @@
+Version 0.5.0
+~~~~~~~~~~~~~~
+Released: 2015-06-26
+
+Features:
+ * Make use of new OverlayFS multi-layer feature
+ * Drop redundant code from LiRuntime
+ * Simplify update process
+ * Improve cruft cleanup methods
+ * l10n: Update l10n information
+ * Implement user-friendly progress notifications
+ * lipa: Show a fancy progress bar
+ * lipa: Show some process details when installing
+ * Recognize experimental X-Repository package property
+ * Extract AppStream icons for use in package repos
+ * Implement new repository layout
+ * The LiPkgCache is public API now
+ * Add DBus method to install package from a remote source
+ * mgr: Add method to easily retrieve bundle status via its ID
+ * Use helper daemon for removal actions as well
+ * lirepo: Export AppStream icon tarballs
+ * Add icon information to AppStream XML
+ * Download and extract AppStream icon tarballs from the remote
+
+Bugfixes:
+ * Fix potential crash in the helper daemon
+ * installer: Fix a rare unref assertion error
+
 Version 0.4.2
 ~~~~~~~~~~~~~~
 Released: 2015-03-28
