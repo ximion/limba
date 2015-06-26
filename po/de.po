@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Limba\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-05-24 16:18+0200\n"
+"POT-Creation-Date: 2015-06-26 15:37+0200\n"
 "PO-Revision-Date: 2015-05-18 22:35+0000\n"
 "Last-Translator: Matthias K. <matthias@tenstral.net>\n"
 "Language-Team: German (http://www.transifex.com/projects/p/limba/language/"
@@ -143,6 +143,10 @@ msgid "Could not open file '%s' for writing."
 msgstr ""
 
 #, c-format
+msgid "Could not open icon tarball! Error: %s"
+msgstr ""
+
+#, c-format
 msgid "Could not open metadata-file '%s' for reading."
 msgstr ""
 
@@ -229,6 +233,14 @@ msgid "Failed to open repository: %s"
 msgstr ""
 
 #, c-format
+msgid "Failed to save repository indices: %s"
+msgstr ""
+
+#, c-format
+msgid "Failed to update icon tarball: %s"
+msgstr ""
+
+#, c-format
 msgid "File '%s' already exists."
 msgstr ""
 
@@ -288,6 +300,10 @@ msgid "Limba version: %s"
 msgstr ""
 
 msgid "List installed software"
+msgstr ""
+
+#, c-format
+msgid "No id was found for this package."
 msgstr ""
 
 msgid "No import result returned."
@@ -455,6 +471,10 @@ msgstr ""
 
 #, c-format
 msgid "Unable to remove existing installation of '%s (%s)'."
+msgstr ""
+
+#, c-format
+msgid "Unable to rename file."
 msgstr ""
 
 #, c-format

@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2015-05-24 16:19+0200\n"
+        "POT-Creation-Date: 2015-06-26 15:37+0200\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -184,6 +184,14 @@ msgid   "Checksum for embedded package '%s' did not match."
 msgstr  ""
 
 #, c-format
+msgid   "No id was found for this package."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to rename file."
+msgstr  ""
+
+#, c-format
 msgid   "This package has a broken signature."
 msgstr  ""
 
@@ -275,6 +283,10 @@ msgstr  ""
 
 #, c-format
 msgid   "Unable to download data from '%s': %s."
+msgstr  ""
+
+#, c-format
+msgid   "Could not open icon tarball! Error: %s"
 msgstr  ""
 
 #, c-format
@@ -498,6 +510,14 @@ msgstr  ""
 
 #, c-format
 msgid   "Failed to add package: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Failed to save repository indices: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Failed to update icon tarball: %s"
 msgstr  ""
 
 #. : This is the header to the --help menu

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Limba\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-05-19 00:32+0200\n"
+"POT-Creation-Date: 2015-06-26 15:37+0200\n"
 "PO-Revision-Date: 2015-05-18 22:33+0000\n"
 "Last-Translator: Matthias K. <matthias@tenstral.net>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/limba/language/"
@@ -152,6 +152,10 @@ msgstr "Impossible d'ouvrir le payload de l'IPK! Erreur : %s"
 msgid "Could not open file '%s' for writing."
 msgstr "Impossible d'ouvrir le fichier '%s' pour écriture."
 
+#, fuzzy, c-format
+msgid "Could not open icon tarball! Error: %s"
+msgstr "Impossible d'ouvrir le fichier IPK! Erreur : %s"
+
 #, c-format
 msgid "Could not open metadata-file '%s' for reading."
 msgstr "Impossible d'ouvrir le fichier de métadonnée '%s' pour lecture."
@@ -239,6 +243,14 @@ msgstr ""
 msgid "Failed to open repository: %s"
 msgstr ""
 
+#, fuzzy, c-format
+msgid "Failed to save repository indices: %s"
+msgstr "Impossible de déballer le paquet. %s"
+
+#, fuzzy, c-format
+msgid "Failed to update icon tarball: %s"
+msgstr "Impossible de déballer le paquet. %s"
+
 #, c-format
 msgid "File '%s' already exists."
 msgstr "Le fichier '%s' existe déjà."
@@ -301,6 +313,10 @@ msgstr "Version de Limba : %s"
 
 msgid "List installed software"
 msgstr "Liste des logiciels installés"
+
+#, c-format
+msgid "No id was found for this package."
+msgstr ""
 
 msgid "No import result returned."
 msgstr ""
@@ -473,6 +489,10 @@ msgstr "Impossible d'ouvrir le paquet. %s"
 #, c-format
 msgid "Unable to remove existing installation of '%s (%s)'."
 msgstr "Impossible de supprimer l'installation existante de '%s (%s)'."
+
+#, fuzzy, c-format
+msgid "Unable to rename file."
+msgstr "Impossible d'écrire le fichier 'control'. %s"
 
 #, c-format
 msgid "Unable to set permissions on file '%s'. Error: %s"
