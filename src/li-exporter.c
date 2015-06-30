@@ -183,6 +183,18 @@ li_exporter_process_desktop_file (LiExporter *exp, const gchar *disk_location, G
 	}
 	g_key_file_set_string (kfile, "Desktop Entry", "Exec", exec_cmd);
 
+	/* wipe interfering TryExec line - should not be used in menus, and we do not know
+	 * if the TryExec binary exists within a Limba bundle or not */
+	if (g_key_file_has_key (kfile, "Desktop Entry", "TryExec", NULL)) {
+		g_key_file_remove_key (kfile, "Desktop Entry", "TryExec", &tmp_error);
+		if (tmp_error != NULL) {
+			/* this is not fatal, ignore the error */
+			g_error_free (tmp_error);
+			g_debug ("Unable to remove TryExec key from .desktop file %s", dest);
+			goto out;
+		}
+	}
+
 	g_key_file_save_to_file (kfile, dest, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
