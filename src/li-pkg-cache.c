@@ -529,13 +529,15 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 		/* set cache directory */
 		dest = g_build_filename (LIMBA_CACHE_DIR, md5sum, NULL);
+		g_mkdir_with_parents (dest, 0755);
 
 		/* set AppStream target file */
+		tmp = g_build_filename (APPSTREAM_CACHE, "xmls", NULL);
+		g_mkdir_with_parents (tmp, 0755);
+		g_free (tmp);
 		tmp = g_strdup_printf ("limba_%s.xml.gz", md5sum);
 		dest_ascache = g_build_filename (APPSTREAM_CACHE, "xmls", tmp, NULL);
 		g_free (tmp);
-		g_mkdir_with_parents (dest, 0755);
-		g_mkdir_with_parents (dest_ascache, 0755);
 
 		dest_index_all = g_build_filename (dest, "Index-all.gz", NULL);
 		dest_index_arch = g_strdup_printf ("%s/Index-%s.gz", dest, current_arch);
