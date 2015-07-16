@@ -42,8 +42,7 @@ macro( macro_bool_to_bool FOUND_VAR )
   endforeach()
 endmacro()
 
-include (MacroEnsureVersion)
-
+#HACK: local copy...
 MACRO(MACRO_BOOL_TO_01 FOUND_VAR )
    FOREACH (_current_VAR ${ARGN})
       IF(${FOUND_VAR})
@@ -53,6 +52,7 @@ MACRO(MACRO_BOOL_TO_01 FOUND_VAR )
       ENDIF(${FOUND_VAR})
    ENDFOREACH(_current_VAR)
 ENDMACRO(MACRO_BOOL_TO_01)
+
 
 if ( WIN32 )
 
@@ -87,12 +87,6 @@ if ( WIN32 )
 
   else()
 
-    # is this needed, of just unreflected cut'n'paste?
-    # this isn't a KDE library, after all!
-    if( NOT KDEWIN_FOUND )
-      find_package( KDEWIN REQUIRED )
-    endif()
-
     set( GPGME_FOUND         false )
     set( GPGME_VANILLA_FOUND false )
     set( GPGME_GLIB_FOUND    false )
@@ -103,19 +97,11 @@ if ( WIN32 )
       ${CMAKE_INSTALL_PREFIX}/include
     )
 
-    if (NOT WINCE)
     find_library( _gpgme_vanilla_library NAMES gpgme libgpgme gpgme-11 libgpgme-11
       PATHS
         ${CMAKE_LIBRARY_PATH}
         ${CMAKE_INSTALL_PREFIX}/lib
     )
-    else (NOT WINCE)
-      find_library( _gpgme_vanilla_library NAMES libgpgme-11-msc
-        PATHS
-          ${CMAKE_LIBRARY_PATH}
-          ${CMAKE_INSTALL_PREFIX}/lib
-      )
-    endif (NOT WINCE)
 
     find_library( _gpgme_glib_library    NAMES gpgme-glib libgpgme-glib gpgme-glib-11 libgpgme-glib-11
       PATHS
@@ -129,31 +115,27 @@ if ( WIN32 )
         ${CMAKE_INSTALL_PREFIX}/lib
     )
 
-    if ( WINCE )
-        set( _gpg_error_library )
-    else()
-        find_library( _gpg_error_library     NAMES gpg-error libgpg-error gpg-error-0 libgpg-error-0
-           PATHS
-                ${CMAKE_LIBRARY_PATH}
-                ${CMAKE_INSTALL_PREFIX}/lib
-        )
-    endif()
+    find_library( _gpg_error_library     NAMES gpg-error libgpg-error gpg-error-0 libgpg-error-0
+       PATHS
+            ${CMAKE_LIBRARY_PATH}
+            ${CMAKE_INSTALL_PREFIX}/lib
+    )
 
     set( GPGME_INCLUDES ${GPGME_INCLUDES} )
 
-    if ( _gpgme_vanilla_library AND ( _gpg_error_library OR WINCE ) )
+    if ( _gpgme_vanilla_library AND _gpg_error_library )
       set( GPGME_VANILLA_LIBRARIES ${_gpgme_vanilla_library} ${_gpg_error_library} )
       set( GPGME_VANILLA_FOUND     true )
       set( GPGME_FOUND             true )
     endif()
 
-    if ( _gpgme_glib_library AND ( _gpg_error_library OR WINCE ) )
+    if ( _gpgme_glib_library AND _gpg_error_library )
       set( GPGME_GLIB_LIBRARIES    ${_gpgme_glib_library}    ${_gpg_error_library} )
       set( GPGME_GLIB_FOUND        true )
       set( GPGME_FOUND             true )
     endif()
 
-    if ( _gpgme_qt_library AND ( _gpg_error_library OR WINCE ) )
+    if ( _gpgme_qt_library AND _gpg_error_library )
       set( GPGME_QT_LIBRARIES      ${_gpgme_qt_library}      ${_gpg_error_library} )
       set( GPGME_QT_FOUND          true )
       set( GPGME_FOUND             true )
@@ -213,10 +195,9 @@ else() # not WIN32
 
       exec_program( ${_GPGMECONFIG_EXECUTABLE} ARGS --version OUTPUT_VARIABLE GPGME_VERSION )
 
-      set( _GPGME_MIN_VERSION "1.1.7" )
-      macro_ensure_version( ${_GPGME_MIN_VERSION} ${GPGME_VERSION} _GPGME_INSTALLED_VERSION_OK )
+      set( _GPGME_MIN_VERSION "1.5.0" )
 
-      if ( NOT _GPGME_INSTALLED_VERSION_OK )
+      if ( ${GPGME_VERSION} VERSION_LESS ${_GPGME_MIN_VERSION} )
 
         message( STATUS "The installed version of gpgme is too old: ${GPGME_VERSION} (required: >= ${_GPGME_MIN_VERSION})" )
 
@@ -384,20 +365,16 @@ if ( NOT Gpgme_FIND_QUIETLY )
     message( STATUS "No usable gpgme flavours found." )
   endif()
 
-  macro_bool_to_bool( Gpgme_FIND_REQUIRED _req )
-
   if ( WIN32 )
     set( _gpgme_homepage "http://www.gpg4win.org" )
   else()
     set( _gpgme_homepage "http://www.gnupg.org/related_software/gpgme" )
   endif()
 
-else()
+endif()
 
-  if ( Gpgme_FIND_REQUIRED AND NOT GPGME_FOUND )
-    message( FATAL_ERROR "Did not find GPGME" )
-  endif()
-
+if (NOT GPGME_FOUND )
+  message( FATAL_ERROR "Did not find GPGME" )
 endif()
 
 set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS_gpgme_saved )
