@@ -195,7 +195,7 @@ else() # not WIN32
 
       exec_program( ${_GPGMECONFIG_EXECUTABLE} ARGS --version OUTPUT_VARIABLE GPGME_VERSION )
 
-      set( _GPGME_MIN_VERSION "1.5.0" )
+      set( _GPGME_MIN_VERSION "1.4.0" )
 
       if ( ${GPGME_VERSION} VERSION_LESS ${_GPGME_MIN_VERSION} )
 
