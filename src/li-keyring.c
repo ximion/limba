@@ -129,10 +129,15 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 
 	if ((tmpdir) || (li_utils_is_root () && (!g_file_test (home, G_FILE_TEST_IS_DIR))))  {
 		gchar *gpgconf_fname;
+		/* Yes, this is as stupid as it looks... */
 		const gchar *gpg_conf = "# Options for GnuPG used by Limba \n\n"
 			"no-greeting\n"
 			"no-permission-warning\n"
-			"lock-multiple\n\n"
+			"no-default-keyring\n"
+			"preserve-permissions\n"
+			"lock-never\n"
+			"trust-model direct\n"
+			"no-expensive-trust-checks\n\n"
 			"keyserver-options timeout=24\n"
 			"keyserver-options auto-key-retrieve\n\n"
 			"keyserver hkp://pool.sks-keyservers.net\n"
