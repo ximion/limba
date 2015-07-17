@@ -243,7 +243,7 @@ li_runtime_get_uuid (LiRuntime *rt)
 /**
  * li_runtime_get_members:
  *
- * Returns: (transfer none) (element-type LiPkgInfo, LiPkgInfo): Hash set of packages which are members of this runtime
+ * Returns: (transfer none) (element-type utf8 LiPkgInfo): Hash set of packages which are members of this runtime
  */
 GHashTable*
 li_runtime_get_members (LiRuntime *rt)
@@ -255,7 +255,7 @@ li_runtime_get_members (LiRuntime *rt)
 /**
  * li_runtime_get_requirements:
  *
- * Returns: (transfer none) (element-type LiPkgInfo, LiPkgInfo): Hash set of package requirements which make up this runtime
+ * Returns: (transfer none) (element-type utf8 LiPkgInfo): Hash set of package requirements which make up this runtime
  */
 GHashTable*
 li_runtime_get_requirements (LiRuntime *rt)

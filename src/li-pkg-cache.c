@@ -814,8 +814,8 @@ li_pkg_cache_get_packages (LiPkgCache *cache)
 /**
  * li_pkg_cache_get_pkg_info:
  *
- * Returns: The #LiPkgInfo for pkid, or %NULL in case no package
- * with that id was found in the cache.
+ * Returns: (transfer none): The #LiPkgInfo for pkid, or %NULL in case
+ * no package with that id was found in the cache.
  */
 LiPkgInfo*
 li_pkg_cache_get_pkg_info (LiPkgCache *cache, const gchar *pkid)

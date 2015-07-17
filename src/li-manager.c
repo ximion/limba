@@ -292,7 +292,7 @@ li_manager_get_software_list (LiManager *mgr, GError **error)
 }
 
 /**
- * li_manager_get_software_by_id:
+ * li_manager_get_software_by_pkid:
  *
  * Returns: (transfer none): A #LiPkgInfo or %NULL if no software was found.
  **/
