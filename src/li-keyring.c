@@ -154,8 +154,11 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 
 	err = gpgme_new (&ctx);
 	g_assert (err == 0);
-	gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
-	gpgme_ctx_set_engine_info (ctx, LI_GPG_PROTOCOL, NULL, home);
+
+	err = gpgme_ctx_set_engine_info (ctx, LI_GPG_PROTOCOL, NULL, home);
+	g_assert (err == 0);
+	err = gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
+	g_assert (err == 0);
 
 	return ctx;
 }
@@ -322,9 +325,13 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 
 /**
  * li_keyring_verify_clear_signature:
+ *
+ * Verifies a GPG signature.
+ *
+ * Returns: The data which was signed.
  */
 gchar*
-li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_fpr, GError **error)
+li_keyring_verify_clear_signature (LiKeyring *kr, LiKeyringKind kind, const gchar *sigtext, gchar **out_fpr, GError **error)
 {
 	gpgme_ctx_t ctx;
 	gpgme_error_t err;
@@ -337,7 +344,7 @@ li_keyring_verify_clear_signature (LiKeyring *kr, const gchar *sigtext, gchar **
 	gpgme_verify_result_t result;
 	gpgme_signature_t sig;
 
-	ctx = li_keyring_get_context (kr, LI_KEYRING_KIND_NONE);
+	ctx = li_keyring_get_context (kr, kind);
 
 	err = gpgme_data_new_from_mem (&sigdata, sigtext, strlen (sigtext), 1);
 	if (err != 0) {
@@ -436,14 +443,39 @@ li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_d
 	gchar *sdata;
 	gchar *fpr = NULL;
 	LiTrustLevel level;
-	gpgme_ctx_t ctx = NULL;
-	gpgme_key_t key = NULL;
+	GError *error_ucheck = NULL;
 	GError *tmp_error = NULL;
 
-	sdata = li_keyring_verify_clear_signature (kr, sigtext, &fpr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return LI_TRUST_LEVEL_NONE;
+	/* Trust levels:
+	 * None: Signature is broken, package is not trusted.
+	 * Low: Signature is valid, but we don't trust they key it was signed with.
+	 * Medium: Signature is implicitly trusted.
+	 * High: Signature is explicitly trusted.
+	 */
+
+	/* can we validate the signature with keys in our trusted database? */
+	sdata = li_keyring_verify_clear_signature (kr,
+					LI_KEYRING_KIND_USER,
+					sigtext,
+					&fpr,
+					&error_ucheck);
+	level = LI_TRUST_LEVEL_HIGH;
+
+	if (error_ucheck != NULL) {
+		/* do we implicitly trust that key? */
+		sdata = li_keyring_verify_clear_signature (kr,
+					LI_KEYRING_KIND_USER,
+					sigtext,
+					&fpr,
+					&tmp_error);
+
+		level = LI_TRUST_LEVEL_MEDIUM;
+		if (tmp_error == NULL) {
+			g_error_free (error_ucheck);
+		} else {
+			g_propagate_error (error, tmp_error);
+			return LI_TRUST_LEVEL_NONE;
+		}
 	}
 
 	if (out_data != NULL)
@@ -454,42 +486,7 @@ li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_d
 	if (out_fpr != NULL)
 		*out_fpr = g_strdup (fpr);
 
-	/* if we are here, we have at least low trust, since the signature is valid */
-	level = LI_TRUST_LEVEL_LOW;
 
-	/* do we have that key in our trusted database? */
-	ctx = li_keyring_get_context (kr, LI_KEYRING_KIND_USER);
-	key = li_keyring_lookup_key (ctx, fpr, FALSE, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		goto out;
-	}
-	if (key != NULL) {
-		/* the key is highly trusted */
-		level = LI_TRUST_LEVEL_HIGH;
-		goto out;
-	}
-
-	gpgme_release (ctx);
-
-	/* do we implicitly trust that key? */
-	ctx = li_keyring_get_context (kr, LI_KEYRING_KIND_AUTOMATIC);
-	key = li_keyring_lookup_key (ctx, fpr, FALSE, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		goto out;
-	}
-	if (key != NULL) {
-		/* the key has a medium trust level */
-		level = LI_TRUST_LEVEL_MEDIUM;
-		goto out;
-	}
-
-out:
-	if (key != NULL)
-		gpgme_key_unref (key);
-	if (ctx != NULL)
-		gpgme_release (ctx);
 	if (fpr != NULL)
 		g_free (fpr);
 

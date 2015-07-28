@@ -83,7 +83,7 @@ typedef struct _LiKeyringClass	LiKeyringClass;
 
 struct _LiKeyring
 {
-	GObject			parent;
+	GObject		parent;
 };
 
 struct _LiKeyringClass
@@ -100,23 +100,24 @@ struct _LiKeyringClass
 	void (*_as_reserved8)	(void);
 };
 
-GType			li_keyring_get_type	(void);
-LiKeyring		*li_keyring_new		(void);
+GType			li_keyring_get_type (void);
+LiKeyring		*li_keyring_new (void);
 
 gboolean		li_keyring_import_key (LiKeyring *kr,
-									const gchar *fpr,
-									LiKeyringKind kind,
-									GError **error);
+						const gchar *fpr,
+						LiKeyringKind kind,
+						GError **error);
 gchar			*li_keyring_verify_clear_signature (LiKeyring *kr,
-									const gchar *sigtext,
-									gchar **out_fpr,
-									GError **error);
+							LiKeyringKind kind,
+							const gchar *sigtext,
+							gchar **out_fpr,
+							GError **error);
 
 LiTrustLevel	li_keyring_process_signature (LiKeyring *kr,
-									const gchar *sigtext,
-									gchar **out_data,
-									gchar **out_fpr,
-									GError **error);
+					const gchar *sigtext,
+					gchar **out_data,
+					gchar **out_fpr,
+					GError **error);
 
 G_END_DECLS
 
