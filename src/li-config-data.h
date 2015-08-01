@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*-
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
  * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
  *
@@ -60,30 +60,30 @@ struct _LiConfigDataClass
 };
 
 GType			li_config_data_get_type	(void);
-LiConfigData	*li_config_data_new		(void);
+LiConfigData		*li_config_data_new	(void);
 
 void			li_config_data_load_file (LiConfigData *cdata,
-											GFile *file,
-											GError **error);
+							GFile *file,
+							GError **error);
 void			li_config_data_load_data (LiConfigData *cdata,
-											const gchar *data);
+							const gchar *data);
 gboolean		li_config_data_open_block (LiConfigData *cdata,
-											const gchar *field,
-											const gchar *value,
-											gboolean reset_index);
+							const gchar *field,
+							const gchar *value,
+							gboolean reset_index);
 
 void			li_config_data_new_block (LiConfigData *cdata);
 
 gchar			*li_config_data_get_value (LiConfigData *cdata,
-											const gchar *field);
+							const gchar *field);
 gboolean		li_config_data_set_value (LiConfigData *cdata,
-										const gchar *field,
-										const gchar *value);
+							const gchar *field,
+							const gchar *value);
 
 gchar			*li_config_data_get_data (LiConfigData *cdata);
 gboolean		li_config_data_save_to_file (LiConfigData *cdata,
-											const gchar *filename,
-											GError **error);
+							const gchar *filename,
+							GError **error);
 
 void			li_config_data_reset (LiConfigData *cdata);
 gboolean		li_config_data_next (LiConfigData *cdata);

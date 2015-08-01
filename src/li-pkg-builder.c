@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*-
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
  * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
  *
@@ -658,7 +658,7 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		g_free (arch);
 	}
 
-	/* safe our new control metadata */
+	/* save our new control metadata */
 	ctl_fname = g_build_filename (tmp_dir, "control", NULL);
 	li_pkg_info_save_to_file (ctl, ctl_fname);
 

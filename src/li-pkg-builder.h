@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*-
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
  * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
  *
@@ -78,16 +78,16 @@ struct _LiPkgBuilderClass
 };
 
 GType			li_pkg_builder_get_type	(void);
-LiPkgBuilder	*li_pkg_builder_new		(void);
+LiPkgBuilder		*li_pkg_builder_new	(void);
 
 gboolean		li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder,
-													const gchar *data_dir,
-													const gchar *out_fname,
-													GError **error);
+								const gchar *data_dir,
+								const gchar *out_fname,
+								GError **error);
 
 gboolean		li_pkg_builder_get_sign_package (LiPkgBuilder *builder);
 void			li_pkg_builder_set_sign_package (LiPkgBuilder *builder,
-												gboolean sign);
+							gboolean sign);
 
 G_END_DECLS
 
