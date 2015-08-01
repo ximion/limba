@@ -98,7 +98,7 @@ li_draw_progress_bar (const gchar *title, guint progress)
 	ioctl (0, TIOCGWINSZ, &ws);
 
 	width = ws.ws_col - strlen(title) - 2;
-	bar_width = width - 2 - 5;
+	bar_width = width - 2 - 4;
 
 	/* only continue if we have space to draw the progress bar */
 	if (width <= 0)
@@ -125,7 +125,7 @@ li_draw_progress_bar (const gchar *title, guint progress)
 		perc_space_str = "";
 	}
 
-	g_print ("\r%s [%s%s] %s%i%%", title, bar_fill_str, bar_space_str, perc_space_str, (int) progress);
+	g_print ("%s [%s%s] %s%i%%\r", title, bar_fill_str, bar_space_str, perc_space_str, (int) progress);
 
 	g_free (bar_fill_str);
 	g_free (bar_space_str);

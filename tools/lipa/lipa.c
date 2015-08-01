@@ -23,6 +23,8 @@
 #include <config.h>
 #include <locale.h>
 #include <glib/gi18n-lib.h>
+#include <signal.h>
+#include <stdlib.h>
 #include <limba.h>
 
 #include "li-console-utils.h"
@@ -461,6 +463,21 @@ out:
 	return exit_code;
 }
 
+/*
+ * sigint_handler_cb:
+ *
+ * Handle SIGINT
+ */
+void
+sigint_handler_cb (int sig)
+{
+	/* don't break the progress bar if we suddenly abort */
+	li_abort_progress_bar ();
+
+	/* quit */
+	exit (130);
+}
+
 /**
  * lipa_get_summary:
  **/
@@ -549,6 +566,9 @@ main (int argc, char *argv[])
 		exit_code = 1;
 		goto out;
 	}
+
+	/* handle CTRL+C */
+	signal (SIGINT, sigint_handler_cb);
 
 	command = argv[1];
 	if (argc > 2)
