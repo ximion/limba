@@ -704,3 +704,45 @@ li_parse_dependencies_string (const gchar *depstr)
 
 	return array;
 }
+
+/**
+ * li_env_get_user_fullname:
+ *
+ * Get the user's full name from the environment.
+ *
+ * Returns: User's full name, or %NULL on error. Free with g_free()
+ */
+gchar*
+li_env_get_user_fullname (void)
+{
+	const gchar *var;
+
+	var = g_getenv ("LIMBA_FULLNAME");
+	if (var == NULL)
+		var = g_getenv ("DEBFULLNAME");
+	if (var == NULL)
+		return NULL;
+	else
+		return g_strdup (var);
+}
+
+/**
+ * li_env_get_user_email:
+ *
+ * Get the user's email address from the environment.
+ *
+ * Returns: Email address, or %NULL on error. Free with g_free()
+ */
+gchar*
+li_env_get_user_email (void)
+{
+	const gchar *var;
+
+	var = g_getenv ("LIMBA_EMAIL");
+	if (var == NULL)
+		var = g_getenv ("DEBEMAIL");
+	if (var == NULL)
+		return NULL;
+	else
+		return g_strdup (var);
+}

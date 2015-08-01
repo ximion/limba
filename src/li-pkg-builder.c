@@ -41,6 +41,7 @@
 #include "li-utils-private.h"
 #include "li-package.h"
 #include "li-pkg-index.h"
+#include "li-config-data.h"
 
 typedef struct _LiPkgBuilderPrivate	LiPkgBuilderPrivate;
 struct _LiPkgBuilderPrivate
@@ -365,12 +366,112 @@ li_print_gpgsign_result (gpgme_ctx_t ctx, gpgme_sign_result_t result, gpgme_sig_
 
 		if (gpgme_get_key (ctx, sig->fpr, &key, 0) == 0) {
 			if (key->uids != NULL)
-				g_print(_("Package signed for \"%s\" [0x%s]\n"), key->uids->uid, short_fpr);
+				g_debug ("Signed for \"%s\" [0x%s]", key->uids->uid, short_fpr);
 			gpgme_key_unref (key);
 		} else {
-			g_print(_("Package signed for 0x%s\n"), short_fpr);
+			g_debug ("Package signed for 0x%s", short_fpr);
 		}
 	}
+}
+
+/**
+ * li_pkg_builder_sign_data:
+ *
+ * Returns: Signed text, %NULL on error
+ */
+gpgme_data_t
+li_pkg_builder_sign_data (LiPkgBuilder *builder, const gchar *data, gpgme_sig_mode_t sigmode, GError **error)
+{
+	gpgme_error_t err;
+	gpgme_ctx_t ctx;
+	gpgme_data_t din, dout;
+	gpgme_sign_result_t sig_res;
+	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
+
+	err = gpgme_new (&ctx);
+	if (err != 0) {
+		g_set_error (error,
+			LI_BUILDER_ERROR,
+			LI_BUILDER_ERROR_SIGN,
+			_("Signing of package failed: %s"),
+			gpgme_strsource (err));
+		gpgme_release (ctx);
+		return NULL;
+	}
+
+	gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
+	gpgme_set_armor (ctx, TRUE);
+
+	if (priv->gpg_key != NULL) {
+		gpgme_key_t akey;
+
+		err = gpgme_get_key (ctx, priv->gpg_key, &akey, 1);
+		if (err != 0) {
+			g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Signing of package failed: %s"),
+				gpgme_strsource (err));
+			gpgme_release (ctx);
+			return NULL;
+		}
+
+		err = gpgme_signers_add (ctx, akey);
+		if (err != 0) {
+			g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Signing of package failed: %s"),
+				gpgme_strsource (err));
+			gpgme_release (ctx);
+			return NULL;
+		}
+
+		gpgme_key_unref (akey);
+	}
+
+	err = gpgme_data_new_from_mem (&din, data, strlen (data), 0);
+	if (err != 0) {
+		g_set_error (error,
+			LI_BUILDER_ERROR,
+			LI_BUILDER_ERROR_SIGN,
+			_("Signing of package failed: %s"),
+			gpgme_strsource (err));
+		gpgme_data_release (din);
+		gpgme_release (ctx);
+		return NULL;
+	}
+
+	err = gpgme_data_new (&dout);
+	if (err != 0) {
+		g_set_error (error,
+			LI_BUILDER_ERROR,
+			LI_BUILDER_ERROR_SIGN,
+			_("Signing of package failed: %s"),
+			gpgme_strsource (err));
+		gpgme_data_release (din);
+		gpgme_release (ctx);
+		return NULL;
+	}
+
+	err = gpgme_op_sign (ctx, din, dout, sigmode);
+	sig_res = gpgme_op_sign_result (ctx);
+	if (sig_res)
+		li_print_gpgsign_result (ctx, sig_res, sigmode);
+
+	gpgme_data_release (din);
+	gpgme_release (ctx);
+
+	if (err != 0) {
+		g_set_error (error,
+			LI_BUILDER_ERROR,
+			LI_BUILDER_ERROR_SIGN,
+			_("Signing of package failed: %s"),
+			gpgme_strsource (err));
+		return NULL;
+	}
+
+	return dout;
 }
 
 /**
@@ -382,18 +483,14 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 	guint i;
 	GString *index_str;
 	_cleanup_free_ gchar *indexdata = NULL;
-	gpgme_error_t err;
-	gpgme_ctx_t ctx;
-	gpgme_sig_mode_t sigmode = GPGME_SIG_MODE_NORMAL;
-	gpgme_data_t din, dout;
-	gpgme_sign_result_t sig_res;
+	gpgme_data_t sigdata;
 
 	#define BUF_SIZE 512
 	gchar *sig_fname;
 	char buf[BUF_SIZE + 1];
 	FILE *file;
-	int ret;
-	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
+	gint ret;
+	GError *tmp_error = NULL;
 
 	index_str = g_string_new ("");
 	for (i = 0; i < sign_files->len; i++) {
@@ -424,101 +521,124 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 	}
 	indexdata = g_string_free (index_str, FALSE);
 
-	err = gpgme_new (&ctx);
-	if (err != 0) {
-		g_set_error (error,
-				LI_BUILDER_ERROR,
-				LI_BUILDER_ERROR_SIGN,
-				_("Signing of package failed: %s"),
-				gpgme_strsource (err));
+	sigdata = li_pkg_builder_sign_data (builder, indexdata, GPGME_SIG_MODE_NORMAL, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
 		return NULL;
 	}
-
-	gpgme_set_protocol (ctx, LI_GPG_PROTOCOL);
-	gpgme_set_armor (ctx, TRUE);
-
-	if (priv->gpg_key != NULL) {
-		gpgme_key_t akey;
-
-		err = gpgme_get_key (ctx, priv->gpg_key, &akey, 1);
-		if (err != 0) {
-			g_set_error (error,
-					LI_BUILDER_ERROR,
-					LI_BUILDER_ERROR_SIGN,
-					_("Signing of package failed: %s"),
-					gpgme_strsource (err));
-			return NULL;
-		}
-
-		err = gpgme_signers_add (ctx, akey);
-		if (err != 0) {
-			g_set_error (error,
-					LI_BUILDER_ERROR,
-					LI_BUILDER_ERROR_SIGN,
-					_("Signing of package failed: %s"),
-					gpgme_strsource (err));
-			return NULL;
-		}
-
-		gpgme_key_unref (akey);
-	}
-
-	err = gpgme_data_new_from_mem (&din, indexdata, strlen (indexdata), 0);
-	if (err != 0) {
-		g_set_error (error,
-				LI_BUILDER_ERROR,
-				LI_BUILDER_ERROR_SIGN,
-				_("Signing of package failed: %s"),
-				gpgme_strsource (err));
-		return NULL;
-	}
-
-	err = gpgme_data_new (&dout);
-	if (err != 0) {
-		g_set_error (error,
-				LI_BUILDER_ERROR,
-				LI_BUILDER_ERROR_SIGN,
-				_("Signing of package failed: %s"),
-				gpgme_strsource (err));
-		return NULL;
-	}
-
-	err = gpgme_op_sign (ctx, din, dout, sigmode);
-	sig_res = gpgme_op_sign_result (ctx);
-	if (sig_res)
-		li_print_gpgsign_result (ctx, sig_res, sigmode);
-
-	if (err != 0) {
-		g_set_error (error,
-				LI_BUILDER_ERROR,
-				LI_BUILDER_ERROR_SIGN,
-				_("Signing of package failed: %s"),
-				gpgme_strsource (err));
-		return NULL;
-	}
+	g_print ("%s\n", _("Packages signed."));
 
 	sig_fname = g_build_filename (tmp_dir, "_signature", NULL);
 	file = fopen (sig_fname, "w");
 	if (file == NULL) {
 		g_set_error (error,
-				LI_BUILDER_ERROR,
-				LI_BUILDER_ERROR_SIGN,
-				_("Unable to write signature: %s"),
-				g_strerror (errno));
+			LI_BUILDER_ERROR,
+			LI_BUILDER_ERROR_SIGN,
+			_("Unable to write signature: %s"),
+			g_strerror (errno));
 		g_free (sig_fname);
+		gpgme_data_release (sigdata);
 		return NULL;
 	}
 
-	gpgme_data_seek (dout, 0, SEEK_SET);
-	while ((ret = gpgme_data_read (dout, buf, BUF_SIZE)) > 0)
+	gpgme_data_seek (sigdata, 0, SEEK_SET);
+	while ((ret = gpgme_data_read (sigdata, buf, BUF_SIZE)) > 0)
 		fwrite (buf, ret, 1, file);
 	fclose (file);
 
-	gpgme_data_release (dout);
-	gpgme_data_release (din);
-	gpgme_release (ctx);
+	gpgme_data_release (sigdata);
 
 	return sig_fname;
+}
+
+/**
+ * li_pkg_builder_write_dsc_file:
+ *
+ * The .dsc description is meant to be used to upload one or more packages
+ * to a remote repository.
+ * This function generates a basic .dsc file for the new package.
+ */
+void
+li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, LiPkgInfo *ctl, GError **error)
+{
+	_cleanup_object_unref_ LiConfigData *cdata = NULL;
+	_cleanup_free_ gchar *fname = NULL;
+	_cleanup_free_ gchar *email = NULL;
+	_cleanup_free_ gchar *username = NULL;
+	gchar *tmp;
+	gchar *tmp2;
+	gchar *tmp3;
+
+	gpgme_data_t sigdata;
+	#define BUF_SIZE 512
+	char buf[BUF_SIZE + 1];
+	FILE *file;
+	gint ret;
+	GError *tmp_error = NULL;
+
+	cdata = li_config_data_new ();
+
+	/* set basic information */
+	li_config_data_set_value (cdata, "Limba-Version", VERSION);
+
+	tmp2 = g_path_get_basename (pkg_fname);
+	tmp3 = li_compute_checksum_for_file (pkg_fname);
+	tmp = g_strdup_printf ("%s %s", tmp3, tmp2);
+	g_free (tmp2);
+	g_free (tmp3);
+	li_config_data_set_value (cdata, "Files", tmp);
+	g_free (tmp);
+	tmp = NULL;
+
+	/* set uploader field */
+	email = li_env_get_user_email ();
+	username = li_env_get_user_fullname ();
+
+	if (username == NULL) {
+		if (email != NULL)
+			tmp = g_strdup (email);
+	} else {
+		if (email != NULL)
+			tmp = g_strdup_printf ("%s <%s>", username, email);
+	}
+	if (tmp != NULL) {
+		li_config_data_set_value (cdata, "Uploader", tmp);
+		g_free (tmp);
+	}
+
+	/* set target repository */
+	li_config_data_set_value (cdata, "Target",
+				  li_pkg_info_get_repository (ctl));
+
+	tmp = li_config_data_get_data (cdata);
+	sigdata = li_pkg_builder_sign_data (builder, tmp, GPGME_SIG_MODE_CLEAR, &tmp_error);
+	g_free (tmp);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+	g_print ("%s\n", _("DSC file signed."));
+
+	fname = g_strdup_printf ("%s.dsc", pkg_fname);
+	tmp = li_config_data_get_data (cdata);
+
+	file = fopen (fname, "w");
+	if (file == NULL) {
+		g_set_error (error,
+			LI_BUILDER_ERROR,
+			LI_BUILDER_ERROR_SIGN,
+			_("Unable to write signature on dsc file: %s"),
+			g_strerror (errno));
+		gpgme_data_release (sigdata);
+		return;
+	}
+
+	gpgme_data_seek (sigdata, 0, SEEK_SET);
+	while ((ret = gpgme_data_read (sigdata, buf, BUF_SIZE)) > 0)
+		fwrite (buf, ret, 1, file);
+	fclose (file);
+
+	gpgme_data_release (sigdata);
 }
 
 /**
@@ -692,6 +812,13 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 
 	/* cleanup temporary dir */
 	li_delete_dir_recursive (tmp_dir);
+
+	/* write dsc file */
+	li_pkg_builder_write_dsc_file (builder, pkg_fname, ctl, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
 
 	return TRUE;
 }

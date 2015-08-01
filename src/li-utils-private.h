@@ -93,18 +93,18 @@ GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
 gboolean		li_str_empty (const gchar* str);
 gchar**			li_ptr_array_to_strv (GPtrArray *array);
 gchar			*li_str_replace (const gchar* str,
-								const gchar* old_str,
-								const gchar* new_str);
+					const gchar* old_str,
+					const gchar* new_str);
 
 gboolean		li_copy_file (const gchar *source,
-								const gchar *destination,
-								GError **error);
+					const gchar *destination,
+					GError **error);
 gboolean		li_delete_dir_recursive (const gchar* dirname);
 GPtrArray		*li_utils_find_files_matching (const gchar* dir,
-												const gchar* pattern,
-												gboolean recursive);
+							const gchar* pattern,
+							gboolean recursive);
 GPtrArray		*li_utils_find_files (const gchar* dir,
-									gboolean recursive);
+						gboolean recursive);
 gchar			*li_utils_get_tmp_dir (const gchar *prefix);
 
 gboolean		li_utils_is_root (void);
@@ -112,6 +112,9 @@ gboolean		li_utils_is_root (void);
 gchar			*li_compute_checksum_for_file (const gchar *fname);
 gchar			*li_get_uuid_string (void);
 const gchar		*li_get_last_version_from_component (AsComponent *cpt);
+
+gchar			*li_env_get_user_fullname (void);
+gchar			*li_env_get_user_email (void);
 
 G_END_DECLS
 
