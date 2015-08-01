@@ -34,6 +34,7 @@
 #include <glib/gi18n-lib.h>
 #include <stdlib.h>
 #include <locale.h>
+#include <errno.h>
 #include <gpgme.h>
 
 #include "li-utils-private.h"
@@ -129,20 +130,33 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 
 	if ((tmpdir) || (li_utils_is_root () && (!g_file_test (home, G_FILE_TEST_IS_DIR))))  {
 		gchar *gpgconf_fname;
+		_cleanup_free_ gchar *gpg_conf = NULL;
 		/* Yes, this is as stupid as it looks... */
-		const gchar *gpg_conf = "# Options for GnuPG used by Limba \n\n"
-			"no-greeting\n"
-			"no-permission-warning\n"
-			"no-default-keyring\n"
-			"preserve-permissions\n"
-			"lock-never\n"
-			"trust-model direct\n"
-			"no-expensive-trust-checks\n\n"
-			"keyserver-options timeout=24\n"
-			"keyserver-options auto-key-retrieve\n\n"
-			"keyserver hkp://pool.sks-keyservers.net\n"
-			"#keyserver hkp://keys.gnupg.net\n"
-			"#keyserver hkp://keyring.debian.org\n";
+		if (kind == LI_KEYRING_KIND_NONE) {
+			/* allow fetching keys when using a temporary keyring */
+			gpg_conf = g_strdup ("# Options for GnuPG used by Limba \n\n"
+				"no-greeting\n"
+				"no-permission-warning\n"
+				"no-default-keyring\n"
+				"preserve-permissions\n"
+				"lock-never\n"
+				"no-expensive-trust-checks\n\n"
+				"keyserver-options timeout=24\n"
+				"keyserver-options auto-key-retrieve\n\n"
+				"keyserver hkp://pool.sks-keyservers.net\n"
+				"#keyserver hkp://keys.gnupg.net\n"
+				"#keyserver hkp://keyring.debian.org\n");
+		} else {
+			/* We don't want any keyserver configured for system keyrings */
+			gpg_conf = g_strdup ("# Options for GnuPG used by Limba \n\n"
+				"no-greeting\n"
+				"no-permission-warning\n"
+				"no-default-keyring\n"
+				"preserve-permissions\n"
+				"lock-never\n"
+				"trust-model direct\n"
+				"no-expensive-trust-checks\n\n");
+		}
 		g_mkdir_with_parents (home, 0755);
 
 		gpgconf_fname = g_build_filename (home, "gpg.conf", NULL);
@@ -194,10 +208,10 @@ li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, gboolean remote, GErro
 	err = gpgme_set_keylist_mode (ctx, mode);
 	if (err != 0) {
 		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_LOOKUP,
-				_("Key lookup failed: %s"),
-				gpgme_strerror (err));
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_LOOKUP,
+			_("Key lookup failed: %s"),
+			gpgme_strerror (err));
 		return NULL;
 	}
 
@@ -206,12 +220,13 @@ li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, gboolean remote, GErro
 		/* we couldn't find the key */
 		return NULL;
 	}
+
 	if (err != 0) {
 		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_LOOKUP,
-				_("Key lookup failed: %s"),
-				gpgme_strerror (err));
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_LOOKUP,
+			_("Key lookup failed: %s"),
+			gpgme_strerror (err));
 		return NULL;
 	}
 
@@ -230,34 +245,43 @@ li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, gboolean remote, GErro
 gboolean
 li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GError **error)
 {
-	gpgme_ctx_t ctx;
+	gpgme_ctx_t ctx_target;
+	gpgme_ctx_t ctx_tmp;
 	gpgme_key_t key;
 	gpgme_error_t err;
 	gpgme_key_t keys[2];
+	gpgme_data_t key_data = NULL;
 	gpgme_import_result_t ires;
 	gchar *cmd;
 	gpgme_engine_info_t engine;
 	GError *tmp_error = NULL;
 
-	ctx = li_keyring_get_context (kr, kind);
+	ctx_target = li_keyring_get_context (kr, kind);
+	ctx_tmp = li_keyring_get_context (kr, LI_KEYRING_KIND_NONE);
 
 	/* check if we already have that key */
-	key = li_keyring_lookup_key (ctx, fpr, FALSE, &tmp_error);
+	key = li_keyring_lookup_key (ctx_target, fpr, FALSE, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
+		gpgme_release (ctx_tmp);
+		gpgme_release (ctx_target);
 		return FALSE;
 	}
 	if (key != NULL) {
-		/* we already have that key! */
+		/* we already trust the key! */
 		g_debug ("Key '%s' is already in the keyring.", fpr);
 		gpgme_key_unref (key);
-		gpgme_release (ctx);
+		gpgme_release (ctx_tmp);
+		gpgme_release (ctx_target);
 		return TRUE;
 	}
 
-	key = li_keyring_lookup_key (ctx, fpr, TRUE, &tmp_error);
+	/* fetch key from remote */
+	key = li_keyring_lookup_key (ctx_tmp, fpr, TRUE, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
+		gpgme_release (ctx_tmp);
+		gpgme_release (ctx_target);
 		return FALSE;
 	}
 	if (key == NULL) {
@@ -265,60 +289,101 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 			LI_KEYRING_ERROR,
 			LI_KEYRING_ERROR_KEY_UNKNOWN,
 			_("Key lookup failed, could not find remote key."));
-		gpgme_release (ctx);
+		gpgme_release (ctx_tmp);
+		gpgme_release (ctx_target);
 		return FALSE;
 	}
 
 	keys[0] = key;
 	keys[1] = NULL;
 
-	err = gpgme_op_import_keys (ctx, keys);
+	/* add key to temporary keyring */
+	err = gpgme_op_import_keys (ctx_tmp, keys);
 	if (err != 0) {
 		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_IMPORT,
-				_("Importing of key failed: %s"),
-				gpgme_strerror (err));
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_IMPORT,
+			_("Key import failed: %s"),
+			gpgme_strerror (err));
 		gpgme_key_unref (key);
-		gpgme_release (ctx);
+		gpgme_release (ctx_tmp);
+		gpgme_release (ctx_target);
 		return FALSE;
 	}
 
-	ires = gpgme_op_import_result (ctx);
-	if (!ires) {
-		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_IMPORT,
-				_("Importing of key failed: %s"),
-				_("No import result returned."));
-		gpgme_key_unref (key);
-		gpgme_release (ctx);
-		return FALSE;
-	}
-
-	/* FIXME: The key import always fails at time, for unknown reason... We add a workaround here,
-	 * which should be removed as soon as GPGMe is working for us (_VERY_ soon!) */
-	engine = gpgme_ctx_get_engine_info (ctx);
-	cmd = g_strdup_printf ("gpg --batch --homedir=%s --recv-key %s", engine->home_dir, fpr);
+	/* FIXME: The key import above currently always fails, for unknown reason... We add a workaround here,
+	 * which should be removed as soon as GPGMe is working for us (bug report has been filed). */
+	engine = gpgme_ctx_get_engine_info (ctx_tmp);
+	cmd = g_strdup_printf ("gpg2 --batch --no-tty --lc-ctype=C --homedir=%s --recv-key %s", engine->home_dir, fpr);
 	system (cmd);
 	g_free (cmd);
 
-#if 0
+	err = gpgme_data_new (&key_data);
+	if (err != 0) {
+		g_set_error (error,
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_IMPORT,
+			_("Key import failed: %s"),
+			gpgme_strerror (err));
+		gpgme_key_unref (key);
+		gpgme_release (ctx_tmp);
+		gpgme_release (ctx_target);
+		return FALSE;
+	}
+
+	err = gpgme_op_export_keys (ctx_tmp, keys, 0, key_data);
+	gpgme_release (ctx_tmp);
+	if (err != 0) {
+		g_set_error (error,
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_IMPORT,
+			_("Key export failed: %s"),
+			gpgme_strerror (err));
+		gpgme_key_unref (key);
+		gpgme_release (ctx_target);
+		gpgme_data_release (key_data);
+		return FALSE;
+	}
+	gpgme_key_unref (key);
+
+	/* rewind manually, GPGMe doesn't do that for us */
+	gpgme_data_seek (key_data, 0, SEEK_SET);
+
+	err = gpgme_op_import (ctx_target, key_data);
+	gpgme_data_release (key_data);
+	if (err != 0) {
+		g_set_error (error,
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_IMPORT,
+			_("Importing of key failed: %s"),
+			gpgme_strerror (err));
+		gpgme_release (ctx_target);
+		return FALSE;
+	}
+
+	ires = gpgme_op_import_result (ctx_target);
+	if (!ires) {
+		g_set_error (error,
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_IMPORT,
+			_("Importing of key failed: %s"),
+			_("No import result returned."));
+		gpgme_release (ctx_target);
+		return FALSE;
+	}
+
 	/* we tried to import one key, so one key should have been accepted */
 	if (ires->considered != 1 || !ires->imports) {
 		g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_IMPORT,
-				_("Importing of key failed: %s"),
-				_("Zero results returned."));
-		gpgme_key_unref (key);
-		gpgme_release (ctx);
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_IMPORT,
+			_("Importing of key failed: %s"),
+			_("Zero results returned."));
+		gpgme_release (ctx_target);
 		return FALSE;
 	}
-#endif
 
-	gpgme_key_unref (key);
-	gpgme_release (ctx);
+	gpgme_release (ctx_target);
 
 	return TRUE;
 }
