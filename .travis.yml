@@ -9,10 +9,10 @@ compiler:
 
 before_install:
   - sudo add-apt-repository "deb mirror://mirrors.ubuntu.com/US.txt utopic main restricted universe multiverse" -y
-  - sudo add-apt-repository ppa:ximion/packagekit -y
   - sudo apt-get update -qq
 
 install:
+  - sudo rm -f /etc/dpkg/dpkg.cfg.d/multiarch
   - sudo apt-get install -qq base-files software-properties-common build-essential zlib1g # workarounds for upgrade issues
   # GCC 4.9
   - if [ "$CC" = "gcc" ]; then sudo apt-get install -qq gcc g++; fi
