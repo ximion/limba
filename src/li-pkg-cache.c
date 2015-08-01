@@ -304,7 +304,6 @@ li_pkg_cache_extract_icon_tarball (LiPkgCache *cache, const gchar *tarball_fname
 	struct archive *ar;
 	struct archive_entry* e;
 	gint res;
-	_cleanup_free_ gchar *icon_dest_name = NULL;
 
 	/* open the archive */
 	ar = archive_read_new ();
