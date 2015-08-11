@@ -1042,7 +1042,7 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 
 		apki = g_hash_table_lookup (apkgs, li_pkg_info_get_name (ipki));
 		/* check if we actually have a package available */
-		if (ipki == NULL)
+		if (apki == NULL)
 			continue;
 
 		if (li_compare_versions (li_pkg_info_get_version (apki), li_pkg_info_get_version (ipki)) > 0) {
