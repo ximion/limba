@@ -262,7 +262,7 @@ pkgen_make_template (const gchar *dir)
 "Please edit the files in that directory, e.g. add a long description to your\n" \
 "application and specify its run-time dependencies.\n" \
 "When you are done with this, build your software with --prefix=%s\n" \
-"and install it into the inst_target subdirectory of your 'lipkg' directory.\n" \
+"and install it into the 'target' subdirectory of your 'lipkg' directory.\n" \
 "Then run 'lipkgen build lipkg/' to create your package. \n" \
 "If you want to embed dependencies, place their IPK packages in the 'repo/'\n" \
 "subdirectory of 'lipkg/'"), res_dir, LI_SW_ROOT_PREFIX);

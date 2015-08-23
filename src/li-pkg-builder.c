@@ -680,12 +680,12 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		return FALSE;
 	}
 
-	payload_root = g_build_filename (dir, "inst_target", NULL);
+	payload_root = g_build_filename (dir, "target", NULL);
 	if (!g_file_test (payload_root, G_FILE_TEST_IS_DIR)) {
 		g_set_error (error,
 				LI_BUILDER_ERROR,
 				LI_BUILDER_ERROR_NOT_FOUND,
-				_("Could not find payload data in the 'inst_target' subdirectory."));
+				_("Could not find payload data in the 'target' subdirectory."));
 		return FALSE;
 	}
 

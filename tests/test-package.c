@@ -39,9 +39,9 @@ test_compile_foobar ()
 	/* TODO: This is duty for the appcompile helper... */
 
 	dirname = g_build_filename (datadir, "..", "foobar", NULL);
-	inst_dir_all = g_build_filename (dirname, "lipkg", "inst_target", NULL);
-	inst_dir_app = g_build_filename (dirname, "foo", "lipkg", "inst_target", NULL);
-	inst_dir_lib = g_build_filename (dirname, "libfoo", "lipkg", "inst_target", NULL);
+	inst_dir_all = g_build_filename (dirname, "lipkg", "target", NULL);
+	inst_dir_app = g_build_filename (dirname, "foo", "lipkg", "target", NULL);
+	inst_dir_lib = g_build_filename (dirname, "libfoo", "lipkg", "target", NULL);
 	chdir (dirname);
 
 	if (g_file_test ("Makefile", G_FILE_TEST_EXISTS))
