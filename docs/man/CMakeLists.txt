@@ -7,7 +7,7 @@ set(manpages "runapp.1"
 	"lipkgen.1"
 )
 
-if(LIBUILD)
+if(LICOMPILE)
 	set(manpages ${manpages}
 		"ligcc.1"
 		"lig++.1"

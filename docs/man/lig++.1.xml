@@ -61,7 +61,7 @@
 
 	<refsect1>
 		<title>See Also</title>
-		<para>libuild (1), ligcc(1), gcc(1).</para>
+		<para>ligcc(1), gcc(1).</para>
 		<para>
 			Additional documentation can be found on http://people.freedesktop.org/~mak/limba.
 		</para>

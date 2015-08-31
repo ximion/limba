@@ -8,16 +8,16 @@ use strict;
 use FindBin qw($RealBin);
 use File::Spec;
 use lib $RealBin;
-use lib "$RealBin/../share/libuild";
+use lib "$RealBin/../share/licompile";
 use IPC::Open2;
 use POSIX;
 use Cwd;
 
-use LiBuild::GCC;
-use LiBuild::Utils;
+use LiCompile::GCC;
+use LiCompile::Utils;
 
 # Don't forget to bump the version in Makefile too.
-our $LIBUILD_VERSION = "2.1.0";
+our $LICOMPILE_VERSION = "2.1.0";
 
 
 ######## Initialization ########
@@ -31,61 +31,61 @@ our $LIBUILD_VERSION = "2.1.0";
 #   $gxx2 is g++ 3.4, and it might not be set.
 #   Double compiling is only enabled if both are set.
 #
-# Note that $LIBUILD_CXX_MODE is an internal environment variable
+# Note that $LICOMPILE_CXX_MODE is an internal environment variable
 # which should not be set by the user.
 our ($gcc, $gxx2);
 
-if ($ENV{LIBUILD_CXX_MODE}) {
+if ($ENV{LICOMPILE_CXX_MODE}) {
 	# C++ support; user can:
-	# - Not set LIBUILD_CXX1/2 at all -> use g++ as default, and don't double compile C++ sources.
-	# - Set LIBUILD_CXX1 and LIBUILD_CXX2 -> enable double compiling.
-	# - Set only LIBUILD_CXX1 -> don't double compile.
-	# - Set only LIBUILD_CXX2 -> use 'g++' as default for LIBUILD_CXX1, and enable double compiling.
+	# - Not set LICOMPILE_CXX1/2 at all -> use g++ as default, and don't double compile C++ sources.
+	# - Set LICOMPILE_CXX1 and LICOMPILE_CXX2 -> enable double compiling.
+	# - Set only LICOMPILE_CXX1 -> don't double compile.
+	# - Set only LICOMPILE_CXX2 -> use 'g++' as default for LICOMPILE_CXX1, and enable double compiling.
 
-	if (empty($ENV{LIBUILD_CXX1}) && empty($ENV{LIBUILD_CXX2})) {
-		$gcc = new LiBuild::GCC('g++');
+	if (empty($ENV{LICOMPILE_CXX1}) && empty($ENV{LICOMPILE_CXX2})) {
+		$gcc = new LiCompile::GCC('g++');
 
-	} elsif (!empty($ENV{LIBUILD_CXX1}) && !empty($ENV{LIBUILD_CXX2})) {
-		$gcc = new LiBuild::GCC($ENV{LIBUILD_CXX1});
-		$gxx2 = new LiBuild::GCC($ENV{LIBUILD_CXX2});
+	} elsif (!empty($ENV{LICOMPILE_CXX1}) && !empty($ENV{LICOMPILE_CXX2})) {
+		$gcc = new LiCompile::GCC($ENV{LICOMPILE_CXX1});
+		$gxx2 = new LiCompile::GCC($ENV{LICOMPILE_CXX2});
 
-	} elsif (!empty($ENV{LIBUILD_CXX1})) {
-		$gcc = new LiBuild::GCC($ENV{LIBUILD_CXX1});
+	} elsif (!empty($ENV{LICOMPILE_CXX1})) {
+		$gcc = new LiCompile::GCC($ENV{LICOMPILE_CXX1});
 
-	} elsif (!empty($ENV{LIBUILD_CXX2})) {
-		$gcc = new LiBuild::GCC('g++');
-		$gxx2 = new LiBuild::GCC($ENV{LIBUILD_CXX2});
+	} elsif (!empty($ENV{LICOMPILE_CXX2})) {
+		$gcc = new LiCompile::GCC('g++');
+		$gxx2 = new LiCompile::GCC($ENV{LICOMPILE_CXX2});
 	}
 
 } else {
 	my $gcc_command = 'gcc';
-	$gcc_command = $ENV{LIBUILD_CC} if (!empty($ENV{LIBUILD_CC}));
-	$gcc = new LiBuild::GCC($gcc_command);
+	$gcc_command = $ENV{LICOMPILE_CC} if (!empty($ENV{LICOMPILE_CC}));
+	$gcc = new LiCompile::GCC($gcc_command);
 }
 
 
 our $appath;
-our $libgcc = $ENV{LIBUILD_STATIC_LIBGCC} ? '-static-libgcc' : '-shared-libgcc';
+our $libgcc = $ENV{LICOMPILE_STATIC_LIBGCC} ? '-static-libgcc' : '-shared-libgcc';
 
 # Find out where ligcc is located and determine the buildlist executable
 # path relative to the ligcc script location.
-$appath = $ENV{LIBUILD_PATH} if (!empty($ENV{LIBUILD_PATH}));
+$appath = $ENV{LICOMPILE_PATH} if (!empty($ENV{LICOMPILE_PATH}));
 if (!defined $appath) {
 	$appath = $FindBin::Bin;
 	$appath =~ s/\/*$//g;
 	$appath =~ s/^(.*)\/.*?$/$1/;
-	$appath .= '/lib/libuild';
+	$appath .= '/lib/licompile';
 	if (! -f "$appath/buildlist" && -f "$FindBin::Bin/buildlist") {
 		$appath = $FindBin::Bin;
 	}
 }
 
 # Build the apsymbols.h header file
-my $headerPath = "$ENV{HOME}/.config/libuild";
+my $headerPath = "$ENV{HOME}/.config/licompile";
 run('mkdir', '-p', $headerPath);
 my $minimumGlibc = "2.7.0";
-if (!empty($ENV{LIBUILD_MINIMUM_GLIBC})) {
-	$minimumGlibc = $ENV{LIBUILD_MINIMUM_GLIBC};
+if (!empty($ENV{LICOMPILE_MINIMUM_GLIBC})) {
+	$minimumGlibc = $ENV{LICOMPILE_MINIMUM_GLIBC};
 }
 if (run("$appath/buildlist", $headerPath, $minimumGlibc) != 0) {
 	exit 1;
@@ -93,17 +93,17 @@ if (run("$appath/buildlist", $headerPath, $minimumGlibc) != 0) {
 
 # Special constants
 our @linking = ('-Wl,--enable-new-dtags,--rpath,${ORIGIN}/../lib');
-our @include = ("-I$appath", '-include', "$headerPath/apsymbols.h", "-DLIBUILD_VERSION=\"$LIBUILD_VERSION\"");
-our $extraTypes = $LiBuild::GCC::extraTypes;
-our $srcTypes = $LiBuild::GCC::srcTypes;
+our @include = ("-I$appath", '-include', "$headerPath/apsymbols.h", "-DLICOMPILE_VERSION=\"$LICOMPILE_VERSION\"");
+our $extraTypes = $LiCompile::GCC::extraTypes;
+our $srcTypes = $LiCompile::GCC::srcTypes;
 
 
-@linking = () if ($ENV{LIBUILD_NO_RPATH});
-if (!empty($ENV{LIBUILD_INCLUDE})) {
-	foreach my $dir (split /:+/, $ENV{LIBUILD_INCLUDE}) {
+@linking = () if ($ENV{LICOMPILE_NO_RPATH});
+if (!empty($ENV{LICOMPILE_INCLUDE})) {
+	foreach my $dir (split /:+/, $ENV{LICOMPILE_INCLUDE}) {
 		if ($dir =~ /=/) {
 			# allow people to force changing a path with oldpath=newpath, e.g.,:
-			# $echo $LIBUILD_INCLUDE
+			# $echo $LICOMPILE_INCLUDE
 			# /opt/kde/include=/home/taj/kde-headers/kde-3.3.2/kde/include
 			# would change -I/opt/kde/include to my KDE 3.3 headers.
 			# this works around problems where the order of the include
@@ -124,7 +124,7 @@ if (!empty($ENV{LIBUILD_INCLUDE})) {
 	}
 }
 
-# Include the libuild include folder, and all folders inside that folder.
+# Include the licompile include folder, and all folders inside that folder.
 if (opendir D, $appath) {
 	foreach my $dir (readdir D) {
 		if ($dir !~ /^\./ && -d "$appath/$dir") {
@@ -134,8 +134,8 @@ if (opendir D, $appath) {
 	closedir D;
 }
 
-if (!empty($ENV{LIBUILD_PROJECTNAME})) {
-	push @linking, '-Wl,--rpath,${ORIGIN}/../lib/' . $ENV{LIBUILD_PROJECTNAME};
+if (!empty($ENV{LICOMPILE_PROJECTNAME})) {
+	push @linking, '-Wl,--rpath,${ORIGIN}/../lib/' . $ENV{LICOMPILE_PROJECTNAME};
 }
 
 
@@ -161,7 +161,7 @@ if ($capabilities{stack_protector}) {
 
 if ($capabilities{fortify_source}) {
 	# Some distros (e.g. Ubuntu 8.10) activate a bufferoverflow protection
-	# which is only available since glibc 2.3.4. LiBuild removes all symbols
+	# which is only available since glibc 2.3.4. LiCompile removes all symbols
 	# newer then 2.3, so this can't be used.
 	push @include, "-U_FORTIFY_SOURCE";
 }
@@ -174,7 +174,7 @@ push @linking, $libgcc if ($capabilities{libgcc});
 ############# Detect compilation situation #############
 
 our $situation = $gcc->situation(\@ARGV);
-if ($ENV{LIBUILD_CXX_MODE}) {
+if ($ENV{LICOMPILE_CXX_MODE}) {
 	debug "apg++ @ARGV\n";
 } else {
 	debug "ligcc @ARGV\n";
@@ -356,31 +356,31 @@ if ($situation eq 'compile') {
 } else {
 	my $ret = run($gcc->command, @ARGV);
 	if (defined $ARGV[0] && $ARGV[0] eq '--help') {
-		print	"\nlibuild environment variables:\n";
-		print	"  LIBUILD_PATH=path         Specifies the include path for LI-XBuild\n" .
-			"                            (like: /usr/local/include/libuild)\n" .
-			"  LIBUILD_DEBUG=1           Enable debugging messages\n" .
-			"  LIBUILD_BOGUS_DEPS=deps   Specify a list of whitespace-seperated bogus\n" .
+		print	"\nlicompile environment variables:\n";
+		print	"  LICOMPILE_PATH=path         Specifies the include path for LI-XBuild\n" .
+			"                            (like: /usr/local/include/licompile)\n" .
+			"  LICOMPILE_DEBUG=1           Enable debugging messages\n" .
+			"  LICOMPILE_BOGUS_DEPS=deps   Specify a list of whitespace-seperated bogus\n" .
 			"                            library dependancies (like: X11 ICE png). These\n" .
 			"                            libraries will not be linked.\n" .
-			"  LIBUILD_STATIC=deps       Specify a list of whitespace-seperated libraries\n" .
+			"  LICOMPILE_STATIC=deps       Specify a list of whitespace-seperated libraries\n" .
 			"                            to statically link to (like: popt z). You can also\n" .
 			"                            explicitly specify a filename to the static library.\n" .
 			"                            Example: popt=/usr/lib/libpopt.a\n" .
-			"  LIBUILD_STATIC_X=1        Force static linking of some X extension libraries\n" .
+			"  LICOMPILE_STATIC_X=1        Force static linking of some X extension libraries\n" .
 			"                            Don't use this unless you know what you're doing.\n" .
-			"  LIBUILD_DISABLE_BOGUS_DETECTOR=1   Disable the automatic bogus dependancy\n" .
+			"  LICOMPILE_DISABLE_BOGUS_DETECTOR=1   Disable the automatic bogus dependancy\n" .
 			"                            detector. This is useful when linking to libraries\n" .
 			"                            don't have correct DT_NEEDED entries, like GTK 1.2.\n" .
-			"  LIBUILD_NOT_BOGUS=deps    If you want to use the automatic bogus dependancy\n" .
+			"  LICOMPILE_NOT_BOGUS=deps    If you want to use the automatic bogus dependancy\n" .
 			"                            dectector anyway, then you can specify a list of\n" .
 			"                            dependancies here that are not bogus.\n" .
-			"  LIBUILD_STATIC_LIBGCC=1   Link all binaries with -static-libgcc. See the gcc\n" .
+			"  LICOMPILE_STATIC_LIBGCC=1   Link all binaries with -static-libgcc. See the gcc\n" .
 			"                            info page for more info about this option.\n" .
-			"  LIBUILD_PROJECTNAME       If non-empty, libuild will add\n" .
-			"                            \$ORIGIN/../lib/\$LIBUILD_PROJECTNAME to the library\n" .
+			"  LICOMPILE_PROJECTNAME       If non-empty, LiCompile will add\n" .
+			"                            \$ORIGIN/../lib/\$LICOMPILE_PROJECTNAME to the library\n" .
 			"                            search path.\n" .
-			"  LIBUILD_INCLUDE           Prepend the specified directory to the compiler's\n" .
+			"  LICOMPILE_INCLUDE           Prepend the specified directory to the compiler's\n" .
 			"                            header search path. The compiler will search this\n" .
 			"                            directory first, before searching any other\n" .
 			"                            directory. This is useful in combination with the\n" .
@@ -388,17 +388,17 @@ if ($situation eq 'compile') {
 			"                            You can specify multiple directories,\n" .
 			"                            seperated by a ':', just like the \$PATH environment\n" .
 			"                            variable.\n" .
-			"  LIBUILD_NO_RPATH          Do not add rpath entries during linking.\n" .
-			"  LIBUILD_CC                Use the specified C compiler. Default value: gcc\n" .
-			"  LIBUILD_CXX1,LIBUILD_CXX2 Use the specified C++ compiler. Default value: g++\n" .
+			"  LICOMPILE_NO_RPATH          Do not add rpath entries during linking.\n" .
+			"  LICOMPILE_CC                Use the specified C compiler. Default value: gcc\n" .
+			"  LICOMPILE_CXX1,LICOMPILE_CXX2 Use the specified C++ compiler. Default value: g++\n" .
 			"                            Set both variables to enable double compiling. The\n" .
 			"                            first should be set to the g++ 3.2 compiler and the\n" .
 			"                            second should be set to the g++ 3.4 (or newer)\n" .
 			"                            compiler.\n" .
-			"  LIBUILD_RESOLVE_LIBPATH   A whitespace-separated list of regular expressions which\n" .
+			"  LICOMPILE_RESOLVE_LIBPATH   A whitespace-separated list of regular expressions which\n" .
 			"                            specify the libraries whose path must be resolved into\n" .
 			"                            an absolute path.\n" .
-			"  LIBUILD_MINIMUM_GLIBC     Specifies the minimum glibc version your binaries will\n" .
+			"  LICOMPILE_MINIMUM_GLIBC     Specifies the minimum glibc version your binaries will\n" .
 			"                            be compatible with.\n";
 	}
 	exit $ret;
@@ -413,7 +413,7 @@ sub modifyLinkerOptions {
 
 	# Remove manually specified bogus library dependancies
 	my @bogusDeps;
-	@bogusDeps = split / +/, $ENV{LIBUILD_BOGUS_DEPS} if (!empty($ENV{LIBUILD_BOGUS_DEPS}));
+	@bogusDeps = split / +/, $ENV{LICOMPILE_BOGUS_DEPS} if (!empty($ENV{LICOMPILE_BOGUS_DEPS}));
 
 	# We call removeLibraries() twice because it may detect
 	# some dependancies after we've resolved the library names
@@ -514,8 +514,8 @@ sub translateLibNames {
 		} elsif (/^-l(.+)/ || /--library=(.+)/) {
 			my $libname = $1;
 
-			# Resolve libname if explicitely asked to, through LIBUILD_RESOLVE_LIBPATH.
-			my @libtosolve = split / +/, $ENV{LIBUILD_RESOLVE_LIBPATH} if (!empty($ENV{LIBUILD_RESOLVE_LIBPATH}));
+			# Resolve libname if explicitely asked to, through LICOMPILE_RESOLVE_LIBPATH.
+			my @libtosolve = split / +/, $ENV{LICOMPILE_RESOLVE_LIBPATH} if (!empty($ENV{LICOMPILE_RESOLVE_LIBPATH}));
 			foreach (@libtosolve) {
 				my $regexp = $_;
 				if ($libname =~ /($regexp)/) {
@@ -544,7 +544,7 @@ sub translateLibNames {
 		} elsif ($_ eq '-pthread') {
 			$_[0] = "-lpthread";
 
-		} elsif ($ENV{LIBUILD_CXX_MODE} && /\/?libstdc\+\+\.so(.[56])?/) {
+		} elsif ($ENV{LICOMPILE_CXX_MODE} && /\/?libstdc\+\+\.so(.[56])?/) {
 			# drop this in double compile mode as it can cause issues
 			# in single-compile mode leave it alone, otherwise, libtool can break
 			# ^^^ That used to be true
@@ -650,7 +650,7 @@ sub manipulateDeps {
 	my @deps;
 	my @argv;
 
-	if ($ENV{LIBUILD_DISABLE_BOGUS_DETECTOR}) {
+	if ($ENV{LICOMPILE_DISABLE_BOGUS_DETECTOR}) {
 		@argv = @_;
 		goto FINAL;
 	}
@@ -736,8 +736,8 @@ sub manipulateDeps {
 	FINAL: {
 		# Don't strip dependancies that are explicitly marked as not bogus
 		my %notBogus;
-		if (!empty($ENV{LIBUILD_NOT_BOGUS})) {
-			foreach (split / +/, $ENV{LIBUILD_NOT_BOGUS}) {
+		if (!empty($ENV{LICOMPILE_NOT_BOGUS})) {
+			foreach (split / +/, $ENV{LICOMPILE_NOT_BOGUS}) {
 				$notBogus{$_} = 1;
 			}
 		}
@@ -782,14 +782,14 @@ sub extractSymbols {
 }
 
 
-# Force static linking against libraries in $LIBUILD_STATIC and certain X libraries.
+# Force static linking against libraries in $LICOMPILE_STATIC and certain X libraries.
 sub forceStatic {
 	my (%xlibs, %staticList, $X11linked, $linkedToStaticX);
 	my (@args, @searchPaths);
 
 	# Create a list of libraries that we want to statically link
 	$gcc->getSearchPaths(\@_, \@searchPaths);
-	if (defined $ENV{'LIBUILD_STATIC_X'} && $ENV{'LIBUILD_STATIC_X'} eq "1") {
+	if (defined $ENV{'LICOMPILE_STATIC_X'} && $ENV{'LICOMPILE_STATIC_X'} eq "1") {
 		foreach (qw(Xrender Xcursor Xfixes Xi Xinerama Xrandr Xv Xxf86dga Xxf86misc Xxf86vm)) {
 			my $file = searchLib("lib$_.a", \@searchPaths);
 			$staticList{$_} = $file if (defined $file);
@@ -798,8 +798,8 @@ sub forceStatic {
 	}
 
 	my @static_deps;
-	if (!empty($ENV{LIBUILD_STATIC})) {
-		foreach (split / +/, $ENV{LIBUILD_STATIC}) {
+	if (!empty($ENV{LICOMPILE_STATIC})) {
+		foreach (split / +/, $ENV{LICOMPILE_STATIC}) {
 			my ($lib, $file) = split /=/, $_, 2;
 			$file = searchLib("lib$lib.a", \@searchPaths) if (!defined $file);
 			$staticList{$lib} = $file if (defined $file);

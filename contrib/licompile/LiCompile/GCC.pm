@@ -1,8 +1,8 @@
 # Various gcc-related functions
-package LiBuild::GCC;
+package LiCompile::GCC;
 
 use strict;
-use LiBuild::Utils;
+use LiCompile::Utils;
 use IPC::Open3;
 
 
@@ -25,10 +25,10 @@ our $srcTypes = "$cTypes|$cxxTypes";
 ######## Methods ########
 
 ##
-# LiBuild::GCC->new(gcc_command)
+# LiCompile::GCC->new(gcc_command)
 # gcc_command: The command for invoking GCC.
 #
-# Create a new LiBuild:GCC object.
+# Create a new LiCompile:GCC object.
 sub new {
 	my ($class, $gcc) = @_;
 	my %self;
@@ -72,8 +72,8 @@ sub capabilities {
 	my @stat = stat $gcc_file;
 	my $gcc_mtime = $stat[9];
 	my $home = homeDir();
-	if (-f "$home/.libuild") {
-		parseDataFile("$home/.libuild", \%cache);
+	if (-f "$home/.cache/licompile") {
+		parseDataFile("$home/.cache/licompile", \%cache);
 		if ($cache{version} != 2) {
 			# Cache file version incompatible; delete cache
 			%cache = ();
@@ -225,7 +225,7 @@ sub capabilities {
 	}
 
 	$cache{version} = 2;
-	writeDataFile("$home/.libuild", \%cache);
+	writeDataFile("$home/.cache/licompile", \%cache);
 	return %capabilities;
 }
 
@@ -233,7 +233,7 @@ sub capabilities {
 ##
 # $gcc->command()
 #
-# Returns the GCC command associated with this LiBuild::GCC object.
+# Returns the GCC command associated with this LiCompile::GCC object.
 sub command {
 	my ($self) = @_;
 	return $self->{gcc};

@@ -1,4 +1,4 @@
-# CMakeLists for LI-BuildTools
+# CMakeLists for LI CompileHelper
 
 set(BUILDLIST_SOURCES
 	buildlist.c
@@ -18,17 +18,17 @@ include_directories(${CMAKE_BINARY_DIR}
 
 add_executable(buildlist ${BUILDLIST_SOURCES})
 
-install(TARGETS buildlist DESTINATION lib/libuild COMPONENT buildtools)
+install(TARGETS buildlist DESTINATION lib/licompile COMPONENT buildtools)
 install(PROGRAMS ligcc
 		 lig++
 		 relaytool
 	DESTINATION bin
 	COMPONENT buildtools
 )
-install(FILES LiBuild/GCC.pm
-	      LiBuild/Utils.pm
-	DESTINATION share/libuild/LiBuild
+install(FILES LiCompile/GCC.pm
+	      LiCompile/Utils.pm
+	DESTINATION share/licompile/LiCompile
 	COMPONENT buildtools
 )
-install(FILES ctype.h DESTINATION include/libuild COMPONENT headers)
+install(FILES ctype.h DESTINATION include/licompile COMPONENT headers)
 install(FILES relaytool.m4 DESTINATION share/aclocal COMPONENT headers)

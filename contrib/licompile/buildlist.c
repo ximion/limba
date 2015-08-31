@@ -272,15 +272,15 @@ int main (int argc, char **argv)
 		g_object_unref (fi);
 	}
 
-	g_string_append (header_content, "/* libuild embedded metadata */\n" \
-		"#define LIBUILD_NOTE_METADATA(s)   __asm__(\".section .metadata, \\\"M" \
+	g_string_append (header_content, "/* licompile embedded metadata */\n" \
+		"#define LICOMPILE_NOTE_METADATA(s)   __asm__(\".section .metadata, \\\"M" \
 		"S\\\", @note, 1\\n\\t.string \\\"\" s \"\\\"\\n\\t.previous\\n\\t\")\n" \
 		"\n" \
-		"#ifdef LIBUILD_VERSION\n" \
-		"LIBUILD_NOTE_METADATA(\"libuild.version=\" LIBUILD_VERSION);\n" \
+		"#ifdef LICOMPILE_VERSION\n" \
+		"LICOMPILE_NOTE_METADATA(\"licompile.version=\" LICOMPILE_VERSION);\n" \
 		"#endif\n" \
 		"\n" \
-		"/* libuild generated symbol exclusion list */\n");
+		"/* licompile generated symbol exclusion list */\n");
 
 	keys = g_hash_table_get_keys (symbol_map);
 	for (sym_it = keys; sym_it != NULL; sym_it = sym_it->next) {

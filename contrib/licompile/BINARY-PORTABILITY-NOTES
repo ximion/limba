@@ -27,7 +27,7 @@ supported by glibc. Until they are, keep these in mind:
 3) Linking against shared versions of X11 extension libs
 Some X libraries, such as libXrender, are originally not shared libraries.
 Distributions just created shared library versions to save memory. So
-some distributions don't ship the shared versions at all. Libuild
+some distributions don't ship the shared versions at all. LiCompile
 automatically statically links some of those X libraries (you can turn
 this behavior off of course). This is disabled by default now.
 

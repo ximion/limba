@@ -4,7 +4,7 @@
 use strict;
 use FindBin;
 
-my $apgcc = "$FindBin::Bin/ligcc";
-$ENV{LIBUILD_CXX_MODE} = 1;
-my $a = do $apgcc;
+my $ligcc = "$FindBin::Bin/ligcc";
+$ENV{LICOMPILE_CXX_MODE} = 1;
+my $a = do $ligcc;
 die $@ if ($@);

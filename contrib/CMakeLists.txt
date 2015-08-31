@@ -1,5 +1,5 @@
 
-if (LIBUILD)
-	add_subdirectory(libuild)
-endif (LIBUILD)
+if (LICOMPILE)
+	add_subdirectory(licompile)
+endif (LICOMPILE)
 add_subdirectory(buildhelper)
