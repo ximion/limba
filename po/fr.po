@@ -8,11 +8,10 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Limba\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-06-26 15:37+0200\n"
-"PO-Revision-Date: 2015-05-18 22:33+0000\n"
+"POT-Creation-Date: 2015-08-31 20:30+0200\n"
+"PO-Revision-Date: 2015-06-26 13:38+0000\n"
 "Last-Translator: Matthias K. <matthias@tenstral.net>\n"
-"Language-Team: French (http://www.transifex.com/projects/p/limba/language/"
-"fr/)\n"
+"Language-Team: French (http://www.transifex.com/matk/limba/language/fr/)\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -101,8 +100,8 @@ msgstr "Impossible de trouver le paquet : %s"
 msgid "Could not find package: %s"
 msgstr "Impossible de trouver le paquet : %s"
 
-#, c-format
-msgid "Could not find payload data in the 'inst_target' subdirectory."
+#, fuzzy, c-format
+msgid "Could not find payload data in the 'target' subdirectory."
 msgstr ""
 "Impossible de trouver les données de payload dans le sous-dossier "
 "'inst_target'."
@@ -152,9 +151,9 @@ msgstr "Impossible d'ouvrir le payload de l'IPK! Erreur : %s"
 msgid "Could not open file '%s' for writing."
 msgstr "Impossible d'ouvrir le fichier '%s' pour écriture."
 
-#, fuzzy, c-format
+#, c-format
 msgid "Could not open icon tarball! Error: %s"
-msgstr "Impossible d'ouvrir le fichier IPK! Erreur : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not open metadata-file '%s' for reading."
@@ -195,10 +194,13 @@ msgid ""
 "your\n"
 "application and specify its run-time dependencies.\n"
 "When you are done with this, build your software with --prefix=%s\n"
-"and install it into the inst_target subdirectory of your 'lipkg' directory.\n"
+"and install it into the 'target' subdirectory of your 'lipkg' directory.\n"
 "Then run 'lipkgen build lipkg/' to create your package. \n"
 "If you want to embed dependencies, place their IPK packages in the 'repo/'\n"
 "subdirectory of 'lipkg/'"
+msgstr ""
+
+msgid "DSC file signed."
 msgstr ""
 
 msgid "Define a software name (human readable):"
@@ -243,13 +245,13 @@ msgstr ""
 msgid "Failed to open repository: %s"
 msgstr ""
 
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to save repository indices: %s"
-msgstr "Impossible de déballer le paquet. %s"
+msgstr ""
 
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to update icon tarball: %s"
-msgstr "Impossible de déballer le paquet. %s"
+msgstr ""
 
 #, c-format
 msgid "File '%s' already exists."
@@ -287,6 +289,14 @@ msgstr "Paquet invalide : Le composant de métadonnée est introuvable."
 msgid "Invalid path to directory."
 msgstr "Déballer le paquet Limba dans un dossier."
 
+#, fuzzy, c-format
+msgid "Key export failed: %s"
+msgstr "La signature du paquet %s a échoué"
+
+#, fuzzy, c-format
+msgid "Key import failed: %s"
+msgstr "La signature du paquet %s a échoué"
+
 #, c-format
 msgid "Key lookup failed, could not find remote key."
 msgstr ""
@@ -296,11 +306,11 @@ msgid "Key lookup failed: %s"
 msgstr ""
 
 #. : This is the header to the --help menu
-msgid "Limba package builder"
-msgstr "Créateur de paquet Limba"
+msgid "Limba build tool"
+msgstr ""
 
 #. : This is the header to the --help menu
-msgid "Limba repository builder"
+msgid "Limba package builder"
 msgstr "Créateur de paquet Limba"
 
 #. : This is the header to the --help menu
@@ -338,12 +348,8 @@ msgstr "Aucun résultat reçu."
 msgid "Package file '%s' was not found."
 msgstr "Le fichier paquet '%s' est introuvable."
 
-#, c-format
-msgid "Package signed for \"%s\" [0x%s]\n"
-msgstr "Paquet signé pour \"%s\" [0x%s]\n"
-
-#, c-format
-msgid "Package signed for 0x%s\n"
+#, fuzzy
+msgid "Packages signed."
 msgstr "Paquet signé pour 0x%s\n"
 
 msgid "Please specify a path to the AppStream XML data:"
@@ -490,9 +496,9 @@ msgstr "Impossible d'ouvrir le paquet. %s"
 msgid "Unable to remove existing installation of '%s (%s)'."
 msgstr "Impossible de supprimer l'installation existante de '%s (%s)'."
 
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to rename file."
-msgstr "Impossible d'écrire le fichier 'control'. %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to set permissions on file '%s'. Error: %s"
@@ -510,6 +516,10 @@ msgstr "Impossible d'écrire le fichier 'control'. %s"
 #, c-format
 msgid "Unable to write AppStream data. %s"
 msgstr "Impossible d'écrire les données AppStream. %s"
+
+#, fuzzy, c-format
+msgid "Unable to write signature on dsc file: %s"
+msgstr "Impossible d'écrire la signature : %s"
 
 #, c-format
 msgid "Unable to write signature: %s"
@@ -560,3 +570,9 @@ msgstr ""
 
 msgid "Zero results returned."
 msgstr "résultats zéro retournés."
+
+#~ msgid "Limba repository builder"
+#~ msgstr "Créateur de paquet Limba"
+
+#~ msgid "Package signed for \"%s\" [0x%s]\n"
+#~ msgstr "Paquet signé pour \"%s\" [0x%s]\n"

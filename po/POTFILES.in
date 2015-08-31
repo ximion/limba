@@ -18,8 +18,8 @@ src/li-pkg-cache.c
 src/li-repository.c
 # Tools
 tools/runapp/runapp.c
-tools/lipa/lipa.c
+tools/cli/limbacli.c
+tools/buildcli/libuildcli.c
 tools/lipkgen/lipkgen.c
-tools/lirepo/lirepo.c
 # Mimetype
 data/mime/x-ipk.xml.in

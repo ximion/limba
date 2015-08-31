@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2015-06-26 15:37+0200\n"
+        "POT-Creation-Date: 2015-08-31 20:30+0200\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -45,6 +45,14 @@ msgstr  ""
 
 #, c-format
 msgid   "Key lookup failed, could not find remote key."
+msgstr  ""
+
+#, c-format
+msgid   "Key import failed: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Key export failed: %s"
 msgstr  ""
 
 #, c-format
@@ -238,23 +246,25 @@ msgid   "Could not open metadata-file '%s' for reading."
 msgstr  ""
 
 #, c-format
-msgid   "Package signed for \"%s\" [0x%s]\n"
-msgstr  ""
-
-#, c-format
-msgid   "Package signed for 0x%s\n"
+msgid   "Signing of package failed: %s"
 msgstr  ""
 
 #, c-format
 msgid   "Unable to calculate checksum for: %s"
 msgstr  ""
 
-#, c-format
-msgid   "Signing of package failed: %s"
+msgid   "Packages signed."
 msgstr  ""
 
 #, c-format
 msgid   "Unable to write signature: %s"
+msgstr  ""
+
+msgid   "DSC file signed."
+msgstr  ""
+
+#, c-format
+msgid   "Unable to write signature on dsc file: %s"
 msgstr  ""
 
 #, c-format
@@ -262,7 +272,7 @@ msgid   "Could not find control file for the archive!"
 msgstr  ""
 
 #, c-format
-msgid   "Could not find payload data in the 'inst_target' subdirectory."
+msgid   "Could not find payload data in the 'target' subdirectory."
 msgstr  ""
 
 #, c-format
@@ -325,6 +335,66 @@ msgstr  ""
 msgid   "Could not create directory structure for runtime. %s"
 msgstr  ""
 
+#, c-format
+msgid   "Failed to initialize repository: %s"
+msgstr  ""
+
+msgid   "You need to specify a package file to add to the repository."
+msgstr  ""
+
+#, c-format
+msgid   "Failed to open repository: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Failed to add package: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Failed to save repository indices: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Failed to update icon tarball: %s"
+msgstr  ""
+
+#. : This is the header to the --help menu
+msgid   "Limba build tool"
+msgstr  ""
+
+msgid   "Subcommands:"
+msgstr  ""
+
+msgid   "Initialize a new repository in DIRECTORY."
+msgstr  ""
+
+msgid   "Add a package to the repository"
+msgstr  ""
+
+msgid   "Show the program version"
+msgstr  ""
+
+msgid   "Show extra debugging information"
+msgstr  ""
+
+msgid   "Don't show \"fancy\" output"
+msgstr  ""
+
+#, c-format
+msgid   "Run '%s --help' to see a full list of available command line options."
+msgstr  ""
+
+#, c-format
+msgid   "Limba version: %s"
+msgstr  ""
+
+msgid   "You need to specify a command."
+msgstr  ""
+
+#, c-format
+msgid   "Command '%s' is unknown."
+msgstr  ""
+
 msgid   "Progress"
 msgstr  ""
 
@@ -372,9 +442,6 @@ msgstr  ""
 msgid   "Limba software manager"
 msgstr  ""
 
-msgid   "Subcommands:"
-msgstr  ""
-
 msgid   "List installed software"
 msgstr  ""
 
@@ -396,31 +463,7 @@ msgstr  ""
 msgid   "Add a PGP key to the trusted database."
 msgstr  ""
 
-msgid   "Show the program version"
-msgstr  ""
-
-msgid   "Show extra debugging information"
-msgstr  ""
-
-msgid   "Don't show \"fancy\" output"
-msgstr  ""
-
 msgid   "Do not fail action with an error code."
-msgstr  ""
-
-#, c-format
-msgid   "Run '%s --help' to see a full list of available command line options."
-msgstr  ""
-
-#, c-format
-msgid   "Limba version: %s"
-msgstr  ""
-
-msgid   "You need to specify a command."
-msgstr  ""
-
-#, c-format
-msgid   "Command '%s' is unknown."
 msgstr  ""
 
 msgid   "You need to specify a directory with build-metadata."
@@ -464,7 +507,7 @@ msgid   "Created project template in '%s'.\n"
         "Please edit the files in that directory, e.g. add a long description to your\n"
         "application and specify its run-time dependencies.\n"
         "When you are done with this, build your software with --prefix=%s\n"
-        "and install it into the inst_target subdirectory of your 'lipkg' directory.\n"
+        "and install it into the 'target' subdirectory of your 'lipkg' directory.\n"
         "Then run 'lipkgen build lipkg/' to create your package. \n"
         "If you want to embed dependencies, place their IPK packages in the 'repo/'\n"
         "subdirectory of 'lipkg/'"
@@ -495,37 +538,4 @@ msgid   "Unpack the Limba package to a directory."
 msgstr  ""
 
 msgid   "Do not sign the package"
-msgstr  ""
-
-#, c-format
-msgid   "Failed to initialize repository: %s"
-msgstr  ""
-
-msgid   "You need to specify a package file to add to the repository."
-msgstr  ""
-
-#, c-format
-msgid   "Failed to open repository: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Failed to add package: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Failed to save repository indices: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Failed to update icon tarball: %s"
-msgstr  ""
-
-#. : This is the header to the --help menu
-msgid   "Limba repository builder"
-msgstr  ""
-
-msgid   "Initialize a new repository in DIRECTORY."
-msgstr  ""
-
-msgid   "Add a package to the repository"
 msgstr  ""
