@@ -5,6 +5,6 @@ set (LIMBA_TOOLS_COMMON_SRC
 )
 
 add_subdirectory(runapp)
-add_subdirectory(lipa)
+add_subdirectory(cli)
 add_subdirectory(lipkgen)
-add_subdirectory(lirepo)
+add_subdirectory(buildcli)

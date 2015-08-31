@@ -40,8 +40,8 @@ G_BEGIN_DECLS
  * LiBuilderError:
  * @LI_BUILDER_ERROR_FAILED:		Generic failure
  * @LI_BUILDER_ERROR_NOT_FOUND:		A required file or entity was not found
- * @LI_BUILDER_ERROR_WRITE:			An error occured while writing data
- * @LI_BUILDER_ERROR_SIGN:			Error while signing the package
+ * @LI_BUILDER_ERROR_WRITE:		An error occured while writing data
+ * @LI_BUILDER_ERROR_SIGN:		Error while signing the package
  *
  * The error type.
  **/

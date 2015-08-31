@@ -25,45 +25,11 @@
 #include <glib/gi18n-lib.h>
 #include <limba.h>
 
+#include "li-console-utils.h"
+
 static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
-
-/**
- * li_print_stderr:
- */
-static void
-li_print_stderr (const gchar *format, ...)
-{
-	va_list args;
-	gchar *str;
-
-	va_start (args, format);
-	str = g_strdup_vprintf (format, args);
-	va_end (args);
-
-	g_printerr ("%s\n", str);
-
-	g_free (str);
-}
-
-/**
- * li_print_stdout:
- */
-static void
-li_print_stdout (const gchar *format, ...)
-{
-	va_list args;
-	gchar *str;
-
-	va_start (args, format);
-	str = g_strdup_vprintf (format, args);
-	va_end (args);
-
-	g_print ("%s\n", str);
-
-	g_free (str);
-}
 
 /**
  * lirepo_init:
@@ -168,21 +134,21 @@ out:
 }
 
 /**
- * lirepo_get_summary:
+ * libuild_get_summary:
  **/
 static gchar *
-lirepo_get_summary ()
+libuild_get_summary ()
 {
 	GString *string;
 	string = g_string_new ("");
 
 	/* TRANSLATORS: This is the header to the --help menu */
-	g_string_append_printf (string, "%s\n\n%s\n", _("Limba repository builder"),
-				/* these are commands we can use with lipa */
+	g_string_append_printf (string, "%s\n\n%s\n", _("Limba build tool"),
+				/* these are commands we can use with limba-build */
 				_("Subcommands:"));
 
-	g_string_append_printf (string, "  %s - %s\n", "init [DIRECTORY]", _("Initialize a new repository in DIRECTORY."));
-	g_string_append_printf (string, "  %s - %s\n", "add [PKGNAME] [DIRECTORY]", _("Add a package to the repository"));
+	g_string_append_printf (string, "  %s - %s\n", "repo-init [DIRECTORY]", _("Initialize a new repository in DIRECTORY."));
+	g_string_append_printf (string, "  %s - %s\n", "repo-add [PKGNAME] [DIRECTORY]", _("Add a package to the repository"));
 
 	return g_string_free (string, FALSE);
 }
@@ -210,12 +176,12 @@ main (int argc, char *argv[])
 		{ NULL }
 	};
 
-	opt_context = g_option_context_new ("- Limba repository builder");
+	opt_context = g_option_context_new ("- Limba build tool");
 	g_option_context_set_help_enabled (opt_context, TRUE);
 	g_option_context_add_main_entries (opt_context, client_options, NULL);
 
 	/* set the summary text */
-	summary = lirepo_get_summary ();
+	summary = libuild_get_summary ();
 	g_option_context_set_summary (opt_context, summary) ;
 	options_help = g_option_context_get_help (opt_context, TRUE, NULL);
 	g_free (summary);
@@ -255,9 +221,9 @@ main (int argc, char *argv[])
 	if (argc > 3)
 		value2 = argv[3];
 
-	if (g_strcmp0 (command, "init") == 0) {
+	if (g_strcmp0 (command, "repo-init") == 0) {
 		exit_code = lirepo_init (value1);
-	} else if (g_strcmp0 (command, "add") == 0) {
+	} else if (g_strcmp0 (command, "repo-add") == 0) {
 		exit_code = lirepo_add_package (value1, value2);
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);

@@ -35,42 +35,6 @@ static gboolean optn_no_fancy = FALSE;
 static gboolean optn_no_fail = FALSE;
 
 /**
- * li_print_stderr:
- */
-static void
-li_print_stderr (const gchar *format, ...)
-{
-	va_list args;
-	gchar *str;
-
-	va_start (args, format);
-	str = g_strdup_vprintf (format, args);
-	va_end (args);
-
-	g_printerr ("%s\n", str);
-
-	g_free (str);
-}
-
-/**
- * li_print_stdout:
- */
-static void
-li_print_stdout (const gchar *format, ...)
-{
-	va_list args;
-	gchar *str;
-
-	va_start (args, format);
-	str = g_strdup_vprintf (format, args);
-	va_end (args);
-
-	g_print ("%s\n", str);
-
-	g_free (str);
-}
-
-/**
  * lipa_check_su:
  */
 gboolean
@@ -489,7 +453,7 @@ lipa_get_summary ()
 
 	/* TRANSLATORS: This is the header to the --help menu */
 	g_string_append_printf (string, "%s\n\n%s\n", _("Limba software manager"),
-				/* these are commands we can use with lipa */
+				/* these are commands we can use with the limba CLI */
 				_("Subcommands:"));
 
 	g_string_append_printf (string, "  %s - %s\n", "list", _("List installed software"));

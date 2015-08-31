@@ -29,6 +29,9 @@ void			li_write_progress_step (const gchar *format, ...);
 void			li_draw_progress_bar (const gchar *title, guint progress);
 void			li_abort_progress_bar (void);
 
+void			li_print_stderr (const gchar *format, ...);
+void			li_print_stdout (const gchar *format, ...);
+
 G_END_DECLS
 
 #endif /* __LI_CONSOLE_UTILS_H */

@@ -156,3 +156,39 @@ li_abort_progress_bar (void)
 
 	g_print ("\n");
 }
+
+/**
+ * li_print_stderr:
+ */
+void
+li_print_stderr (const gchar *format, ...)
+{
+	va_list args;
+	gchar *str;
+
+	va_start (args, format);
+	str = g_strdup_vprintf (format, args);
+	va_end (args);
+
+	g_printerr ("%s\n", str);
+
+	g_free (str);
+}
+
+/**
+ * li_print_stdout:
+ */
+void
+li_print_stdout (const gchar *format, ...)
+{
+	va_list args;
+	gchar *str;
+
+	va_start (args, format);
+	str = g_strdup_vprintf (format, args);
+	va_end (args);
+
+	g_print ("%s\n", str);
+
+	g_free (str);
+}
