@@ -159,9 +159,6 @@ lipa_install_package (const gchar *pkgid)
 		goto out;
 	}
 
-	if (!lipa_check_su ())
-		return 2;
-
 	inst = li_installer_new ();
 	g_signal_connect (inst, "progress",
 						G_CALLBACK (li_installer_progress_cb), NULL);
@@ -248,9 +245,6 @@ lipa_remove_software (const gchar *pkgid)
 	LiManager *mgr;
 	gint res = 0;
 	GError *error = NULL;
-
-	if (!lipa_check_su ())
-		return 2;
 
 	if (pkgid == NULL) {
 		li_print_stderr (_("You need to specify a package to remove."));
