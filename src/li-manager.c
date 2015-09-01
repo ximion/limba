@@ -52,6 +52,7 @@ struct _LiManagerPrivate
 	GMainLoop *loop;
 	LiProxyManager *bus_proxy;
 	GError *proxy_error;
+	guint bus_watch_id;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiManager, li_manager, G_TYPE_OBJECT)
@@ -173,9 +174,9 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 		if (g_file_info_get_is_hidden (file_info))
 			continue;
 		path = g_build_filename (LI_SOFTWARE_ROOT,
-								 g_file_info_get_name (file_info),
-								 "control",
-								 NULL);
+						g_file_info_get_name (file_info),
+						 "control",
+						 NULL);
 		if (g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
 			_cleanup_object_unref_ GFile *ctlfile = NULL;
 			ctlfile = g_file_new_for_path (path);
@@ -197,8 +198,8 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 				}
 
 				g_hash_table_insert (pkgs,
-									g_strdup (li_pkg_info_get_id (pki)),
-									pki);
+							g_strdup (li_pkg_info_get_id (pki)),
+							pki);
 			}
 		}
 	}
@@ -209,8 +210,8 @@ out:
 		g_object_unref (enumerator);
 	if (tmp_error != NULL) {
 		g_propagate_prefixed_error (error,
-						tmp_error,
-						"Error while searching for installed software:");
+					tmp_error,
+					"Error while searching for installed software:");
 		if (pkgs != NULL)
 			g_hash_table_unref (pkgs);
 		return NULL;
@@ -265,8 +266,8 @@ li_manager_update_software_table (LiManager *mgr, GError **error)
 		/* add packages to the global list, if they are not already installed */
 		if (g_hash_table_lookup (priv->pkgs, li_pkg_info_get_id (pki)) == NULL) {
 			g_hash_table_insert (priv->pkgs,
-								g_strdup (li_pkg_info_get_id (pki)),
-								g_object_ref (pki));
+						g_strdup (li_pkg_info_get_id (pki)),
+						g_object_ref (pki));
 		}
 	}
 }
@@ -344,9 +345,9 @@ li_manager_find_installed_runtimes (LiManager *mgr)
 		if (g_file_info_get_is_hidden (file_info))
 			continue;
 		path = g_build_filename (runtime_root,
-								 g_file_info_get_name (file_info),
-								 "control",
-								 NULL);
+						g_file_info_get_name (file_info),
+						 "control",
+						 NULL);
 		if (g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
 			gchar *rt_path;
 			gboolean ret;
@@ -542,7 +543,7 @@ li_manager_proxy_progress_cb (LiProxyManager *mgr_bus, const gchar *id, gint per
  * Callback for the Error() DBus signal
  */
 static void
-li_manager_proxy_error_cb (LiProxyManager *mgr_bus, guint code, const gchar *message, LiManager *mgr)
+li_manager_proxy_error_cb (LiProxyManager *mgr_bus, guint32 domain, guint code, const gchar *message, LiManager *mgr)
 {
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
@@ -552,7 +553,7 @@ li_manager_proxy_error_cb (LiProxyManager *mgr_bus, guint code, const gchar *mes
 		priv->proxy_error = NULL;
 	}
 
-	g_set_error (&priv->proxy_error, 0, code, "%s", message);
+	g_set_error (&priv->proxy_error, domain, code, "%s", message);
 }
 
 /**
@@ -571,6 +572,29 @@ li_manager_proxy_finished_cb (LiProxyManager *mgr_bus, gboolean success, LiManag
 			g_error_free (priv->proxy_error);
 			priv->proxy_error = NULL;
 		}
+	}
+
+	g_main_loop_quit (priv->loop);
+}
+
+/**
+ * li_manager_bus_vanished:
+ */
+static void
+li_manager_bus_vanished (GDBusConnection *connection, const gchar *name, LiManager *mgr)
+{
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	/* check if we are actually running any action */
+	if (!g_main_loop_is_running (priv->loop))
+		return;
+
+	if (priv->proxy_error == NULL) {
+		/* set error, since the DBus name vanished while performing an action, indicating that something crashed */
+		g_set_error (&priv->proxy_error,
+			LI_INSTALLER_ERROR,
+			LI_INSTALLER_ERROR_INTERNAL,
+			_("The Limba daemon vanished from the bus mid-transaction, so it likely crashed. Please file a bug against Limba."));
 	}
 
 	g_main_loop_quit (priv->loop);
@@ -607,6 +631,17 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
+			}
+
+			/* we want to know when the bus name vanishes unexpectedly */
+			if (priv->bus_watch_id == 0) {
+				priv->bus_watch_id = g_bus_watch_name (G_BUS_TYPE_SYSTEM,
+									"org.freedesktop.Limba",
+									G_BUS_NAME_WATCHER_FLAGS_NONE,
+									NULL,
+									(GBusNameVanishedCallback) li_manager_bus_vanished,
+									mgr,
+									NULL);
 			}
 
 			g_signal_connect (priv->bus_proxy, "progress",

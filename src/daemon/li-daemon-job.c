@@ -104,7 +104,10 @@ li_daemon_job_emit_error (LiDaemonJob *job, GError *error)
 	if (error == NULL)
 		return;
 
-	li_proxy_manager_emit_error (priv->mgr_bus, error->code, error->message);
+	li_proxy_manager_emit_error (priv->mgr_bus,
+					error->domain,
+					error->code,
+					error->message);
 	g_error_free (error);
 }
 

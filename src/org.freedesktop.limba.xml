@@ -56,6 +56,7 @@
 
 		<!--
 			Error:
+			@domain: An error domain.
 			@code: An error code.
 			@details: Details text.
 			@since: 0.5.1
@@ -63,6 +64,7 @@
 			Emitted when an action results in an error.
 		-->
 		<signal name="Error">
+			<arg name="domain" type="u" />
 			<arg name="code" type="u" />
 			<arg name="details" type="s" />
 		</signal>
@@ -76,6 +78,14 @@
 		<signal name="Finished">
 			<arg name="success" type="b" />
 		</signal>
+
+	</interface>
+
+	<!-- org.freedesktop.Limba.Job:
+		@short_description: A Job run by the Limba daemon
+		@since: 0.5.1
+	-->
+	<interface name="org.freedesktop.Limba.Job">
 
 	</interface>
 </node>

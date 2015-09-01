@@ -39,7 +39,8 @@ G_BEGIN_DECLS
 
 /**
  * LiInstallerError:
- * @LI_INSTALLER_ERROR_FAILED:					Generic failure
+ * @LI_INSTALLER_ERROR_FAILED:			Generic failure
+ * @LI_INSTALLER_ERROR_INTERNAL:		Internal error
  * @LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND:	A dependency was not found
  * @LI_INSTALLER_ERROR_FOUNDATION_NOT_FOUND:	A system dependency was not found
  *
@@ -47,6 +48,7 @@ G_BEGIN_DECLS
  **/
 typedef enum {
 	LI_INSTALLER_ERROR_FAILED,
+	LI_INSTALLER_ERROR_INTERNAL,
 	LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND,
 	LI_INSTALLER_ERROR_FOUNDATION_NOT_FOUND,
 	/*< private >*/

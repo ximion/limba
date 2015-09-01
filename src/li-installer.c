@@ -52,6 +52,7 @@ struct _LiInstallerPrivate
 	GMainLoop *loop;
 	GError *proxy_error;
 	LiProxyManager *bus_proxy;
+	guint bus_watch_id;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiInstaller, li_installer, G_TYPE_OBJECT)
@@ -91,6 +92,8 @@ li_installer_finalize (GObject *object)
 		g_error_free (priv->proxy_error);
 	if (priv->bus_proxy != NULL)
 		g_object_unref (priv->bus_proxy);
+	if (priv->bus_watch_id != 0)
+		g_bus_unwatch_name (priv->bus_watch_id);
 
 	G_OBJECT_CLASS (li_installer_parent_class)->finalize (object);
 }
@@ -636,7 +639,7 @@ li_installer_update_foundations_table (LiInstaller *inst, GError **error)
  * Callback for the Error() DBus signal
  */
 static void
-li_installer_proxy_error_cb (LiProxyManager *mgr_bus, guint code, const gchar *message, LiInstaller *inst)
+li_installer_proxy_error_cb (LiProxyManager *mgr_bus, guint32 domain, guint code, const gchar *message, LiInstaller *inst)
 {
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
@@ -646,7 +649,7 @@ li_installer_proxy_error_cb (LiProxyManager *mgr_bus, guint code, const gchar *m
 		priv->proxy_error = NULL;
 	}
 
-	g_set_error (&priv->proxy_error, 0, code, "%s", message);
+	g_set_error (&priv->proxy_error, domain, code, "%s", message);
 }
 
 /**
@@ -684,6 +687,29 @@ li_installer_proxy_progress_cb (LiProxyManager *mgr_bus, const gchar *id, gint p
 }
 
 /**
+ * li_installer_bus_vanished:
+ */
+static void
+li_installer_bus_vanished (GDBusConnection *connection, const gchar *name, LiInstaller *inst)
+{
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	/* check if we are actually running any action */
+	if (!g_main_loop_is_running (priv->loop))
+		return;
+
+	if (priv->proxy_error == NULL) {
+		/* set error, since the DBus name vanished while performing an action, indicating that something crashed */
+		g_set_error (&priv->proxy_error,
+			LI_INSTALLER_ERROR,
+			LI_INSTALLER_ERROR_INTERNAL,
+			_("The Limba daemon vanished from the bus mid-transaction, so it likely crashed. Please file a bug against Limba."));
+	}
+
+	g_main_loop_quit (priv->loop);
+}
+
+/**
  * li_installer_install:
  */
 gboolean
@@ -709,6 +735,17 @@ li_installer_install (LiInstaller *inst, GError **error)
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
+			}
+
+			/* we want to know when the bus name vanishes unexpectedly */
+			if (priv->bus_watch_id == 0) {
+				priv->bus_watch_id = g_bus_watch_name (G_BUS_TYPE_SYSTEM,
+									"org.freedesktop.Limba",
+									G_BUS_NAME_WATCHER_FLAGS_NONE,
+									NULL,
+									(GBusNameVanishedCallback) li_installer_bus_vanished,
+									inst,
+									NULL);
 			}
 
 			g_signal_connect (priv->bus_proxy, "progress",
