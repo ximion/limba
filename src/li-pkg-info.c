@@ -42,7 +42,7 @@ struct _LiPkgInfoPrivate
 	gchar *dependencies;
 	gchar *hash_sha256;
 	gchar *repo_location;
-	gchar *x_repository;
+	gchar *abi_break_versions;
 
 	LiPackageFlags flags;
 	LiVersionFlags vrel;
@@ -99,10 +99,10 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 		priv->version = str;
 	}
 
-	str = li_config_data_get_value (cdata, "X-Repository");
+	str = li_config_data_get_value (cdata, "ABI-Break-Versions");
 	if (str != NULL) {
-		g_free (priv->x_repository);
-		priv->x_repository = str;
+		g_free (priv->abi_break_versions);
+		priv->abi_break_versions = str;
 	}
 
 	g_free (priv->arch);
@@ -160,8 +160,8 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 	if (priv->version != NULL)
 		li_config_data_set_value (cdata, "Version", priv->version);
 
-	if (priv->x_repository != NULL)
-		li_config_data_set_value (cdata, "X-Repository", priv->x_repository);
+	if (priv->abi_break_versions != NULL)
+		li_config_data_set_value (cdata, "ABI-Break-Versions", priv->abi_break_versions);
 
 	if (priv->dependencies != NULL)
 		li_config_data_set_value (cdata, "Requires", priv->dependencies);
@@ -194,7 +194,7 @@ li_pkg_info_finalize (GObject *object)
 	g_free (priv->runtime_uuid);
 	g_free (priv->format_version);
 	g_free (priv->repo_location);
-	g_free (priv->x_repository);
+	g_free (priv->abi_break_versions);
 
 	G_OBJECT_CLASS (li_pkg_info_parent_class)->finalize (object);
 }
@@ -682,23 +682,24 @@ li_pkg_info_set_repo_location (LiPkgInfo *pki, const gchar *location)
 }
 
 /**
- * li_pkg_info_get_repository:
+ * li_pkg_info_get_abi_break_versions:
  */
 const gchar*
-li_pkg_info_get_repository (LiPkgInfo *pki)
+li_pkg_info_get_abi_break_versions (LiPkgInfo *pki)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
-	return priv->x_repository;
+	return priv->abi_break_versions;
 }
 
 /**
- * li_pkg_info_set_repository:
+ * li_pkg_info_set_abi_break_versions:
  */
 void
-li_pkg_info_set_repository (LiPkgInfo *pki, const gchar *repo_name)
+li_pkg_info_set_abi_break_versions (LiPkgInfo *pki, const gchar *versions)
 {
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
-	priv->x_repository = g_strdup (repo_name);
+	g_free (priv->abi_break_versions);
+	priv->abi_break_versions = g_strdup (versions);
 }
 
 /**

@@ -608,7 +608,7 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, Li
 
 	/* set target repository */
 	li_config_data_set_value (cdata, "Target",
-				  li_pkg_info_get_repository (ctl));
+				"<<FIXME::Repository-Name>>");
 
 	tmp = li_config_data_get_data (cdata);
 	sigdata = li_pkg_builder_sign_data (builder, tmp, GPGME_SIG_MODE_CLEAR, &tmp_error);

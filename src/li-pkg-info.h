@@ -161,9 +161,9 @@ gchar		*li_pkg_info_get_name_relation_string (LiPkgInfo *pki);
 gboolean	li_pkg_info_satisfies_requirement (LiPkgInfo *pki,
 						LiPkgInfo *req);
 
-const gchar	*li_pkg_info_get_repository (LiPkgInfo *pki);
-void		li_pkg_info_set_repository (LiPkgInfo *pki,
-					const gchar *repo_name);
+const gchar	*li_pkg_info_get_abi_break_versions (LiPkgInfo *pki);
+void		li_pkg_info_set_abi_break_versions (LiPkgInfo *pki,
+					const gchar *versions);
 
 G_END_DECLS
 
