@@ -537,12 +537,12 @@ li_manager_proxy_progress_cb (LiProxyManager *mgr_bus, const gchar *id, gint per
 }
 
 /**
- * li_manager_dbus_remove_software_ready_cb:
+ * li_manager_proxy_error_cb:
  *
- * Helper callback for removeSoftware() method.
+ * Callback for the Error() DBus signal
  */
 static void
-li_manager_dbus_remove_software_ready_cb (GObject *source_object, GAsyncResult *res, LiManager *mgr)
+li_manager_proxy_error_cb (LiProxyManager *mgr_bus, guint code, const gchar *message, LiManager *mgr)
 {
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
@@ -552,7 +552,27 @@ li_manager_dbus_remove_software_ready_cb (GObject *source_object, GAsyncResult *
 		priv->proxy_error = NULL;
 	}
 
-	li_proxy_manager_call_remove_software_finish (priv->bus_proxy, res, &priv->proxy_error);
+	g_set_error (&priv->proxy_error, 0, code, "%s", message);
+}
+
+/**
+ * li_manager_proxy_finished_cb:
+ *
+ * Callback for the Finished() DBus signal
+ */
+static void
+li_manager_proxy_finished_cb (LiProxyManager *mgr_bus, gboolean success, LiManager *mgr)
+{
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	if (success) {
+		/* ensure no error is set */
+		if (priv->proxy_error != NULL) {
+			g_error_free (priv->proxy_error);
+			priv->proxy_error = NULL;
+		}
+	}
+
 	g_main_loop_quit (priv->loop);
 }
 
@@ -579,21 +599,22 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 		if (priv->bus_proxy == NULL) {
 			/* looks like we do not yet have a bus connection, so we create one */
 			priv->bus_proxy = li_proxy_manager_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
-											G_DBUS_PROXY_FLAGS_NONE,
-											"org.freedesktop.Limba",
-											"/org/freedesktop/Limba/Manager",
-											NULL,
-											&tmp_error);
+										G_DBUS_PROXY_FLAGS_NONE,
+										"org.freedesktop.Limba",
+										"/org/freedesktop/Limba/Manager",
+										NULL,
+										&tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
 			}
 
-			/* Installations might take quite long, so we set an infinite connection timeout. Maybe there is a better way to solve this? */
-			g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (priv->bus_proxy), G_MAXINT);
-
 			g_signal_connect (priv->bus_proxy, "progress",
 						G_CALLBACK (li_manager_proxy_progress_cb), mgr);
+			g_signal_connect (priv->bus_proxy, "error",
+						G_CALLBACK (li_manager_proxy_error_cb), mgr);
+			g_signal_connect (priv->bus_proxy, "finished",
+						G_CALLBACK (li_manager_proxy_finished_cb), mgr);
 		}
 
 		/* ensure no error is set */
@@ -602,9 +623,15 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 			priv->proxy_error = NULL;
 		}
 
-		li_proxy_manager_call_remove_software (priv->bus_proxy,
-										pkgid, NULL,
-										(GAsyncReadyCallback) li_manager_dbus_remove_software_ready_cb, mgr);
+		li_proxy_manager_call_remove_software_sync (priv->bus_proxy,
+						pkgid,
+						NULL,
+						&tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
+		}
+
 		g_main_loop_run (priv->loop);
 
 		if (priv->proxy_error != NULL) {
@@ -624,9 +651,9 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	if (!g_file_query_exists (ctlfile, NULL)) {
 		g_object_unref (ctlfile);
 		g_set_error (error,
-					LI_MANAGER_ERROR,
-					LI_MANAGER_ERROR_NOT_FOUND,
-					_("Could not find software: %s"), pkgid);
+				LI_MANAGER_ERROR,
+				LI_MANAGER_ERROR_NOT_FOUND,
+				_("Could not find software: %s"), pkgid);
 		return FALSE;
 	}
 	pki = li_pkg_info_new ();

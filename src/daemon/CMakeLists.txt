@@ -2,6 +2,8 @@
 
 set(LIMBA_DAEMON_SRC
 	li-daemon.c
+	li-daemon-job.h
+	li-daemon-job.c
 )
 
 add_executable(limba-daemon ${LIMBA_DAEMON_SRC})

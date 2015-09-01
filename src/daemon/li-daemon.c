@@ -22,7 +22,7 @@
 #include <polkit/polkit.h>
 
 #include "li-dbus-interface.h"
-#include "limba.h"
+#include "li-daemon-job.h"
 
 typedef struct {
 	GMainLoop *loop;
@@ -33,6 +33,7 @@ typedef struct {
 	GTimer *timer;
 	guint exit_idle_time;
 	guint timer_id;
+	LiDaemonJob *job;
 } LiHelperDaemon;
 
 /**
@@ -45,21 +46,30 @@ li_daemon_reset_timer (LiHelperDaemon *helper)
 }
 
 /**
- * li_installer_progress_cb:
+ * li_daemon_init_job:
  */
-static void
-li_installer_progress_cb (LiInstaller *inst, guint percentage, const gchar *id, LiProxyInstaller *inst_bus)
+gboolean
+li_daemon_init_job (LiHelperDaemon *helper, LiProxyManager *mgr_bus, GDBusMethodInvocation *context)
 {
-	if (id == NULL)
-		id = "";
-	li_proxy_installer_emit_progress (inst_bus, id, percentage);
+	gboolean ret;
+
+	/* we don't have a job queue, so we error out in case someone tries to start
+	 * multiple jobs at the same time */
+	if (li_daemon_job_is_running (helper->job)) {
+		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Manager.Error.Failed",
+							"Another job is running at time, Please wait for it to complete.");
+		return FALSE;
+	}
+
+	ret = li_daemon_job_prepare (helper->job, mgr_bus);
+	return ret;
 }
 
 /**
  * bus_installer_install_local_cb:
  */
 static gboolean
-bus_installer_install_local_cb (LiProxyInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *fname, LiHelperDaemon *helper)
+bus_installer_install_local_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *context, const gchar *fname, LiHelperDaemon *helper)
 {
 	GError *error = NULL;
 	LiInstaller *inst = NULL;
@@ -67,18 +77,16 @@ bus_installer_install_local_cb (LiProxyInstaller *inst_bus, GDBusMethodInvocatio
 	PolkitSubject *subject;
 	const gchar *sender;
 
-	li_daemon_reset_timer (helper);
-
 	sender = g_dbus_method_invocation_get_sender (context);
 
 	subject = polkit_system_bus_name_new (sender);
 	pres = polkit_authority_check_authorization_sync (helper->authority,
-													subject,
-													"org.freedesktop.limba.install-package-local",
-													NULL,
-													POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-													NULL,
-													&error);
+								subject,
+								"org.freedesktop.limba.install-package-local",
+								NULL,
+								POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+								NULL,
+								&error);
 	g_object_unref (subject);
 
 	if (error != NULL) {
@@ -88,39 +96,18 @@ bus_installer_install_local_cb (LiProxyInstaller *inst_bus, GDBusMethodInvocatio
 
 	if (!polkit_authorization_result_get_is_authorized (pres)) {
 		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Installer.Error.NotAuthorized",
-													"Authorization failed.");
+							"Authorization failed.");
 		goto out;
 	}
 
-	if (fname == NULL) {
-		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Installer.Error.Failed",
-													"The filename must not be NULL.");
+	/* initialize our job, in case it is idling */
+	if (!li_daemon_init_job (helper, mgr_bus, context))
 		goto out;
-	}
 
-	if (!g_str_has_prefix (fname, "/")) {
-		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Installer.Error.Failed",
-													"The path to the IPK package to install must be absolute.");
-		goto out;
-	}
+	/* do the thing */
+	li_daemon_job_run_install_local (helper->job, fname);
 
-	inst = li_installer_new ();
-	g_signal_connect (inst, "progress",
-						G_CALLBACK (li_installer_progress_cb), inst_bus);
-
-	li_installer_open_file (inst, fname, &error);
-	if (error != NULL) {
-		g_dbus_method_invocation_take_error (context, error);
-		goto out;
-	}
-
-	li_installer_install (inst, &error);
-	if (error != NULL) {
-		g_dbus_method_invocation_take_error (context, error);
-		goto out;
-	}
-
-	li_proxy_installer_complete_install_local (inst_bus, context);
+	li_proxy_manager_complete_install_local (mgr_bus, context);
 
  out:
 	if (inst != NULL)
@@ -137,26 +124,23 @@ bus_installer_install_local_cb (LiProxyInstaller *inst_bus, GDBusMethodInvocatio
  * bus_installer_install_cb:
  */
 static gboolean
-bus_installer_install_cb (LiProxyInstaller *inst_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
+bus_installer_install_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
 {
-GError *error = NULL;
-	LiInstaller *inst = NULL;
+	GError *error = NULL;
 	PolkitAuthorizationResult *pres = NULL;
 	PolkitSubject *subject;
 	const gchar *sender;
-
-	li_daemon_reset_timer (helper);
 
 	sender = g_dbus_method_invocation_get_sender (context);
 
 	subject = polkit_system_bus_name_new (sender);
 	pres = polkit_authority_check_authorization_sync (helper->authority,
-													subject,
-													"org.freedesktop.limba.install-package",
-													NULL,
-													POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-													NULL,
-													&error);
+							subject,
+							"org.freedesktop.limba.install-package",
+							NULL,
+							POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+							NULL,
+							&error);
 	g_object_unref (subject);
 
 	if (error != NULL) {
@@ -166,37 +150,20 @@ GError *error = NULL;
 
 	if (!polkit_authorization_result_get_is_authorized (pres)) {
 		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Installer.Error.NotAuthorized",
-													"Authorization failed.");
+							"Authorization failed.");
 		goto out;
 	}
 
-	if (pkid == NULL) {
-		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Installer.Error.Failed",
-													"The bundle identifier was NULL.");
+	/* initialize our job, in case it is idling */
+	if (!li_daemon_init_job (helper, mgr_bus, context))
 		goto out;
-	}
 
-	inst = li_installer_new ();
-	g_signal_connect (inst, "progress",
-						G_CALLBACK (li_installer_progress_cb), inst_bus);
+	/* do the thing */
+	li_daemon_job_run_install (helper->job, pkid);
 
-	li_installer_open_remote (inst, pkid, &error);
-	if (error != NULL) {
-		g_dbus_method_invocation_take_error (context, error);
-		goto out;
-	}
+	li_proxy_manager_complete_install (mgr_bus, context);
 
-	li_installer_install (inst, &error);
-	if (error != NULL) {
-		g_dbus_method_invocation_take_error (context, error);
-		goto out;
-	}
-
-	li_proxy_installer_complete_install (inst_bus, context);
-
- out:
-	if (inst != NULL)
-		g_object_unref (inst);
+out:
 	if (pres != NULL)
 		g_object_unref (pres);
 
@@ -206,40 +173,26 @@ GError *error = NULL;
 }
 
 /**
- * li_manager_progress_cb:
- */
-static void
-li_manager_progress_cb (LiManager *mgr, guint percentage, const gchar *id, LiProxyManager *mgr_bus)
-{
-	if (id == NULL)
-		id = "";
-	li_proxy_manager_emit_progress (mgr_bus, id, percentage);
-}
-
-/**
  * bus_manager_remove_software_cb:
  */
 static gboolean
 bus_manager_remove_software_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
 {
 	GError *error = NULL;
-	LiManager *mgr = NULL;
 	PolkitAuthorizationResult *pres = NULL;
 	PolkitSubject *subject;
 	const gchar *sender;
-
-	li_daemon_reset_timer (helper);
 
 	sender = g_dbus_method_invocation_get_sender (context);
 
 	subject = polkit_system_bus_name_new (sender);
 	pres = polkit_authority_check_authorization_sync (helper->authority,
-													subject,
-													"org.freedesktop.limba.remove-package",
-													NULL,
-													POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
-													NULL,
-													&error);
+							subject,
+							"org.freedesktop.limba.remove-package",
+							NULL,
+							POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+							NULL,
+							&error);
 	g_object_unref (subject);
 
 	if (error != NULL) {
@@ -249,31 +202,20 @@ bus_manager_remove_software_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *
 
 	if (!polkit_authorization_result_get_is_authorized (pres)) {
 		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Manager.Error.NotAuthorized",
-													"Authorization failed.");
+								"Authorization failed.");
 		goto out;
 	}
 
-	if (pkid == NULL) {
-		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Manager.Error.Failed",
-													"The bundle identifier was NULL.");
+	/* initialize our job, in case it is idling */
+	if (!li_daemon_init_job (helper, mgr_bus, context))
 		goto out;
-	}
 
-	mgr = li_manager_new ();
-	g_signal_connect (mgr, "progress",
-						G_CALLBACK (li_manager_progress_cb), mgr_bus);
-
-	li_manager_remove_software (mgr, pkid, &error);
-	if (error != NULL) {
-		g_dbus_method_invocation_take_error (context, error);
-		goto out;
-	}
+	/* do the thing */
+	li_daemon_job_run_remove_package (helper->job, pkid);
 
 	li_proxy_manager_complete_remove_software (mgr_bus, context);
 
- out:
-	if (mgr != NULL)
-		g_object_unref (mgr);
+out:
 	if (pres != NULL)
 		g_object_unref (pres);
 
@@ -289,7 +231,6 @@ static void
 on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon *helper)
 {
 	LiProxyObjectSkeleton *object;
-	LiProxyInstaller *inst_bus;
 	LiProxyManager *mgr_bus;
 	GError *error = NULL;
 
@@ -300,27 +241,6 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 
 	helper->obj_manager = g_dbus_object_manager_server_new ("/org/freedesktop/Limba");
 
-	/* create the Installer object */
-	object = li_proxy_object_skeleton_new ("/org/freedesktop/Limba/Installer");
-
-	inst_bus = li_proxy_installer_skeleton_new ();
-	li_proxy_object_skeleton_set_installer (object, inst_bus);
-	g_object_unref (inst_bus);
-
-	g_signal_connect (inst_bus,
-					"handle-install-local",
-					G_CALLBACK (bus_installer_install_local_cb),
-					helper);
-
-	g_signal_connect (inst_bus,
-					"handle-install",
-					G_CALLBACK (bus_installer_install_cb),
-					helper);
-
-	/* export the object */
-	g_dbus_object_manager_server_export (helper->obj_manager, G_DBUS_OBJECT_SKELETON (object));
-	g_object_unref (object);
-
 	/* create the Manager object */
 	object = li_proxy_object_skeleton_new ("/org/freedesktop/Limba/Manager");
 
@@ -329,9 +249,19 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 	g_object_unref (mgr_bus);
 
 	g_signal_connect (mgr_bus,
-					"handle-remove-software",
-					G_CALLBACK (bus_manager_remove_software_cb),
-					helper);
+			"handle-remove-software",
+			G_CALLBACK (bus_manager_remove_software_cb),
+			helper);
+
+	g_signal_connect (mgr_bus,
+			"handle-install-local",
+			G_CALLBACK (bus_installer_install_local_cb),
+			helper);
+
+	g_signal_connect (mgr_bus,
+			"handle-install",
+			G_CALLBACK (bus_installer_install_cb),
+			helper);
 
 	/* export the object */
 	g_dbus_object_manager_server_export (helper->obj_manager, G_DBUS_OBJECT_SKELETON (object));
@@ -369,6 +299,13 @@ static gboolean
 li_daemon_timeout_check_cb (LiHelperDaemon *helper)
 {
 	guint idle;
+
+	/* we don't do anything when a job is running */
+	if (li_daemon_job_is_running (helper->job)) {
+		li_daemon_reset_timer (helper);
+		return TRUE;
+	}
+
 	idle = (guint) g_timer_elapsed (helper->timer, NULL);
 	g_debug ("idle is %i", idle);
 
@@ -426,19 +363,20 @@ main (gint argc, gchar *argv[])
 		g_setenv ("G_MESSAGES_DEBUG", "all", TRUE);
 	}
 
+	/* initialize helper */
 	helper.loop = g_main_loop_new (NULL, FALSE);
-
-	helper.exit_idle_time = 20;
+	helper.exit_idle_time = 30;
 	helper.timer = g_timer_new ();
+	helper.job = li_daemon_job_new ();
 
 	id = g_bus_own_name (G_BUS_TYPE_SYSTEM,
-						"org.freedesktop.Limba",
-						G_BUS_NAME_OWNER_FLAGS_REPLACE,
-						(GBusAcquiredCallback) on_bus_acquired,
-						(GBusNameAcquiredCallback) on_name_acquired,
-						(GBusNameLostCallback) on_name_lost,
-						&helper,
-						NULL);
+				"org.freedesktop.Limba",
+				G_BUS_NAME_OWNER_FLAGS_REPLACE,
+				(GBusAcquiredCallback) on_bus_acquired,
+				(GBusNameAcquiredCallback) on_name_acquired,
+				(GBusNameLostCallback) on_name_lost,
+				&helper,
+				NULL);
 
 	helper.timer_id = g_timeout_add_seconds (5, (GSourceFunc) li_daemon_timeout_check_cb, &helper);
 	g_source_set_name_by_id (helper.timer_id, "[LiDaemon] main poll");
@@ -449,6 +387,7 @@ main (gint argc, gchar *argv[])
 	g_bus_unown_name (id);
 	g_timer_destroy (helper.timer);
 	g_main_loop_unref (helper.loop);
+	g_object_unref (helper.job);
 
 	if (helper.timer_id > 0)
 		g_source_remove (helper.timer_id);

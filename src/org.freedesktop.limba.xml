@@ -1,11 +1,23 @@
 <node>
-	<!-- org.freedesktop.Limba.Installer:
-		@short_description: Install Limba packages
+	<!-- org.freedesktop.Limba.Manager:
+		@short_description: Manage Limba packages
 		@since: 0.4
 
-		Allows an unprivileged application to install a software package.
+		Allows an unprivileged application to manage Limba packages,
+		e.g. remove or install them.
 	-->
-	<interface name="org.freedesktop.Limba.Installer">
+	<interface name="org.freedesktop.Limba.Manager">
+		<!--
+			RemoveSoftware:
+			@pkid: A package identifier
+			@since: 0.4
+
+			Remove a Limba package.
+		-->
+		<method name="RemoveSoftware">
+			<arg direction="in" type="s" name="pkid"/>
+		</method>
+
 		<!--
 			InstallLocal:
 			@fname: Absolute path to a package file
@@ -41,38 +53,29 @@
 			<arg name="id" type="s"/>
 			<arg name="percentage" type="i"/>
 		</signal>
-	</interface>
-
-	<!-- org.freedesktop.Limba.Manager:
-		@short_description: Manage Limba packages
-		@since: 0.4
-
-		Allows an unprivileged application to manage Limba packages,
-		e.g. remove them.
-	-->
-	<interface name="org.freedesktop.Limba.Manager">
-		<!--
-			RemoveSoftware:
-			@pkid: A package identifier
-			@since: 0.4
-
-			Remove a Limba package.
-		-->
-		<method name="RemoveSoftware">
-			<arg direction="in" type="s" name="pkid"/>
-		</method>
 
 		<!--
-			Progress:
-			@id: Identifier for the package this progress belongs to.
-			@percentage: Progress percentage.
-			@since: 0.5
+			Error:
+			@code: An error code.
+			@details: Details text.
+			@since: 0.5.1
 
-			Progress information about the current step.
+			Emitted when an action results in an error.
 		-->
-		<signal name="Progress">
-			<arg name="id" type="s"/>
-			<arg name="percentage" type="i"/>
+		<signal name="Error">
+			<arg name="code" type="u" />
+			<arg name="details" type="s" />
 		</signal>
+
+		<!--
+			Finished:
+			@since: 0.5.1
+
+			Signal that the last action is complete.
+		-->
+		<signal name="Finished">
+			<arg name="success" type="b" />
+		</signal>
+
 	</interface>
 </node>
