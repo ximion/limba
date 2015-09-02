@@ -137,7 +137,7 @@ li_build_master_print_section (LiBuildMaster *bmaster, const gchar *section_name
 
 	seclen = strlen (section_name);
 
-	str = g_string_new ("\n\n");
+	str = g_string_new ("\n");
 
 	g_string_append_unichar (str, 0x250C);
 	for (i = 0; i < seclen+14; i++)
@@ -164,10 +164,12 @@ li_build_master_print_section (LiBuildMaster *bmaster, const gchar *section_name
 static gint
 li_build_master_exec (LiBuildMaster *bmaster, const gchar *cmd)
 {
-	gint res;
+	gint res = 0;
 
 	g_print (" ! %s\n", cmd);
 	res = system (cmd);
+	if (res > 255)
+		res = 1;
 
 	return res;
 }
