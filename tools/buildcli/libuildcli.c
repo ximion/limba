@@ -26,16 +26,17 @@
 #include <limba.h>
 
 #include "li-console-utils.h"
+#include "li-build-master.h"
 
 static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
 
 /**
- * lirepo_init:
+ * bcli_repo_init:
  */
 static gint
-lirepo_init (const gchar *repodir)
+bcli_repo_init (const gchar *repodir)
 {
 	gint res = 0;
 	gchar *rdir;
@@ -73,10 +74,10 @@ out:
 }
 
 /**
- * lirepo_add_package:
+ * bcli_repo_add_package:
  */
 static gint
-lirepo_add_package (const gchar *fname, const gchar *repodir)
+bcli_repo_add_package (const gchar *fname, const gchar *repodir)
 {
 	gint res = 0;
 	gchar *rdir;
@@ -134,6 +135,41 @@ out:
 }
 
 /**
+ * bcli_execute_build:
+ */
+static gint
+bcli_execute_build (const gchar *srcdir)
+{
+	LiBuildMaster *bmaster;
+	gint res = 0;
+	gchar *sdir;
+	GError *error = NULL;
+
+	if (srcdir == NULL)
+		sdir = g_get_current_dir ();
+	else
+		sdir = g_strdup (srcdir);
+
+	bmaster = li_build_master_new ();
+
+	li_build_master_init_build (bmaster, sdir, &error);
+	if (error != NULL) {
+		li_print_stdout ("-- Error --");
+		li_print_stderr ("%s", error->message);
+		res = 1;
+		goto out;
+	}
+
+	test_print_script (bmaster);
+
+out:
+	g_free (sdir);
+	g_object_unref (bmaster);
+
+	return res;
+}
+
+/**
  * libuild_get_summary:
  **/
 static gchar *
@@ -147,6 +183,7 @@ libuild_get_summary ()
 				/* these are commands we can use with limba-build */
 				_("Subcommands:"));
 
+	g_string_append_printf (string, "  %s - %s\n", "run [DIRECTORY]", _("Build the software following its build recipe"));
 	g_string_append_printf (string, "  %s - %s\n", "repo-init [DIRECTORY]", _("Initialize a new repository in DIRECTORY."));
 	g_string_append_printf (string, "  %s - %s\n", "repo-add [PKGNAME] [DIRECTORY]", _("Add a package to the repository"));
 
@@ -222,9 +259,11 @@ main (int argc, char *argv[])
 		value2 = argv[3];
 
 	if (g_strcmp0 (command, "repo-init") == 0) {
-		exit_code = lirepo_init (value1);
+		exit_code = bcli_repo_init (value1);
 	} else if (g_strcmp0 (command, "repo-add") == 0) {
-		exit_code = lirepo_add_package (value1, value2);
+		exit_code = bcli_repo_add_package (value1, value2);
+	} else if (g_strcmp0 (command, "run") == 0) {
+		exit_code = bcli_execute_build (value1);
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;

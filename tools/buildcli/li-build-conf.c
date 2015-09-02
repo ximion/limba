@@ -25,8 +25,10 @@
 
 #include "li-build-conf.h"
 
+#include <config.h>
 #include <glib.h>
 #include <glib-object.h>
+#include <glib/gi18n-lib.h>
 #include <yaml.h>
 
 typedef struct _LiBuildConfPrivate	LiBuildConfPrivate;
@@ -72,6 +74,99 @@ li_build_conf_init (LiBuildConf *bconf)
 	priv->yroot = NULL;
 }
 
+/**
+ * li_build_conf_get_root_node:
+ */
+static GNode*
+li_build_conf_get_root_node (LiBuildConf *bconf, const gchar *node_name)
+{
+	GNode *node;
+	LiBuildConfPrivate *priv = GET_PRIVATE (bconf);
+
+	for (node = priv->yroot->children; node != NULL; node = node->next) {
+		gchar *key;
+
+		key = (gchar*) node->data;
+
+		if (g_strcmp0 (key, node_name) == 0) {
+			return node;
+		}
+	}
+
+	return NULL;
+}
+
+/**
+ * li_build_conf_get_before_script:
+ */
+GPtrArray*
+li_build_conf_get_before_script (LiBuildConf *bconf)
+{
+	GPtrArray *cmds;
+	GNode *root;
+	GNode *n;
+
+	root = li_build_conf_get_root_node (bconf, "before_script");
+	if (root == NULL)
+		return NULL;
+
+	cmds = g_ptr_array_new_with_free_func (g_free);
+
+	for (n = root->children; n != NULL; n = n->next) {
+		g_ptr_array_add (cmds,
+				g_strdup ((gchar*) n->data));
+	}
+
+	return cmds;
+}
+
+/**
+ * li_build_conf_get_script:
+ */
+GPtrArray*
+li_build_conf_get_script (LiBuildConf *bconf)
+{
+	GPtrArray *cmds;
+	GNode *root;
+	GNode *n;
+
+	root = li_build_conf_get_root_node (bconf, "script");
+	if (root == NULL)
+		return NULL;
+
+	cmds = g_ptr_array_new_with_free_func (g_free);
+
+	for (n = root->children; n != NULL; n = n->next) {
+		g_ptr_array_add (cmds,
+				g_strdup ((gchar*) n->data));
+	}
+
+	return cmds;
+}
+
+/**
+ * li_build_conf_get_after_script:
+ */
+GPtrArray*
+li_build_conf_get_after_script (LiBuildConf *bconf)
+{
+	GPtrArray *cmds;
+	GNode *root;
+	GNode *n;
+
+	root = li_build_conf_get_root_node (bconf, "after_script");
+	if (root == NULL)
+		return NULL;
+
+	cmds = g_ptr_array_new_with_free_func (g_free);
+
+	for (n = root->children; n != NULL; n = n->next) {
+		g_ptr_array_add (cmds,
+				g_strdup ((gchar*) n->data));
+	}
+
+	return cmds;
+}
 
 /**
  * _buildconf_yaml_free_node:
@@ -201,6 +296,88 @@ li_build_conf_process_data (LiBuildConf *bconf, const gchar *data, GError **erro
 }
 
 /**
+ * li_build_conf_open_file:
+ **/
+void
+li_build_conf_open_file (LiBuildConf *bconf, GFile* file, GError **error)
+{
+	gchar *yaml_doc;
+	GFileInputStream* fistream;
+	gchar *line = NULL;
+	GString *str;
+	GDataInputStream *dis;
+
+	str = g_string_new ("");
+	fistream = g_file_read (file, NULL, NULL);
+	dis = g_data_input_stream_new ((GInputStream*) fistream);
+	g_object_unref (fistream);
+
+	while (TRUE) {
+		line = g_data_input_stream_read_line (dis, NULL, NULL, NULL);
+		if (line == NULL) {
+			break;
+		}
+
+		g_string_append_printf (str, "%s\n", line);
+	}
+
+	yaml_doc = g_string_free (str, FALSE);
+	g_object_unref (dis);
+
+	/* parse YAML data */
+	li_build_conf_process_data (bconf, yaml_doc, error);
+	g_free (yaml_doc);
+}
+
+
+/**
+ * li_build_conf_open_from_dir:
+ */
+void
+li_build_conf_open_from_dir (LiBuildConf *bconf, const gchar *dir, GError **error)
+{
+	GFile *file;
+	gchar *fname = NULL;
+
+	fname = g_build_filename (dir, "lipkg", "build.yml", NULL);
+	file = g_file_new_for_path (fname);
+	if (!g_file_query_exists (file, NULL)) {
+		g_object_unref (file);
+		g_free (fname);
+		fname = NULL;
+	}
+	if (fname == NULL) {
+		fname = g_build_filename (dir, "build.yml", NULL);
+		file = g_file_new_for_path (fname);
+		if (!g_file_query_exists (file, NULL)) {
+			g_object_unref (file);
+			g_free (fname);
+			fname = NULL;
+		}
+	}
+	if (fname == NULL) {
+		fname = g_build_filename (dir, ".travis.yml", NULL);
+		file = g_file_new_for_path (fname);
+		if (!g_file_query_exists (file, NULL)) {
+			g_object_unref (file);
+			g_free (fname);
+			fname = NULL;
+		}
+	}
+	if (fname == NULL) {
+		/* looks like we didn't find a file */
+		g_set_error_literal (error,
+					G_FILE_ERROR,
+					G_FILE_ERROR_NOENT,
+					_("Could not find a 'build.yml' file!"));
+		return;
+	}
+
+	li_build_conf_open_file (bconf, file, error);
+	g_free (fname);
+}
+
+/**
  * li_build_conf_class_init:
  **/
 static void
@@ -221,7 +398,7 @@ li_build_conf_class_init (LiBuildConfClass *klass)
 LiBuildConf *
 li_build_conf_new (void)
 {
-	LiBuildConf *cdata;
-	cdata = g_object_new (LI_TYPE_BUILD_CONF, NULL);
-	return LI_BUILD_CONF (cdata);
+	LiBuildConf *bconf;
+	bconf = g_object_new (LI_TYPE_BUILD_CONF, NULL);
+	return LI_BUILD_CONF (bconf);
 }

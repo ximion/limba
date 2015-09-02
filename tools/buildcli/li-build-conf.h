@@ -56,6 +56,17 @@ struct _LiBuildConfClass
 GType			li_build_conf_get_type	(void);
 LiBuildConf		*li_build_conf_new	(void);
 
+void			li_build_conf_open_file (LiBuildConf *bconf,
+						GFile* file,
+						GError **error);
+void			li_build_conf_open_from_dir (LiBuildConf *bconf,
+						const gchar *dir,
+						GError **error);
+
+GPtrArray		*li_build_conf_get_before_script (LiBuildConf *bconf);
+GPtrArray		*li_build_conf_get_script (LiBuildConf *bconf);
+GPtrArray		*li_build_conf_get_after_script (LiBuildConf *bconf);
+
 G_END_DECLS
 
 #endif /* __LI_BUILD_CONF_H */

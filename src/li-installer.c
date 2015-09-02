@@ -948,6 +948,7 @@ li_installer_get_appstream_data (LiInstaller *inst)
 
 	return li_package_get_appstream_data (priv->pkg);
 }
+
 /**
  * li_installer_error_quark:
  *

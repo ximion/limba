@@ -7,6 +7,8 @@ set(LIMBA_LIBUILD_SRC
 	libuildcli.c
 	li-build-conf.h
 	li-build-conf.c
+	li-build-master.h
+	li-build-master.c
 )
 
 add_definitions("-DG_LOG_DOMAIN=\"LimbaBuildCLI\"")
