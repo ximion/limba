@@ -141,9 +141,9 @@ out:
 static gint
 bcli_execute_build (const gchar *srcdir)
 {
-	LiBuildMaster *bmaster;
+	LiBuildMaster *bmaster = NULL;
 	gint res = 0;
-	gchar *sdir;
+	gchar *sdir = NULL;
 	const gchar *chroot_name;
 	GError *error = NULL;
 
@@ -187,7 +187,8 @@ bcli_execute_build (const gchar *srcdir)
 
 out:
 	g_free (sdir);
-	g_object_unref (bmaster);
+	if (bmaster != NULL)
+		g_object_unref (bmaster);
 
 	return res;
 }

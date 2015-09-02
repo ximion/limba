@@ -388,9 +388,11 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 	gint child_status;
         pid_t ret_val;
 	gchar *tmp;
+	GError *tmp_error = NULL;
 	_cleanup_free_ gchar *env_root = NULL;
 
 	/* create the essential directories for the new build environment */
+	g_debug ("Creating essential directories");
 	tmp = li_get_uuid_string ();
 	env_root = g_build_filename (LOCALSTATEDIR, "cache", "limba-build", "env", tmp, NULL);
 	g_free (tmp);
@@ -401,7 +403,17 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 		goto out;
 	}
 
-	g_debug ("Finished creating essential directories.");
+	/* TODO: Get nice, reproducible name for a build job to set as scope name */
+	g_debug ("Adding build job to new scope");
+	li_add_to_new_scope ("limba-build", "1", &tmp_error);
+	if (tmp_error != NULL) {
+		g_warning ("Unable to add build job to scope: %s", tmp_error->message);
+		res = 6;
+		g_error_free (tmp_error);
+		goto out;
+	}
+
+	g_debug ("Forking build executor");
 
 	/* for our build helper */
 	pid = fork ();
