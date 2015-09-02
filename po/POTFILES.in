@@ -20,6 +20,8 @@ src/li-repository.c
 tools/runapp/runapp.c
 tools/cli/limbacli.c
 tools/buildcli/libuildcli.c
+tools/buildcli/li-build-conf.c
+tools/buildcli/li-build-master.c
 tools/lipkgen/lipkgen.c
 # Mimetype
 data/mime/x-ipk.xml.in

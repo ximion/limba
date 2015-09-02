@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2015-08-31 20:30+0200\n"
+        "POT-Creation-Date: 2015-09-02 23:52+0200\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -33,6 +33,10 @@ msgstr  ""
 
 #, c-format
 msgid   "Could not find system component: '%s'. Please install it manually."
+msgstr  ""
+
+#, c-format
+msgid   "The Limba daemon vanished from the bus mid-transaction, so it likely crashed. Please file a bug against Limba."
 msgstr  ""
 
 #, c-format
@@ -335,6 +339,15 @@ msgstr  ""
 msgid   "Could not create directory structure for runtime. %s"
 msgstr  ""
 
+msgid   "Could not find a 'build.yml' file!"
+msgstr  ""
+
+msgid   "Could not find commands to build this application!"
+msgstr  ""
+
+msgid   "Build command failed with non-zero exit status."
+msgstr  ""
+
 #, c-format
 msgid   "Failed to initialize repository: %s"
 msgstr  ""
@@ -358,11 +371,20 @@ msgstr  ""
 msgid   "Failed to update icon tarball: %s"
 msgstr  ""
 
+msgid   "No chroot base specified to run the build process in. Please specify a directory via the '--chroot=' parameter."
+msgstr  ""
+
+msgid   "In case you really want to run without chroot in an unisolated environment, specify '--chroot=none' explicitly."
+msgstr  ""
+
 #. : This is the header to the --help menu
 msgid   "Limba build tool"
 msgstr  ""
 
 msgid   "Subcommands:"
+msgstr  ""
+
+msgid   "Build the software following its build recipe"
 msgstr  ""
 
 msgid   "Initialize a new repository in DIRECTORY."
@@ -378,6 +400,9 @@ msgid   "Show extra debugging information"
 msgstr  ""
 
 msgid   "Don't show \"fancy\" output"
+msgstr  ""
+
+msgid   "Build in a chroot environment"
 msgstr  ""
 
 #, c-format
