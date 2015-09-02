@@ -27,8 +27,10 @@
 
 #include <config.h>
 #include <glib.h>
-#include <glib-object.h>
+#include <glib/gstdio.h>
 #include <glib/gi18n-lib.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "li-build-conf.h"
 
 
@@ -117,22 +119,112 @@ li_build_master_init_build (LiBuildMaster *bmaster, const gchar *dir, GError **e
 	priv->cmds_pre = li_build_conf_get_before_script (bconf);
 	priv->cmds_post = li_build_conf_get_after_script (bconf);
 
+	priv->build_root = g_strdup (dir);
+
 	priv->init_done = TRUE;
 	g_object_unref (bconf);
 }
 
-void
-test_print_script (LiBuildMaster *bmaster)
+/**
+ * li_build_master_print_section:
+ */
+static void
+li_build_master_print_section (LiBuildMaster *bmaster, const gchar *section_name)
+{
+	GString *str;
+	gint seclen;
+	gint i;
+
+	seclen = strlen (section_name);
+
+	str = g_string_new ("\n\n");
+
+	g_string_append_unichar (str, 0x250C);
+	for (i = 0; i < seclen+14; i++)
+		g_string_append_unichar (str, 0x2500);
+	g_string_append_unichar (str, 0x2510);
+
+	g_string_append_printf (str,
+				"\n│ %s             │\n",
+				section_name);
+
+	g_string_append_unichar (str, 0x2514);
+	for (i = 0; i < seclen+14; i++)
+		g_string_append_unichar (str, 0x2500);
+	g_string_append_unichar (str, 0x2518);
+	g_string_append (str, "\n\n");
+
+	printf ("%s", str->str);
+	g_string_free (str, TRUE);
+}
+
+/**
+ * li_build_master_exec:
+ */
+static gint
+li_build_master_exec (LiBuildMaster *bmaster, const gchar *cmd)
+{
+	gint res;
+
+	g_print (" ! %s\n", cmd);
+	res = system (cmd);
+
+	return res;
+}
+
+/**
+ * li_build_master_run:
+ */
+gint
+li_build_master_run (LiBuildMaster *bmaster, GError **error)
 {
 	guint i;
+	gint res = 0;
+	gboolean ret;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
+	ret = g_setenv ("BUILDROOT", priv->build_root, TRUE);
+	res = g_chdir (priv->build_root);
+	if ((!ret) || (res != 0)) {
+		g_warning ("Unable to set up the environment!");
+		goto out;
+	}
+
+	li_build_master_print_section (bmaster, "Preparing Build Environment");
+	for (i = 0; i < priv->cmds_pre->len; i++) {
+		gchar *cmd;
+		cmd = (gchar*) g_ptr_array_index (priv->cmds_pre, i);
+		res = li_build_master_exec (bmaster, cmd);
+		if (res != 0)
+			goto out;
+	}
+
+	li_build_master_print_section (bmaster, "Build");
 	for (i = 0; i < priv->cmds->len; i++) {
 		gchar *cmd;
 		cmd = (gchar*) g_ptr_array_index (priv->cmds, i);
-
-		g_print ("%s\n", cmd);
+		res = li_build_master_exec (bmaster, cmd);
+		if (res != 0)
+			goto out;
 	}
+
+	li_build_master_print_section (bmaster, "Cleanup");
+	for (i = 0; i < priv->cmds_post->len; i++) {
+		gchar *cmd;
+		cmd = (gchar*) g_ptr_array_index (priv->cmds_post, i);
+		res = li_build_master_exec (bmaster, cmd);
+		if (res != 0)
+			goto out;
+	}
+
+out:
+	if (res != 0)
+		g_set_error_literal (error,
+					LI_BUILD_MASTER_ERROR,
+					LI_BUILD_MASTER_ERROR_STEP_FAILED,
+					_("Build command failed with non-zero exit status."));
+
+	return res;
 }
 
 /**

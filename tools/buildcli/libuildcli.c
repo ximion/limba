@@ -154,13 +154,20 @@ bcli_execute_build (const gchar *srcdir)
 
 	li_build_master_init_build (bmaster, sdir, &error);
 	if (error != NULL) {
-		li_print_stdout ("-- Error --");
+		printf ("\n── Error ──\n");
 		li_print_stderr ("%s", error->message);
 		res = 1;
 		goto out;
 	}
 
-	test_print_script (bmaster);
+	res = li_build_master_run (bmaster, &error);
+	if (error != NULL) {
+		printf ("\n── Error ──\n");
+		li_print_stderr ("%s", error->message);
+		if (res == 0)
+			res = 1;
+		goto out;
+	}
 
 out:
 	g_free (sdir);
@@ -193,13 +200,13 @@ libuild_get_summary ()
 /**
  * main:
  **/
-int
+gint
 main (int argc, char *argv[])
 {
 	GOptionContext *opt_context;
 	GError *error = NULL;
 
-	int exit_code = 0;
+	gint exit_code = 0;
 	gchar *command = NULL;
 	gchar *value1 = NULL;
 	gchar *value2 = NULL;

@@ -56,12 +56,14 @@ struct _LiBuildMasterClass
  * LiBuildMasterError:
  * @LI_BUILD_MASTER_ERROR_FAILED:		Generic failure
  * @LI_BUILD_MASTER_ERROR_NO_COMMANDS:		No commands to execute
+ * @LI_BUILD_MASTER_ERROR_STEP_FAILED:		A build step failed
  *
  * The error type.
  **/
 typedef enum {
 	LI_BUILD_MASTER_ERROR_FAILED,
 	LI_BUILD_MASTER_ERROR_NO_COMMANDS,
+	LI_BUILD_MASTER_ERROR_STEP_FAILED,
 	/*< private >*/
 	LI_BUILD_MASTER_ERROR_LAST
 } LiBuildMasterError;
@@ -76,8 +78,8 @@ void			li_build_master_init_build (LiBuildMaster *bmaster,
 							const gchar *dir,
 							GError **error);
 
-void
-test_print_script (LiBuildMaster *bmaster);
+gint			li_build_master_run (LiBuildMaster *bmaster,
+						GError **error);
 
 G_END_DECLS
 
