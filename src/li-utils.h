@@ -33,7 +33,7 @@ gchar			*li_get_current_arch_h (void);
 gchar			*li_get_arch_triplet (void);
 
 gint			li_compare_versions (const gchar* a,
-									const gchar *b);
+						const gchar *b);
 
 LiPkgInfo		*li_parse_dependency_string (const gchar *depstr);
 GPtrArray		*li_parse_dependencies_string (const gchar *depstr);

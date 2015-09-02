@@ -31,6 +31,7 @@
 static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
+static gchar* optn_chroot = FALSE;
 
 /**
  * bcli_repo_init:
@@ -143,6 +144,7 @@ bcli_execute_build (const gchar *srcdir)
 	LiBuildMaster *bmaster;
 	gint res = 0;
 	gchar *sdir;
+	const gchar *chroot_name;
 	GError *error = NULL;
 
 	if (srcdir == NULL)
@@ -150,9 +152,23 @@ bcli_execute_build (const gchar *srcdir)
 	else
 		sdir = g_strdup (srcdir);
 
+	if (optn_chroot == NULL) {
+		li_print_stderr ("%s\n%s", _("No chroot base specified to run the build process in. Please specify a directory via the '--chroot=' parameter."),
+					_("In case you really want to run without chroot in an unisolated environment, specify '--chroot=none' explicitly."));
+		res = 1;
+		goto out;
+	}
+
+	chroot_name = optn_chroot;
+	if (g_strcmp0 (chroot_name, "none") == 0)
+		chroot_name = NULL;
+
 	bmaster = li_build_master_new ();
 
-	li_build_master_init_build (bmaster, sdir, &error);
+	li_build_master_init_build (bmaster,
+				sdir,
+				chroot_name,
+				&error);
 	if (error != NULL) {
 		printf ("\n── Error ──\n");
 		li_print_stderr ("%s", error->message);
@@ -217,6 +233,7 @@ main (int argc, char *argv[])
 		{ "version", 0, 0, G_OPTION_ARG_NONE, &optn_show_version, _("Show the program version"), NULL },
 		{ "verbose", 0, 0, G_OPTION_ARG_NONE, &optn_verbose_mode, _("Show extra debugging information"), NULL },
 		{ "no-fancy", 0, 0, G_OPTION_ARG_NONE, &optn_no_fancy, _("Don't show \"fancy\" output"), NULL },
+		{ "chroot", 0, 0, G_OPTION_ARG_STRING, &optn_chroot, _("Build in a chroot environment"), NULL },
 		{ NULL }
 	};
 

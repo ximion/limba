@@ -23,9 +23,10 @@
 #define __LI_UTILS_PRIVATE_H
 
 #include <glib-object.h>
-#include <appstream.h>
 
 G_BEGIN_DECLS
+
+typedef struct _AsComponent		AsComponent;
 
 #define GS_DEFINE_CLEANUP_FUNCTION(Type, name, func) \
   static inline void name (void *v) \

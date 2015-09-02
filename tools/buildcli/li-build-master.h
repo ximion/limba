@@ -76,6 +76,7 @@ LiBuildMaster		*li_build_master_new	(void);
 
 void			li_build_master_init_build (LiBuildMaster *bmaster,
 							const gchar *dir,
+							const gchar *chroot_orig,
 							GError **error);
 
 gint			li_build_master_run (LiBuildMaster *bmaster,

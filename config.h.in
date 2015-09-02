@@ -14,6 +14,7 @@
 #define DATADIR "@CMAKE_INSTALL_FULL_DATADIR@/limba"
 #define LIBDIR "@CMAKE_INSTALL_FULL_LIBDIR@"
 #define BUILDDIR "@CMAKE_BINARY_DIR@"
+#define LOCALSTATEDIR "@CMAKE_INSTALL_FULL_LOCALSTATEDIR@"
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #define HAVE_GETTEXT 1
