@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <errno.h>
+#include "li-systemd-dbus.h"
 
 /**
  * SECTION:li-utils
@@ -745,4 +746,124 @@ li_env_get_user_email (void)
 		return NULL;
 	else
 		return g_strdup (var);
+}
+
+struct SdJobData {
+	gchar *job;
+	GMainLoop *main_loop;
+};
+
+/**
+ * li_sd_job_removed_cb:
+ *
+ * Helper callback
+ */
+static void
+li_sd_job_removed_cb (LiSdManager *sdmgr, guint32 id, gchar *job, gchar *unit, gchar *result, struct SdJobData *data)
+{
+	if (strcmp (job, data->job) == 0)
+		g_main_loop_quit (data->main_loop);
+}
+
+/**
+ * li_add_to_new_scope:
+ *
+ * Add the current process to a new scope (cgroup).
+ */
+void
+li_add_to_new_scope (const gchar *domain, const gchar *idname, GError **error)
+{
+	GDBusConnection *conn = NULL;
+	LiSdManager *sdmgr = NULL;
+	GMainLoop *main_loop = NULL;
+	_cleanup_free_ gchar *sd_path = NULL;
+	_cleanup_free_ gchar *sd_address = NULL;
+	_cleanup_free_ gchar *sd_job = NULL;
+	_cleanup_free_ gchar *cgname = NULL;
+	GVariantBuilder builder;
+	GVariant *properties = NULL;
+	GVariant *aux = NULL;
+	guint32 pid;
+	GError *tmp_error = NULL;
+	struct SdJobData data;
+
+	if (domain == NULL)
+		domain = "limba";
+
+	/* check if systemd is running */
+	if (li_utils_is_root ()) {
+		sd_path = g_strdup ("/run/systemd/private");
+	} else {
+		sd_path = g_strdup_printf ("/run/user/%d/systemd/private", getuid ());
+	}
+	if (!g_file_test (sd_path, G_FILE_TEST_EXISTS))
+		goto out;
+
+	pid = getpid ();
+
+	main_loop = g_main_loop_new (NULL, FALSE);
+
+	sd_address = g_strconcat ("unix:path=", sd_path, NULL);
+	conn = g_dbus_connection_new_for_address_sync (sd_address,
+						G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
+						NULL,
+						NULL, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error,
+					"Unable to connect to systemd.");
+		goto out;
+	}
+
+	sdmgr = li_sd_manager_proxy_new_sync (conn,
+					G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+					NULL,
+					"/org/freedesktop/systemd1",
+					NULL,
+					&tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error,
+					"Unable to create systemd manager proxy.");
+		goto out;
+	}
+
+	cgname = g_strdup_printf ("%s-%s-%d.scope", domain, idname, pid);
+
+	g_variant_builder_init (&builder, G_VARIANT_TYPE ("a(sv)"));
+	g_variant_builder_add (&builder, "(sv)",
+				"PIDs",
+				g_variant_new_fixed_array (G_VARIANT_TYPE ("u"),
+							&pid, 1, sizeof (guint32)));
+	properties = g_variant_builder_end (&builder);
+
+	aux = g_variant_new_array (G_VARIANT_TYPE ("(sa(sv))"), NULL, 0);
+	li_sd_manager_call_start_transient_unit_sync (sdmgr,
+						cgname, /* scope name */
+						"fail", /* mode */
+						properties,
+						aux, /* unused, empty array */
+						&sd_job,
+						NULL,
+						&tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error,
+					"Unable to create systemd manager proxy.");
+		goto out;
+	}
+
+	data.job = sd_job;
+	data.main_loop = main_loop;
+	g_signal_connect (sdmgr,
+			"job-removed",
+			G_CALLBACK (li_sd_job_removed_cb), &data);
+
+	/* wait for the job to complete */
+	g_main_loop_run (main_loop);
+
+out:
+	if (main_loop)
+		g_main_loop_unref (main_loop);
+	if (sdmgr)
+		g_object_unref (sdmgr);
+	if (conn)
+		g_object_unref (conn);
 }

@@ -23,6 +23,7 @@
 #include <config.h>
 #include <limba.h>
 #include <li-config-data.h>
+#include "li-utils-private.h"
 
 #include <sys/mount.h>
 #include <sched.h>
@@ -35,14 +36,6 @@
 #include <sys/utsname.h>
 
 #include <gio/gio.h>
-
-#define GS_DEFINE_CLEANUP_FUNCTION(Type, name, func) \
-  static inline void name (void *v) \
-  { \
-    func (*(Type*)v); \
-  }
-GS_DEFINE_CLEANUP_FUNCTION(void*, gs_local_free, g_free)
-#define _cleanup_free_ __attribute__ ((cleanup(gs_local_free)))
 
 /**
  * create_mount_namespace:
@@ -129,7 +122,6 @@ mount_overlay (const gchar *pkgid)
 	g_object_unref (file);
 	if (error != NULL) {
 		fprintf (stderr, "Unable to read software metadata. %s\n", error->message);
-		g_error_free (error);
 		goto out;
 	}
 
@@ -212,6 +204,8 @@ out:
 		g_object_unref (pki);
 	if (wdir != NULL)
 		g_free (wdir);
+	if (error != NULL)
+		g_error_free (error);
 
 	return res;
 }
@@ -250,6 +244,7 @@ main (gint argc, gchar *argv[])
 	gchar **strv;
 	gchar **child_argv = NULL;
 	guint i;
+	GError *error = NULL;
 	uid_t uid = getuid(), euid = geteuid();
 
 	if ((uid > 0) && (uid == euid)) {
@@ -267,7 +262,7 @@ main (gint argc, gchar *argv[])
 		g_strfreev (strv);
 		fprintf (stderr, "No installed software with that name or executable found.\n");
 		ret = 1;
-		goto out;
+		goto error;
 	}
 
 	uname (&uts_data);
@@ -281,14 +276,22 @@ main (gint argc, gchar *argv[])
 
 	ret = create_mount_namespace ();
 	if (ret > 0)
-		goto out;
+		goto error;
 
 	ret = mount_overlay (swname);
 	if (ret > 0)
-		goto out;
+		goto error;
 
 	/* Now we have everything we need CAP_SYS_ADMIN for, so drop setuid */
 	setuid (getuid ());
+
+	/* place this process in a new cgroup */
+	li_add_to_new_scope ("app", swname, &error);
+	if (error != NULL) {
+		fprintf (stderr, "Could not add process to new scope. %s\n", error->message);
+		g_error_free (error);
+		goto error;
+	}
 
 	/* add generic library path */
 	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/lib");
@@ -307,7 +310,7 @@ main (gint argc, gchar *argv[])
 	if (child_argv == NULL) {
 		ret = FALSE;
 		fprintf (stderr, "Out of memory!\n");
-		goto out;
+		goto error;
 	}
 
 	/* give absolute executable path as argv[0] */
@@ -320,6 +323,6 @@ main (gint argc, gchar *argv[])
 
 	return execv (executable, child_argv);
 
-out:
+error:
 	return ret;
 }
