@@ -1,3 +1,33 @@
+Version 0.5.1
+~~~~~~~~~~~~~~
+Released: 2015-09-02
+
+Features:
+ * Automatically clear TryExec key from .desktop files
+ * Add a couple more GPG options
+ * Improve key importing
+ * cli: Make progress-bar look a bit nicer
+ * Write signed dsc file for Limba packages
+ * Take payload data from 'target' subdirectory
+ * Rename libuild to licompile
+ * Rename the Limba tools to have more descriptive names
+ * Issue less blocking DBus calls in limba-daemon
+ * Watch the bus for the limba-daemon service name
+ * cli: Allow removing/installing software via the helper daemon
+ * Add new ABI-Breaks_versions field to indicate versions containing ABI breaks
+ * bcli: Port from lipkbh
+ * Drop old build-helper (lipkbh) Python prototype
+ * bcli: Allow building in a fancy chroot environment
+ * bcli: Put build jobs into their own scope using systemd
+ * Add small manpage for limba-build
+
+Bugfixes:
+ * The AppStream metadata file should not be created as directory
+ * Fix some GI annotations
+ * Verify signatures against a specific keyring
+ * Fix crash when checking for updates
+ * runapp: Properly put new processes into scopes
+
 Version 0.5.0
 ~~~~~~~~~~~~~~
 Released: 2015-06-26
