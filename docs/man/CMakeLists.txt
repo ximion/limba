@@ -5,6 +5,7 @@ include (${CMAKE_SOURCE_DIR}/data/cmake/documentation.cmake)
 set(manpages "runapp.1"
 	"limba.1"
 	"lipkgen.1"
+	"limba-build.1"
 )
 
 if(LICOMPILE)

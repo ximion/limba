@@ -3,10 +3,10 @@
 "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
 
   <!-- Please adjust the date whenever revising the manpage. -->
-  <!ENTITY date        "<date>12 November,2014</date>">
+  <!ENTITY date        "<date>02 September,2015</date>">
   <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
        allowed: see man(7), man(1). -->
-  <!ENTITY package     "lipkgen">
+  <!ENTITY package     "limba-build">
   <!ENTITY gnu         "<acronym>GNU</acronym>">
   <!ENTITY gpl         "&gnu; <acronym>GPL</acronym>">
 ]>
@@ -23,23 +23,23 @@
 	</refentryinfo>
 
 	<refmeta>
-		<refentrytitle>lipkgen</refentrytitle>
+		<refentrytitle>limba-build</refentrytitle>
 		<manvolnum>1</manvolnum>
 	</refmeta>
 	<refnamediv>
 		<refname>&package;</refname>
-		<refpurpose>Limba package builder</refpurpose>
+		<refpurpose>command-line tool for automated builds</refpurpose>
 	</refnamediv>
 
-	<refsynopsisdiv>
-		<cmdsynopsis>
-			<command>&package;</command>
-			<group choice="req">
-				<option>COMMAND</option>
-			</group>
-			<group choice="opt">
-				<option>OPTION ...</option>
-			</group>
+       <refsynopsisdiv>
+	       <cmdsynopsis>
+		       <command>&package;</command>
+		       <group choice="req">
+			       <option>COMMAND</option>
+		       </group>
+		       <group choice="opt">
+			       <option>OPTIONS ...</option>
+		       </group>
 		</cmdsynopsis>
 	</refsynopsisdiv>
 
@@ -49,9 +49,12 @@
 			This manual page documents briefly the <command>&package;</command> command.
 		</para>
 		<para>
-			<command>&package;</command> is a simple tool to build IPK packages directly
-			from compiled binaries. It is usually run by <command>limba-build(1)</command> as part
-			of an automated package build process.
+			<command>&package;</command> is a tool to automate building Limba packages from source
+			in an isolated chroot environment.
+		</para>
+		<para>
+			The tool is also able to create simple Limba package repositories and perform other tasks
+			related to building Limba packages.
 		</para>
 	</refsect1>
 
@@ -60,31 +63,39 @@
 		<variablelist>
 
 		<varlistentry>
-			<term><option>b</option></term>
-			<term><option>build <replaceable>DIRECTORY</replaceable></option></term>
+			<term><option>run <replaceable>DIRECTORY</replaceable></option></term>
 			<listitem>
 				<para>
-					Build IPK package using package metadata in <replaceable>DIRECTORY</replaceable>.
+					Run the build process. &package; will look for a <filename>lipkg/build.yml</filename>, <filename>build.yml</filename>
+					or <filename>.travis.yml</filename> file containing build instructions in that order.
 				</para>
 				<para>
-					If <replaceable>DIRECTORY</replaceable> is not defined, <command>&package;</command> will
-					try to find the package sources automatically in the current directory.
+					To build in a chroot environment, the <parameter class='command'>--chroot=</parameter>  parameter needs to point to a
+					directory containing an operating system as created by e.g. <command>debootstrap (8)</command> on Debian-based systems.
+					If no chroot should be used, <parameter class='command'>--chroot=none</parameter> must be set instead.
+				</para>
+			</listitem>
+		</varlistentry>
+
+
+		<varlistentry>
+			<term><option>repo-init <replaceable>DIRECTORY</replaceable></option></term>
+			<listitem>
+				<para>
+					Initialize empty Limba package repository in a local directory.
 				</para>
 			</listitem>
 		</varlistentry>
 
 		<varlistentry>
-			<term><option>unpack-pkg <replaceable>FILENAME</replaceable> <replaceable>DIRECTORY</replaceable></option></term>
+			<term><option>repo-add <replaceable>FILENAME</replaceable> <replaceable>DIRECTORY</replaceable></option></term>
 			<listitem>
 				<para>
-					Extract contents of package <replaceable>FILENAME</replaceable> into <replaceable>DIRECTORY</replaceable>.
-					This is useful for investigating the raw contents of a Limba package.
-				</para>
-				<para>
-					If <replaceable>DIRECTORY</replaceable> is not defined, the contents are extracted into the current directory.
+					Add a Limba package to a local repository.
 				</para>
 			</listitem>
 		</varlistentry>
+
 
 		<varlistentry>
 			<term><option>--version</option></term>
@@ -105,7 +116,7 @@
 
 	<refsect1>
 		<title>See Also</title>
-		<para>limba(1), limba-build(1).</para>
+		<para>limba (1), lipkgen (1), chroot (8).</para>
 		<para>
 			Additional documentation can be found on http://people.freedesktop.org/~mak/limba.
 		</para>
