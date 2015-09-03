@@ -328,7 +328,7 @@ pkgen_get_summary ()
 
 	/* TRANSLATORS: This is the header to the --help menu */
 	g_string_append_printf (string, "%s\n\n%s\n", _("Limba package builder"),
-				/* these are commands we can use with lipa */
+				/* these are commands we can use with lipkgen */
 				_("Subcommands:"));
 
 	g_string_append_printf (string, "  %s - %s\n", "build [DIRECTORY] [PKGNAME]", _("Create a new package using data found in DIRECTORY."));
