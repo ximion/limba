@@ -1,0 +1,18 @@
+# Build script for FooBar
+
+before_script:
+  - rm -rf ./lipkg/target
+  - find $BUILDROOT/lipkg/ -name "*.ipk*" -exec rm {} \;
+
+script:
+  - ./autogen.sh --prefix=/opt/bundle
+  - make -j2
+  - make install DESTDIR=$BUILDROOT/lipkg/target/
+  # remove cruft
+  - find $BUILDROOT/lipkg/target/ -name "*.la" -exec rm {} \;
+  - find $BUILDROOT/lipkg/target/ -name "*.a" -exec rm {} \;
+  # build package
+  - lipkgen build lipkg/
+
+after_script:
+  - make clean distclean
