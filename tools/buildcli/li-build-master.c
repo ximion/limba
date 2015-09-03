@@ -389,7 +389,9 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
         pid_t ret_val;
 	gchar *tmp;
 	GError *tmp_error = NULL;
+	GPtrArray *artifacts = NULL;
 	_cleanup_free_ gchar *env_root = NULL;
+	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
 	/* create the essential directories for the new build environment */
 	g_debug ("Creating essential directories");
@@ -448,7 +450,39 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 		}
 	}
 
-	g_debug ("Executor is done, umounting...");
+	g_debug ("Executor is done, rescuing build artifacts...");
+	tmp = g_build_filename (env_root, "build", "lipkg", NULL);
+	artifacts = li_utils_find_files_matching (tmp, "*.ipk*", FALSE);
+	g_free (tmp);
+	if ((artifacts == NULL) || (artifacts->len == 0)) {
+		g_print ("Unable to find build artifacts!\n");
+	} else {
+		guint i;
+		for (i = 0; i < artifacts->len; i++) {
+			gchar *fname;
+			gchar *fname_dest;
+			fname = (gchar*) g_ptr_array_index (artifacts, i);
+
+			tmp = g_path_get_basename (fname);
+			fname_dest = g_build_filename (priv->build_root, "lipkg", tmp, NULL);
+
+			g_remove (fname_dest);
+			li_copy_file (fname, fname_dest, &tmp_error);
+			if (tmp_error != NULL) {
+				g_warning ("Unable to copy build artifact from '%s': %s", fname, tmp_error->message);
+				g_error_free (tmp_error);
+				tmp_error = NULL;
+			} else {
+				g_print ("Stored: %s\n", tmp);
+			}
+
+			g_free (tmp);
+			g_free (fname_dest);
+		}
+	}
+
+
+	g_debug ("Unmounting...");
 	tmp = g_build_filename (env_root, "chroot", NULL);
 	umount (tmp);
 	g_free (tmp);
