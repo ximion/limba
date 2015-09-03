@@ -45,7 +45,7 @@ test_compile_foobar ()
 	chdir (dirname);
 
 	if (g_file_test ("Makefile", G_FILE_TEST_EXISTS))
-		system ("make clean");
+		system ("make distclean");
 
 	ret = system ("./autogen.sh --prefix=/opt/bundle");
 	g_assert (ret == 0);
@@ -58,7 +58,7 @@ test_compile_foobar ()
 	g_free (cmd);
 	g_assert (ret == 0);
 
-	/* no install the individual components of this software */
+	/* now install the individual components of this software */
 
 	/* app */
 	cmd = g_build_filename (dirname, "foo", NULL);

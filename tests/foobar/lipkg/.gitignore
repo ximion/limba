@@ -1,1 +1,2 @@
-inst_target
+target*/
+*.ipk*
