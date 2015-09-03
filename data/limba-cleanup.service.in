@@ -6,7 +6,7 @@ Before=shutdown.target
 [Service]
 Type=oneshot
 ConditionPathExists=/var/lib/limba/cleanup-needed
-ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/lipa cleanup --no-fail
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/limba cleanup --no-fail
 
 [Install]
 WantedBy=shutdown.target
