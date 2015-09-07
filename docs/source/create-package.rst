@@ -1,5 +1,6 @@
 Create a Limba package
 **********************
+.. highlight:: bash
 
 This brief instructions assume that you have Limba already installed on your system.
 
@@ -51,7 +52,9 @@ Then, open the ``lipkg/control`` file and adjust the ``Requires`` line.
 The names of the components you depend on match their AppStream-IDs (``<id/>`` tag in the AppStream XML document).
 Any version-relation (>=, >>, <<, <=, <>) is supported, and specified in brackets after the component-id.
 
-The resulting control-file might look like this::
+The resulting control-file might look like this:
+
+.. code-block:: control
 
   Format-Version: 1.0
 
