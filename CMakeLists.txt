@@ -45,6 +45,7 @@ option(MAINTAINER "Enable maintainer mode" OFF)
 option(LICOMPILE "Build and install the LiCompile facilities" OFF)
 option(L10N "Enable localization" ON)
 option(INSTALL_SUID "Install runapp with suid bit set" ON)
+option(DOCUMENTATION "Build documentation" OFF)
 
 #
 # Default paths
