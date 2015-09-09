@@ -748,6 +748,45 @@ li_env_get_user_email (void)
 		return g_strdup (var);
 }
 
+/**
+ * li_env_get_target_repo:
+ *
+ * Get the target repository name.
+ *
+ * Returns: Target repository name, or %NULL on error. Free with g_free()
+ */
+gchar*
+li_env_get_target_repo (void)
+{
+	const gchar *var;
+	var = g_getenv ("LIMBA_TARGET_REPO");
+	if (var == NULL)
+		return NULL;
+	else
+		return g_strdup (var);
+}
+
+/**
+ * li_env_set_user_details:
+ *
+ * Set user details used when building a Limba package
+ */
+void
+li_env_set_user_details (const gchar *user_name, const gchar *user_email, const gchar *target_repo)
+{
+	if (user_name != NULL)
+		g_setenv ("LIMBA_FULLNAME", user_name, TRUE);
+	if (user_email != NULL)
+		g_setenv ("LIMBA_EMAIL", user_email, TRUE);
+	if (target_repo != NULL)
+		g_setenv ("LIMBA_TARGET_REPO", target_repo, TRUE);
+}
+
+/**
+ * SdJobData:
+ *
+ * Helper data for systemd job callback
+ */
 struct SdJobData {
 	gchar *job;
 	GMainLoop *main_loop;

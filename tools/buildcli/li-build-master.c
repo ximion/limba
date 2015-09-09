@@ -42,7 +42,6 @@
 #include "li-utils-private.h"
 #include "li-build-conf.h"
 
-
 typedef struct _LiBuildMasterPrivate	LiBuildMasterPrivate;
 struct _LiBuildMasterPrivate
 {
@@ -54,6 +53,10 @@ struct _LiBuildMasterPrivate
 	GPtrArray *cmds_pre;
 	GPtrArray *cmds;
 	GPtrArray *cmds_post;
+
+	gchar *username;
+	gchar *email;
+	gchar *target_repo;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiBuildMaster, li_build_master, G_TYPE_OBJECT)
@@ -77,6 +80,9 @@ li_build_master_finalize (GObject *object)
 		g_ptr_array_unref (priv->cmds);
 	if (priv->cmds_post != NULL)
 		g_ptr_array_unref (priv->cmds_post);
+	g_free (priv->email);
+	g_free (priv->username);
+	g_free (priv->target_repo);
 
 	G_OBJECT_CLASS (li_build_master_parent_class)->finalize (object);
 }
@@ -334,6 +340,11 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		goto out;
 	}
 
+	/* ensure the details about the person we are building for are properly set */
+	li_env_set_user_details (priv->username,
+				 priv->email,
+				 priv->target_repo);
+
 	li_build_master_print_section (bmaster, "Preparing Build Environment");
 	if (priv->cmds_pre != NULL) {
 		for (i = 0; i < priv->cmds_pre->len; i++) {
@@ -404,6 +415,14 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 		g_warning ("Unable to create build environment: %s", g_strerror (errno));
 		goto out;
 	}
+
+	/* get details about who we are building this for */
+	g_free (priv->email);
+	g_free (priv->username);
+	g_free (priv->target_repo);
+	priv->email = li_env_get_user_email ();
+	priv->username = li_env_get_user_fullname ();
+	priv->target_repo = li_env_get_target_repo ();
 
 	/* TODO: Get nice, reproducible name for a build job to set as scope name */
 	g_debug ("Adding build job to new scope");

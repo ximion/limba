@@ -565,6 +565,7 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, Li
 	_cleanup_free_ gchar *fname = NULL;
 	_cleanup_free_ gchar *email = NULL;
 	_cleanup_free_ gchar *username = NULL;
+	_cleanup_free_ gchar *target_repo = NULL;
 	gchar *tmp;
 	gchar *tmp2;
 	gchar *tmp3;
@@ -593,6 +594,7 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, Li
 	/* set uploader field */
 	email = li_env_get_user_email ();
 	username = li_env_get_user_fullname ();
+	target_repo = li_env_get_target_repo ();
 
 	if (username == NULL) {
 		if (email != NULL)
@@ -607,8 +609,7 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, Li
 	}
 
 	/* set target repository */
-	li_config_data_set_value (cdata, "Target",
-				"<<FIXME::Repository-Name>>");
+	li_config_data_set_value (cdata, "Target", target_repo);
 
 	tmp = li_config_data_get_data (cdata);
 	sigdata = li_pkg_builder_sign_data (builder, tmp, GPGME_SIG_MODE_CLEAR, &tmp_error);

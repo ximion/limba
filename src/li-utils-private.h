@@ -120,6 +120,10 @@ void			li_add_to_new_scope (const gchar *domain,
 
 gchar			*li_env_get_user_fullname (void);
 gchar			*li_env_get_user_email (void);
+gchar			*li_env_get_target_repo (void);
+void			li_env_set_user_details (const gchar *user_name,
+							const gchar *user_email,
+							const gchar *target_repo);
 
 G_END_DECLS
 
