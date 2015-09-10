@@ -9,6 +9,8 @@ set(LIMBA_LIBUILD_SRC
 	li-build-conf.c
 	li-build-master.h
 	li-build-master.c
+	li-build-templates.h
+	li-build-templates.c
 )
 
 add_definitions("-DG_LOG_DOMAIN=\"LimbaBuildCLI\"")
@@ -21,11 +23,13 @@ include_directories(${CMAKE_BINARY_DIR}
 			${CMAKE_CURRENT_SOURCE_DIR}
 			${GLIB_INCLUDE_DIRS}
 			${YAML_INCLUDE_DIR}
+			${APPSTREAM_INCLUDE_DIRS}
 )
 
 target_link_libraries(limba-build
 		${GLIB_LIBRARIES}
 		${YAML_LIBRARIES}
+		${APPSTREAM_LIBRARIES}
 		limba
 )
 

@@ -27,6 +27,7 @@
 
 #include "li-console-utils.h"
 #include "li-build-master.h"
+#include "li-build-templates.h"
 
 static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
@@ -210,6 +211,7 @@ libuild_get_summary ()
 	g_string_append_printf (string, "  %s - %s\n", "run [DIRECTORY]", _("Build the software following its build recipe"));
 	g_string_append_printf (string, "  %s - %s\n", "repo-init [DIRECTORY]", _("Initialize a new repository in DIRECTORY."));
 	g_string_append_printf (string, "  %s - %s\n", "repo-add [PKGNAME] [DIRECTORY]", _("Add a package to the repository"));
+	g_string_append_printf (string, "  %s - %s\n", "make-template", _("Create sources for a new package."));
 
 	return g_string_free (string, FALSE);
 }
@@ -289,6 +291,8 @@ main (int argc, char *argv[])
 		exit_code = bcli_repo_add_package (value1, value2);
 	} else if (g_strcmp0 (command, "run") == 0) {
 		exit_code = bcli_execute_build (value1);
+	} else if (g_strcmp0 (command, "make-template") == 0) {
+		exit_code = libuild_make_template (value1);
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;

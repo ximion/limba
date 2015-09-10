@@ -12,12 +12,10 @@ include_directories(${CMAKE_BINARY_DIR}
 			${CMAKE_SOURCE_DIR}/src
 			${CMAKE_CURRENT_SOURCE_DIR}
 			${GLIB_INCLUDE_DIRS}
-			${APPSTREAM_INCLUDE_DIRS}
 )
 
 target_link_libraries(lipkgen
 		${GLIB_LIBRARIES}
-		${APPSTREAM_LIBRARIES}
 		limba
 )
 
