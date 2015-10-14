@@ -80,41 +80,43 @@ struct _LiManagerClass
 	void (*_as_reserved8)	(void);
 };
 
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiManager, g_object_unref)
+
 GType			li_manager_get_type	(void);
 LiManager		*li_manager_new		(void);
 
 GList			*li_manager_get_software_list (LiManager *mgr,
-											GError **error);
+								GError **error);
 GPtrArray		*li_manager_get_installed_runtimes (LiManager *mgr);
 LiPkgInfo		*li_manager_get_software_by_pkid (LiManager *mgr,
-											const gchar *pkid,
-											GError **error);
+								const gchar *pkid,
+								GError **error);
 
 LiRuntime		*li_manager_find_runtime_with_members (LiManager *mgr,
-													GPtrArray *members);
+								GPtrArray *members);
 
 gboolean		li_manager_remove_software (LiManager *mgr,
-											const gchar *pkgid,
-											GError **error);
+							const gchar *pkgid,
+							GError **error);
 
 gboolean		li_manager_package_is_installed (LiManager *mgr,
-												LiPkgInfo *pki);
+								LiPkgInfo *pki);
 
 gboolean		li_manager_cleanup (LiManager *mgr,
-									GError **error);
+						GError **error);
 
 void			li_manager_receive_key (LiManager *mgr,
-									const gchar *fpr,
-									GError **error);
+							const gchar *fpr,
+							GError **error);
 
 void			li_manager_refresh_cache (LiManager *mgr,
-									GError **error);
+							GError **error);
 
 GList			*li_manager_get_update_list (LiManager *mgr,
-									GError **error);
+							GError **error);
 
 gboolean		li_manager_apply_updates (LiManager *mgr,
-									GError **error);
+							GError **error);
 
 G_END_DECLS
 

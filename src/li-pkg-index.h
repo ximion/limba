@@ -60,20 +60,22 @@ struct _LiPkgIndexClass
 	void (*_as_reserved8)	(void);
 };
 
-GType			li_pkg_index_get_type	(void);
-LiPkgIndex		*li_pkg_index_new		(void);
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPkgIndex, g_object_unref)
+
+GType			li_pkg_index_get_type (void);
+LiPkgIndex		*li_pkg_index_new (void);
 
 void			li_pkg_index_load_file (LiPkgIndex *pkidx,
-										GFile *file,
-										GError **error);
+						GFile *file,
+						GError **error);
 void 			li_pkg_index_load_data (LiPkgIndex *pkidx,
-										const gchar *data);
+						const gchar *data);
 gboolean		li_pkg_index_save_to_file (LiPkgIndex *pkidx,
-											const gchar *filename);
+							const gchar *filename);
 
 GPtrArray		*li_pkg_index_get_packages (LiPkgIndex *pkidx);
 void			li_pkg_index_add_package (LiPkgIndex *pkidx,
-											LiPkgInfo *pki);
+							LiPkgInfo *pki);
 
 gchar			*li_pkg_index_get_data (LiPkgIndex *pkidx);
 

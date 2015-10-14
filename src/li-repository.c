@@ -150,7 +150,7 @@ li_repository_load_indices (LiRepository *repo, const gchar* dir, GError **error
 	}
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		_cleanup_free_ gchar *path = NULL;
+		g_autofree gchar *path = NULL;
 
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
@@ -164,8 +164,8 @@ li_repository_load_indices (LiRepository *repo, const gchar* dir, GError **error
 								NULL);
 
 		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
-			_cleanup_free_ gchar *arch = NULL;
-			_cleanup_free_ gchar *fname = NULL;
+			g_autofree gchar *arch = NULL;
+			g_autofree gchar *fname = NULL;
 			GFile *file;
 
 			/* our directory name is the architecture */
@@ -287,7 +287,7 @@ li_repository_sign (LiRepository *repo, const gchar *sigtext, GError **error)
 	char buf[BUF_SIZE + 1];
 	FILE *file;
 	int ret;
-	_cleanup_free_ gchar *gpg_key = NULL;
+	g_autofree gchar *gpg_key = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	err = gpgme_new (&ctx);
@@ -405,10 +405,10 @@ typedef struct {
 static void
 li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiIndexSaveHelper *helper)
 {
-	_cleanup_free_ gchar *fname = NULL;
-	_cleanup_free_ gchar *dir = NULL;
-	_cleanup_free_ gchar *checksum = NULL;
-	_cleanup_free_ gchar *internal_name = NULL;
+	g_autofree gchar *fname = NULL;
+	g_autofree gchar *dir = NULL;
+	g_autofree gchar *checksum = NULL;
+	g_autofree gchar *internal_name = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (helper->repo);
 
 	/* don't continue if we already have an error */
@@ -448,10 +448,10 @@ li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiIndexSaveHelper *h
 static void
 li_repository_save_asmeta (gchar *arch, AsMetadata *metad, LiIndexSaveHelper *helper)
 {
-	_cleanup_free_ gchar *fname = NULL;
-	_cleanup_free_ gchar *dir = NULL;
-	_cleanup_free_ gchar *checksum = NULL;
-	_cleanup_free_ gchar *internal_name = NULL;
+	g_autofree gchar *fname = NULL;
+	g_autofree gchar *dir = NULL;
+	g_autofree gchar *checksum = NULL;
+	g_autofree gchar *internal_name = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (helper->repo);
 
 	/* don't continue if we already have an error */
@@ -496,7 +496,7 @@ li_repository_save (LiRepository *repo, GError **error)
 	gchar *dir;
 	GError *tmp_error = NULL;
 	LiIndexSaveHelper helper;
-	_cleanup_string_free_ GString *sigtext = NULL;
+	g_autoptr(GString) sigtext = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	/* prepare variable to store checksums */
@@ -558,7 +558,7 @@ gboolean
 li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **error)
 {
 	GError *tmp_error = NULL;
-	_cleanup_object_unref_ LiPackage *pkg = NULL;
+	g_autoptr(LiPackage) pkg = NULL;
 	LiPkgInfo *pki;
 	const gchar *pkgname;
 	const gchar *pkgversion;
@@ -566,9 +566,9 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	gchar *tmp;
 	gunichar c;
 	guint i;
-	_cleanup_free_ gchar *dest_path = NULL;
-	_cleanup_free_ gchar *icon_dir = NULL;
-	_cleanup_free_ gchar *hash = NULL;
+	g_autofree gchar *dest_path = NULL;
+	g_autofree gchar *icon_dir = NULL;
+	g_autofree gchar *hash = NULL;
 	AsComponent *cpt;
 	LiPkgIndex *index;
 	AsMetadata *metad;
@@ -696,7 +696,7 @@ li_repository_find_icons (const gchar* repo_dir, const gchar *icon_size, GError 
 	GFileEnumerator *enumerator = NULL;
 	GFile *fdir;
 	GPtrArray *icon_paths = NULL;
-	_cleanup_free_ gchar *asset_dir = NULL;
+	g_autofree gchar *asset_dir = NULL;
 
 	if (!g_file_test (repo_dir, G_FILE_TEST_EXISTS))
 		return NULL;
@@ -715,7 +715,7 @@ li_repository_find_icons (const gchar* repo_dir, const gchar *icon_size, GError 
 	icon_paths = g_ptr_array_new_with_free_func (g_free);
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		_cleanup_free_ gchar *path = NULL;
+		g_autofree gchar *path = NULL;
 
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
@@ -729,7 +729,7 @@ li_repository_find_icons (const gchar* repo_dir, const gchar *icon_size, GError 
 								NULL);
 
 		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
-			_cleanup_free_ gchar *icon_dir = NULL;
+			g_autofree gchar *icon_dir = NULL;
 			GPtrArray *png_files;
 			guint i;
 
@@ -771,8 +771,8 @@ li_repository_create_icon_tarball (LiRepository *repo, const gchar *icon_size, G
 	int len;
 	int fd;
 	guint i;
-	_cleanup_ptrarray_unref_ GPtrArray *files = NULL;
-	_cleanup_free_ gchar *tarball_fname = NULL;
+	g_autoptr(GPtrArray) files = NULL;
+	g_autofree gchar *tarball_fname = NULL;
 	gchar *tmp;
 	GError *tmp_error = NULL;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);

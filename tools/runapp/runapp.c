@@ -236,8 +236,8 @@ int
 main (gint argc, gchar *argv[])
 {
 	int ret;
-	_cleanup_free_ gchar *swname = NULL;
-	_cleanup_free_ gchar *executable = NULL;
+	g_autofree gchar *swname = NULL;
+	g_autofree gchar *executable = NULL;
 	struct utsname uts_data;
 	gchar *ma_lib_path = NULL;
 	gchar *tmp;

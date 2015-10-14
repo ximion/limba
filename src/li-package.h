@@ -140,51 +140,53 @@ struct _LiPackageClass
 	void (*_as_reserved8)	(void);
 };
 
-GType			li_package_get_type	(void);
-LiPackage		*li_package_new		(void);
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPackage, g_object_unref)
+
+GType			li_package_get_type (void);
+LiPackage		*li_package_new (void);
 
 gboolean		li_package_open_file (LiPackage *pkg,
-										const gchar *filename,
-										GError **error);
+						const gchar *filename,
+						GError **error);
 gboolean		li_package_open_remote (LiPackage *pkg,
-										LiPkgCache *cache,
-										const gchar *pkid,
-										GError **error);
+						LiPkgCache *cache,
+						const gchar *pkid,
+						GError **error);
 
 gboolean		li_package_is_remote (LiPackage *pkg);
 gboolean		li_package_download (LiPackage *pkg,
-										GError **error);
+						GError **error);
 
 gboolean		li_package_install (LiPackage *pkg,
-										GError **error);
+						GError **error);
 
 LiTrustLevel	li_package_verify_signature (LiPackage *pkg,
-										GError **error);
+						GError **error);
 
 const gchar		*li_package_get_install_root (LiPackage *pkg);
 void			li_package_set_install_root (LiPackage *pkg,
-												const gchar *dir);
+							const gchar *dir);
 
 const gchar		*li_package_get_id (LiPackage *pkg);
 void			li_package_set_id (LiPackage *pkg,
-										const gchar *unique_name);
+						const gchar *unique_name);
 
 LiPkgInfo		*li_package_get_info (LiPackage *pkg);
 
 gboolean		li_package_has_embedded_packages (LiPackage *pkg);
 GList			*li_package_get_embedded_packages (LiPackage *pkg);
 LiPackage*		li_package_extract_embedded_package (LiPackage *pkg,
-													LiPkgInfo *pki,
-													GError **error);
+								LiPkgInfo *pki,
+								GError **error);
 gchar			*li_package_get_appstream_data (LiPackage *pkg);
 
 void			li_package_extract_contents (LiPackage *pkg,
-											const gchar *dest_dir,
-											GError **error);
+							const gchar *dest_dir,
+							GError **error);
 
 void			li_package_extract_appstream_icons (LiPackage *pkg,
-											const gchar *dest_dir,
-											GError **error);
+								const gchar *dest_dir,
+								GError **error);
 
 G_END_DECLS
 

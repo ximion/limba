@@ -78,8 +78,8 @@ li_exporter_init (LiExporter *exp)
 static void
 li_exporter_copy_file (LiExporter *exp, const gchar *source, const gchar *destination, GError **error)
 {
-	_cleanup_object_unref_ GFile *fsrc = NULL;
-	_cleanup_object_unref_ GFile *fdest = NULL;
+	g_autoptr(GFile) fsrc = NULL;
+	g_autoptr(GFile) fdest = NULL;
 	GError *tmp_error = NULL;
 	LiExporterPrivate *priv = GET_PRIVATE (exp);
 
@@ -113,11 +113,11 @@ li_exporter_copy_file (LiExporter *exp, const gchar *source, const gchar *destin
 static gboolean
 li_exporter_process_desktop_file (LiExporter *exp, const gchar *disk_location, GError **error)
 {
-	_cleanup_free_ gchar *dest;
+	g_autofree gchar *dest;
 	gchar *tmp;
 	GError *tmp_error = NULL;
 	GKeyFile *kfile = NULL;
-	_cleanup_free_ gchar *exec_cmd = NULL;
+	g_autofree gchar *exec_cmd = NULL;
 	const gchar *pkgid;
 	LiExporterPrivate *priv = GET_PRIVATE (exp);
 
@@ -217,8 +217,8 @@ out:
 static gboolean
 li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError **error)
 {
-	_cleanup_free_ gchar *dest = NULL;
-	_cleanup_free_ gchar *exec_cmd = NULL;
+	g_autofree gchar *dest = NULL;
+	g_autofree gchar *exec_cmd = NULL;
 	gchar *tmp;
 	GError *tmp_error = NULL;
 	struct stat sb;
@@ -270,7 +270,7 @@ li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError 
 static gboolean
 li_exporter_process_icon (LiExporter *exp, const gchar *disk_location, GError **error)
 {
-	_cleanup_free_ gchar *dest = NULL;
+	g_autofree gchar *dest = NULL;
 	gchar *tmp;
 	GError *tmp_error = NULL;
 	LiExporterPrivate *priv = GET_PRIVATE (exp);

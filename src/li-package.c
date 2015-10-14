@@ -215,7 +215,7 @@ li_package_read_entry (LiPackage *pkg, struct archive* ar, GError **error)
 static gboolean
 li_package_extract_entry_to (LiPackage *pkg, struct archive* ar, struct archive_entry* e, const gchar* dest, GError **error)
 {
-	_cleanup_free_ gchar *fname = NULL;
+	g_autofree gchar *fname = NULL;
 	const gchar *cstr;
 	const gchar *link_target;
 	gchar *str;
@@ -706,14 +706,14 @@ li_package_install (LiPackage *pkg, GError **error)
 	struct archive_entry* en;
 	GError *tmp_error = NULL;
 	const gchar *pkg_id = NULL;
-	_cleanup_free_ gchar *pkg_root_dir = NULL;
+	g_autofree gchar *pkg_root_dir = NULL;
 	gchar *tmp;
 	gchar *tmp2;
 	gint res;
 	gboolean ret;
 	const gchar *version;
 	const gchar *tmp_payload_path;
-	_cleanup_object_unref_ LiExporter *exp = NULL;
+	g_autoptr(LiExporter) exp = NULL;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
 	if (priv->remote_package) {
@@ -825,9 +825,9 @@ li_package_install (LiPackage *pkg, GError **error)
 	while (archive_read_next_header (payload_ar, &en) == ARCHIVE_OK) {
 		const gchar *filename;
 		gchar *path;
-		_cleanup_free_ gchar *tmp_str = NULL;
-		_cleanup_free_ gchar *dest_path = NULL;
-		_cleanup_free_ gchar *dest_fname = NULL;
+		g_autofree gchar *tmp_str = NULL;
+		g_autofree gchar *dest_path = NULL;
+		g_autofree gchar *dest_fname = NULL;
 
 		filename = archive_entry_pathname (en);
 		path = g_path_get_dirname (filename);
@@ -905,7 +905,7 @@ li_package_is_remote (LiPackage *pkg)
 gboolean
 li_package_download (LiPackage *pkg, GError **error)
 {
-	_cleanup_free_ gchar *pkg_fname = NULL;
+	g_autofree gchar *pkg_fname = NULL;
 	GError *tmp_error = NULL;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
@@ -959,7 +959,7 @@ li_package_extract_embedded_package (LiPackage *pkg, LiPkgInfo *pki, GError **er
 	struct archive_entry* en;
 	gchar *fname;
 	gchar *hash;
-	_cleanup_free_ gchar *pkg_basename = NULL;
+	g_autofree gchar *pkg_basename = NULL;
 	LiPackage *subpkg;
 	GError *tmp_error = NULL;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
@@ -1086,7 +1086,7 @@ li_package_extract_appstream_icons (LiPackage *pkg, const gchar *dest_dir, GErro
 	struct archive_entry* e;
 	gint res;
 	const gchar *tmp_payload_path;
-	_cleanup_free_ gchar *icon_dest_name = NULL;
+	g_autofree gchar *icon_dest_name = NULL;
 	GError *tmp_error = NULL;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
@@ -1127,7 +1127,7 @@ li_package_extract_appstream_icons (LiPackage *pkg, const gchar *dest_dir, GErro
 	icon_dest_name = g_strdup_printf ("%s.%s", priv->id, "png");
 
 	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
-		_cleanup_free_ gchar *tmp = NULL;
+		g_autofree gchar *tmp = NULL;
 		gchar *dest = NULL;
 
 		if (!g_str_has_suffix (archive_entry_pathname (e), ".png"))
@@ -1142,9 +1142,9 @@ li_package_extract_appstream_icons (LiPackage *pkg, const gchar *dest_dir, GErro
 		}
 
 		if (dest != NULL) {
-			_cleanup_free_ gchar *fname = NULL;
-			_cleanup_free_ gchar *src_fname = NULL;
-			_cleanup_free_ gchar *dest_fname = NULL;
+			g_autofree gchar *fname = NULL;
+			g_autofree gchar *src_fname = NULL;
+			g_autofree gchar *dest_fname = NULL;
 			g_mkdir_with_parents (dest, 0755);
 
 			fname = g_path_get_basename (archive_entry_pathname (e));
@@ -1184,7 +1184,7 @@ _li_package_signature_hash_matches (GHashTable *contents_hash, gchar **sigparts,
 {
 	gint i;
 	gboolean valid;
-	_cleanup_free_ gchar *hash = NULL;
+	g_autofree gchar *hash = NULL;
 
 	/* if we don't have that file which needs to be checked, we consider this as a match */
 	if (g_hash_table_lookup (contents_hash, fname) == NULL)
@@ -1220,7 +1220,7 @@ li_package_verify_signature (LiPackage *pkg, GError **error)
 {
 	GError *tmp_error = NULL;
 	const gchar *payload_fname;
-	_cleanup_free_ gchar *sig_content = NULL;
+	g_autofree gchar *sig_content = NULL;
 	LiTrustLevel level;
 	gchar **parts = NULL;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);

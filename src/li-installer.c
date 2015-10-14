@@ -391,7 +391,7 @@ li_installer_test_foundation_dependency (LiInstaller *inst, LiPkgInfo *dep_pki, 
 static void
 li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 {
-	_cleanup_list_free_ GList *all_pkgs = NULL;
+	g_autoptr(GList) all_pkgs = NULL;
 	GError *tmp_error = NULL;
 	LiPackage *pkg;
 	LiPkgInfo *pki;
@@ -579,7 +579,7 @@ li_installer_set_package (LiInstaller *inst, LiPackage *pkg)
 static void
 li_installer_update_foundations_table (LiInstaller *inst, GError **error)
 {
-	_cleanup_object_unref_ LiConfigData *fdconf = NULL;
+	g_autoptr(LiConfigData) fdconf = NULL;
 	GError *tmp_error = NULL;
 	GFile *file;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
@@ -603,7 +603,7 @@ li_installer_update_foundations_table (LiInstaller *inst, GError **error)
 	li_config_data_reset (fdconf);
 
 	do {
-		_cleanup_free_ gchar *fid = NULL;
+		g_autofree gchar *fid = NULL;
 		gchar *condition;
 		gboolean ret;
 		fid = li_config_data_get_value (fdconf, "ID");

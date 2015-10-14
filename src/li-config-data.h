@@ -59,6 +59,8 @@ struct _LiConfigDataClass
 	void (*_as_reserved8)	(void);
 };
 
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiConfigData, g_object_unref)
+
 GType			li_config_data_get_type	(void);
 LiConfigData		*li_config_data_new	(void);
 

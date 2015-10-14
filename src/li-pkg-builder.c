@@ -98,7 +98,7 @@ li_get_package_fname (const gchar *root_dir, const gchar *disk_fname)
 {
 	gchar *tmp;
 	gchar *fname = NULL;
-	_cleanup_free_ gchar *root_prefix = NULL;
+	g_autofree gchar *root_prefix = NULL;
 	gint offset;
 
 	if (g_str_has_prefix (disk_fname, root_dir)) {
@@ -193,7 +193,7 @@ static gchar*
 li_pkg_builder_add_embedded_packages (const gchar *tmp_dir, const gchar *repo_source, GPtrArray *files, GError **error)
 {
 	guint i;
-	_cleanup_free_ gchar *pkgs_tmpdir = NULL;
+	g_autofree gchar *pkgs_tmpdir = NULL;
 	gchar *tmp;
 	GPtrArray *packages;
 	LiPkgIndex *idx;
@@ -345,7 +345,7 @@ li_print_gpgsign_result (gpgme_ctx_t ctx, gpgme_sign_result_t result, gpgme_sig_
 {
 	gpgme_invalid_key_t invkey;
 	gpgme_new_signature_t sig;
-	_cleanup_free_ gchar *short_fpr = NULL;
+	g_autofree gchar *short_fpr = NULL;
 	gpgme_key_t key;
 
 	for (invkey = result->invalid_signers; invkey; invkey = invkey->next)
@@ -482,7 +482,7 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 {
 	guint i;
 	GString *index_str;
-	_cleanup_free_ gchar *indexdata = NULL;
+	g_autofree gchar *indexdata = NULL;
 	gpgme_data_t sigdata;
 
 	#define BUF_SIZE 512
@@ -561,11 +561,11 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 void
 li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, LiPkgInfo *ctl, GError **error)
 {
-	_cleanup_object_unref_ LiConfigData *cdata = NULL;
-	_cleanup_free_ gchar *fname = NULL;
-	_cleanup_free_ gchar *email = NULL;
-	_cleanup_free_ gchar *username = NULL;
-	_cleanup_free_ gchar *target_repo = NULL;
+	g_autoptr(LiConfigData) cdata = NULL;
+	g_autofree gchar *fname = NULL;
+	g_autofree gchar *email = NULL;
+	g_autofree gchar *username = NULL;
+	g_autofree gchar *target_repo = NULL;
 	gchar *tmp;
 	gchar *tmp2;
 	gchar *tmp3;
@@ -648,18 +648,18 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, Li
 gboolean
 li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir, const gchar *out_fname, GError **error)
 {
-	_cleanup_free_ gchar *ctl_fname = NULL;
-	_cleanup_free_ gchar *payload_root = NULL;
-	_cleanup_free_ gchar *repo_root = NULL;
-	_cleanup_free_ gchar *as_metadata = NULL;
-	_cleanup_free_ gchar *tmp_dir = NULL;
-	_cleanup_free_ gchar *payload_file = NULL;
-	_cleanup_free_ gchar *pkg_fname = NULL;
-	_cleanup_free_ gchar *sig_fname = NULL;
-	_cleanup_object_unref_ GFile *ctlfile = NULL;
-	_cleanup_object_unref_ LiPkgInfo *ctl = NULL;
-	_cleanup_ptrarray_unref_ GPtrArray *files = NULL;
-	_cleanup_ptrarray_unref_ GPtrArray *sign_files = NULL;
+	g_autofree gchar *ctl_fname = NULL;
+	g_autofree gchar *payload_root = NULL;
+	g_autofree gchar *repo_root = NULL;
+	g_autofree gchar *as_metadata = NULL;
+	g_autofree gchar *tmp_dir = NULL;
+	g_autofree gchar *payload_file = NULL;
+	g_autofree gchar *pkg_fname = NULL;
+	g_autofree gchar *sig_fname = NULL;
+	g_autoptr(GFile) ctlfile = NULL;
+	g_autoptr(LiPkgInfo) ctl = NULL;
+	g_autoptr(GPtrArray) files = NULL;
+	g_autoptr(GPtrArray) sign_files = NULL;
 	GError *tmp_error = NULL;
 	gchar *tmp;
 	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);

@@ -80,6 +80,8 @@ struct _LiInstallerClass
 	void (*_as_reserved8)	(void);
 };
 
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiInstaller, g_object_unref)
+
 GType			li_installer_get_type	(void);
 LiInstaller		*li_installer_new		(void);
 

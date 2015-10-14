@@ -30,8 +30,8 @@
 
 #define LI_TYPE_PKG_INFO		(li_pkg_info_get_type())
 #define LI_PKG_INFO(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_INFO, LiPkgInfo))
-#define LI_PKG_INFO_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_INFO, LiPkgInfoClass))
-#define LI_IS_PKG_INFO(obj)	(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_INFO))
+#define LI_PKG_INFO_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_INFO, LiPkgInfoClass))
+#define LI_IS_PKG_INFO(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_INFO))
 #define LI_IS_PKG_INFO_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PKG_INFO))
 #define LI_PKG_INFO_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PKG_INFO, LiPkgInfoClass))
 
@@ -57,10 +57,10 @@ typedef enum  {
  * LiPackageFlags:
  * @LI_PACKAGE_FLAG_NONE:		No package flag is set
  * @LI_PACKAGE_FLAG_APPLICATION:	This package needs a runtime
- * @LI_PACKAGE_FLAG_AUTOMATIC:	This package has been installed automatically
+ * @LI_PACKAGE_FLAG_AUTOMATIC:		This package has been installed automatically
  * @LI_PACKAGE_FLAG_FADED:		Remove this package automatically, if it is no longer in use
- * @LI_PACKAGE_FLAG_AVAILABLE:	Package is available in a repository
- * @LI_PACKAGE_FLAG_INSTALLED:	Package is installed
+ * @LI_PACKAGE_FLAG_AVAILABLE:		Package is available in a repository
+ * @LI_PACKAGE_FLAG_INSTALLED:		Package is installed
  *
  * Flags defining version requirements on other #LiPkgInfo instances.
  **/
@@ -94,6 +94,8 @@ struct _LiPkgInfoClass
 	void (*_as_reserved7)	(void);
 	void (*_as_reserved8)	(void);
 };
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPkgInfo, g_object_unref)
 
 GType		li_pkg_info_get_type	(void);
 LiPkgInfo	*li_pkg_info_new	(void);

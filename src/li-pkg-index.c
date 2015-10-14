@@ -157,7 +157,7 @@ void
 li_pkg_index_load_file (LiPkgIndex *pkidx, GFile *file, GError **error)
 {
 	GError *tmp_error = NULL;
-	_cleanup_object_unref_ LiConfigData *cdata = NULL;
+	g_autoptr(LiConfigData) cdata = NULL;
 
 	cdata = li_config_data_new ();
 

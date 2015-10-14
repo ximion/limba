@@ -227,8 +227,8 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	guint i;
 	gchar *tmp;
 	guint mount_count = 0;
-	_cleanup_free_ gchar *build_tmp_root = NULL;
-	_cleanup_free_ gchar *chroot_dir = NULL;
+	g_autofree gchar *build_tmp_root = NULL;
+	g_autofree gchar *chroot_dir = NULL;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
 	build_tmp_root = g_build_filename (env_root, "build", NULL);
@@ -241,8 +241,8 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	}
 
 	if (priv->chroot_orig_dir != NULL) {
-		_cleanup_free_ gchar *ofs_wdir = NULL;
-		_cleanup_free_ gchar *volatile_data_dir = NULL;
+		g_autofree gchar *ofs_wdir = NULL;
+		g_autofree gchar *volatile_data_dir = NULL;
 
 		/* yay, we are building in a chroot environment! */
 
@@ -401,7 +401,7 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 	gchar *tmp;
 	GError *tmp_error = NULL;
 	GPtrArray *artifacts = NULL;
-	_cleanup_free_ gchar *env_root = NULL;
+	g_autofree gchar *env_root = NULL;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
 	/* create the essential directories for the new build environment */

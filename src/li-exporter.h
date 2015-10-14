@@ -59,21 +59,23 @@ struct _LiExporterClass
 	void (*_as_reserved8)	(void);
 };
 
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiExporter, g_object_unref)
+
 GType			li_exporter_get_type	(void);
-LiExporter		*li_exporter_new		(void);
+LiExporter		*li_exporter_new	(void);
 
 gboolean		li_exporter_process_file (LiExporter *exp,
-										const gchar *filename,
-										const gchar *disk_location,
-										GError **error);
+							const gchar *filename,
+							const gchar *disk_location,
+							GError **error);
 
 gboolean		li_exporter_get_override_allowed (LiExporter *exp);
 void			li_exporter_set_override_allowed (LiExporter *exp,
-										gboolean override);
+								gboolean override);
 
 LiPkgInfo		*li_exporter_get_pkg_info (LiExporter *exp);
 void			li_exporter_set_pkg_info (LiExporter *exp,
-										LiPkgInfo *pki);
+							LiPkgInfo *pki);
 
 gchar			*li_exporter_get_exported_files_index (LiExporter *exp);
 

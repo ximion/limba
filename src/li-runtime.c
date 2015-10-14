@@ -166,9 +166,9 @@ gboolean
 li_runtime_load_directory (LiRuntime *rt, const gchar *dir, GError **error)
 {
 	gchar *uuid;
-	_cleanup_object_unref_ GFile *ctlfile;
-	_cleanup_free_ gchar *ctlpath = NULL;
-	_cleanup_object_unref_ LiConfigData *cdata = NULL;
+	g_autoptr(GFile) ctlfile;
+	g_autofree gchar *ctlpath = NULL;
+	g_autoptr(LiConfigData) cdata = NULL;
 	GError *tmp_error = NULL;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
@@ -212,7 +212,7 @@ li_runtime_load_directory (LiRuntime *rt, const gchar *dir, GError **error)
 gboolean
 li_runtime_load_by_uuid (LiRuntime *rt, const gchar *uuid, GError **error)
 {
-	_cleanup_free_ gchar *runtime_dir = NULL;
+	g_autofree gchar *runtime_dir = NULL;
 	gboolean ret;
 	GError *tmp_error = NULL;
 
@@ -300,8 +300,8 @@ li_runtime_save (LiRuntime *rt, GError **error)
 {
 	gboolean ret;
 	LiConfigData *cdata;
-	_cleanup_free_ gchar *control_fname = NULL;
-	_cleanup_free_ gchar *rt_path = NULL;
+	g_autofree gchar *control_fname = NULL;
+	g_autofree gchar *rt_path = NULL;
 	GError *tmp_error = NULL;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
@@ -345,7 +345,7 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 	guint i;
 	LiRuntime *rt;
 	gboolean ret = TRUE;
-	_cleanup_hashtable_unref_ GHashTable *dedup;
+	g_autoptr(GHashTable) dedup = NULL;
 	GError *tmp_error = NULL;
 
 	dedup = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);

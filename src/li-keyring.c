@@ -130,7 +130,7 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 
 	if ((tmpdir) || (li_utils_is_root () && (!g_file_test (home, G_FILE_TEST_IS_DIR))))  {
 		gchar *gpgconf_fname;
-		_cleanup_free_ gchar *gpg_conf = NULL;
+		g_autofree gchar *gpg_conf = NULL;
 		/* Yes, this is as stupid as it looks... */
 		if (kind == LI_KEYRING_KIND_NONE) {
 			/* allow fetching keys when using a temporary keyring */
@@ -183,7 +183,7 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 static gpgme_key_t
 li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, gboolean remote, GError **error)
 {
-	_cleanup_free_ gchar *full_fpr = NULL;
+	g_autofree gchar *full_fpr = NULL;
 	gpgme_error_t err;
 	gpgme_keylist_mode_t mode;
 	gpgme_key_t key;

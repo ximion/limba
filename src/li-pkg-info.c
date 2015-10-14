@@ -236,7 +236,7 @@ void
 li_pkg_info_load_file (LiPkgInfo *pki, GFile *file, GError **error)
 {
 	GError *tmp_error = NULL;
-	_cleanup_object_unref_ LiConfigData *cdata = NULL;
+	g_autoptr(LiConfigData) cdata = NULL;
 
 	cdata = li_config_data_new ();
 
@@ -651,7 +651,7 @@ li_pkg_info_set_architecture (LiPkgInfo *pki, const gchar *arch)
 gboolean
 li_pkg_info_matches_current_arch (LiPkgInfo *pki)
 {
-	_cleanup_free_ gchar *c_arch = NULL;
+	g_autofree gchar *c_arch = NULL;
 	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
 
 	c_arch = li_get_current_arch_h ();

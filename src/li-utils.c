@@ -315,7 +315,7 @@ gchar*
 li_compute_checksum_for_file (const gchar *fname)
 {
 	const GChecksumType cstype = G_CHECKSUM_SHA256;
-	_cleanup_checksum_free_ GChecksum *cs;
+	g_autoptr(GChecksum) cs;
 	guchar data[4096] = {0};
 	size_t size = 0;
 	FILE *input;
@@ -619,7 +619,7 @@ li_compare_versions (const gchar* a, const gchar *b)
 LiPkgInfo*
 li_parse_dependency_string (const gchar *depstr)
 {
-	_cleanup_free_ gchar *dep_raw = NULL;
+	g_autofree gchar *dep_raw = NULL;
 	LiPkgInfo *pki;
 
 	dep_raw = g_strdup (depstr);
@@ -815,10 +815,10 @@ li_add_to_new_scope (const gchar *domain, const gchar *idname, GError **error)
 	GDBusConnection *conn = NULL;
 	LiSdManager *sdmgr = NULL;
 	GMainLoop *main_loop = NULL;
-	_cleanup_free_ gchar *sd_path = NULL;
-	_cleanup_free_ gchar *sd_address = NULL;
-	_cleanup_free_ gchar *sd_job = NULL;
-	_cleanup_free_ gchar *cgname = NULL;
+	g_autofree gchar *sd_path = NULL;
+	g_autofree gchar *sd_address = NULL;
+	g_autofree gchar *sd_job = NULL;
+	g_autofree gchar *cgname = NULL;
 	GVariantBuilder builder;
 	GVariant *properties = NULL;
 	GVariant *aux = NULL;

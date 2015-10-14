@@ -78,7 +78,7 @@ typedef enum {
 #define	LI_KEYRING_ERROR li_keyring_error_quark ()
 GQuark li_keyring_error_quark (void);
 
-typedef struct _LiKeyring		LiKeyring;
+typedef struct _LiKeyring	LiKeyring;
 typedef struct _LiKeyringClass	LiKeyringClass;
 
 struct _LiKeyring
@@ -99,6 +99,8 @@ struct _LiKeyringClass
 	void (*_as_reserved7)	(void);
 	void (*_as_reserved8)	(void);
 };
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiKeyring, g_object_unref)
 
 GType			li_keyring_get_type (void);
 LiKeyring		*li_keyring_new (void);

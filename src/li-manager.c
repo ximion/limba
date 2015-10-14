@@ -167,7 +167,7 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 	pkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		_cleanup_free_ gchar *path = NULL;
+		g_autofree gchar *path = NULL;
 		if (tmp_error != NULL)
 			goto out;
 
@@ -178,7 +178,7 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 						 "control",
 						 NULL);
 		if (g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
-			_cleanup_object_unref_ GFile *ctlfile = NULL;
+			g_autoptr(GFile) ctlfile = NULL;
 			ctlfile = g_file_new_for_path (path);
 			if (g_file_query_exists (ctlfile, NULL)) {
 				LiPkgInfo *pki;
@@ -226,7 +226,7 @@ out:
 static void
 li_manager_update_software_table (LiManager *mgr, GError **error)
 {
-	_cleanup_object_unref_ LiPkgCache *cache = NULL;
+	g_autoptr(LiPkgCache) cache = NULL;
 	GPtrArray *apkgs;
 	GHashTable *ipkgs;
 	guint i;
@@ -322,7 +322,7 @@ li_manager_find_installed_runtimes (LiManager *mgr)
 	GFile *fdir;
 	GFileEnumerator *enumerator = NULL;
 	GFileInfo *file_info;
-	_cleanup_free_ gchar *runtime_root;
+	g_autofree gchar *runtime_root;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	runtime_root = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", NULL);
@@ -606,11 +606,11 @@ li_manager_bus_vanished (GDBusConnection *connection, const gchar *name, LiManag
 gboolean
 li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 {
-	_cleanup_free_ gchar *swpath = NULL;
+	g_autofree gchar *swpath = NULL;
 	GFile *expfile;
 	gchar *tmp;
 	GError *tmp_error = NULL;
-	_cleanup_ptrarray_unref_ GPtrArray *pkg_array = NULL;
+	g_autoptr(GPtrArray) pkg_array = NULL;
 	GFile *ctlfile;
 	LiPkgInfo *pki;
 	LiRuntime *rt;
@@ -705,7 +705,7 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	g_ptr_array_add (pkg_array, pki);
 	rt = li_manager_find_runtime_with_members (mgr, pkg_array);
 	if (rt != NULL) {
-		_cleanup_list_free_ GList *sw = NULL;
+		g_autoptr(GList) sw = NULL;
 		GList *l;
 		gboolean dependency_found = FALSE;
 
@@ -784,8 +784,8 @@ out:
 gboolean
 li_manager_package_is_installed (LiManager *mgr, LiPkgInfo *pki)
 {
-	_cleanup_free_ gchar *pkid = NULL;
-	_cleanup_free_ gchar *path = NULL;
+	g_autofree gchar *pkid = NULL;
+	g_autofree gchar *path = NULL;
 
 	pkid = g_strdup_printf ("%s-%s",
 							li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
@@ -822,7 +822,7 @@ li_manager_cleanup_broken_packages (LiManager *mgr, GError **error)
 		goto out;
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		_cleanup_free_ gchar *path = NULL;
+		g_autofree gchar *path = NULL;
 		if (tmp_error != NULL)
 			goto out;
 
@@ -837,7 +837,7 @@ li_manager_cleanup_broken_packages (LiManager *mgr, GError **error)
 
 		/* no control file means this is garbage, probably from a previous failed installation */
 		if (!g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
-			_cleanup_free_ gchar *tmp_path;
+			g_autofree gchar *tmp_path;
 			tmp_path = g_build_filename (LI_SOFTWARE_ROOT,
 									g_file_info_get_name (file_info),
 									NULL);
@@ -864,13 +864,13 @@ out:
 gboolean
 li_manager_cleanup (LiManager *mgr, GError **error)
 {
-	_cleanup_hashtable_unref_ GHashTable *sws = NULL;
-	_cleanup_hashtable_unref_ GHashTable *rts = NULL;
-	_cleanup_list_free_ GList *sw_list = NULL;
+	g_autoptr(GHashTable) sws = NULL;
+	g_autoptr(GHashTable) rts = NULL;
+	g_autoptr(GList) sw_list = NULL;
+	g_autoptr(GList) list = NULL;
 	GPtrArray *rt_array;
 	guint i;
 	GList *l;
-	_cleanup_list_free_ GList *list = NULL;
 	GError *tmp_error = NULL;
 	gboolean faded_sw_removed = FALSE;
 	gboolean ret = FALSE;
@@ -987,7 +987,7 @@ out:
 void
 li_manager_refresh_cache (LiManager *mgr, GError **error)
 {
-	_cleanup_object_unref_ LiPkgCache *cache = NULL;
+	g_autoptr(LiPkgCache) cache = NULL;
 	GError *tmp_error = NULL;
 
 	cache = li_pkg_cache_new ();
@@ -1048,12 +1048,12 @@ li_manager_clear_updates_table (LiManager *mgr)
 GList*
 li_manager_get_update_list (LiManager *mgr, GError **error)
 {
-	_cleanup_object_unref_ LiPkgCache *cache = NULL;
+	g_autoptr(LiPkgCache) cache = NULL;
+	g_autoptr(GHashTable) ipkgs = NULL;
+	g_autoptr(GHashTable) apkgs = NULL;
+	g_autoptr(GList) ipkg_list = NULL;
 	GPtrArray *apkgs_list;
-	_cleanup_hashtable_unref_ GHashTable *ipkgs = NULL;
-	_cleanup_hashtable_unref_ GHashTable *apkgs = NULL;
 	guint i;
-	_cleanup_list_free_ GList *ipkg_list = NULL;
 	GList *l;
 	GError *tmp_error = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
@@ -1127,8 +1127,8 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 static void
 li_manager_remove_exported_files_by_pki (LiManager *mgr, LiPkgInfo *pki, GError **error)
 {
-	_cleanup_free_ gchar *swpath = NULL;
-	_cleanup_object_unref_ GFile *expfile = NULL;
+	g_autofree gchar *swpath = NULL;
+	g_autoptr(GFile) expfile = NULL;
 	GError *tmp_error = NULL;
 	gchar *tmp;
 
@@ -1164,7 +1164,7 @@ li_manager_remove_exported_files_by_pki (LiManager *mgr, LiPkgInfo *pki, GError 
 static gboolean
 li_manager_upgrade_single_package (LiManager *mgr, LiPkgInfo *ipki, LiPkgInfo *apki, GError **error)
 {
-	_cleanup_object_unref_ LiInstaller *inst = NULL;
+	g_autoptr(LiInstaller) inst = NULL;
 	GError *tmp_error = NULL;
 
 	/* prepare installation */
@@ -1199,8 +1199,8 @@ li_manager_upgrade_single_package (LiManager *mgr, LiPkgInfo *ipki, LiPkgInfo *a
 gboolean
 li_manager_apply_updates (LiManager *mgr, GError **error)
 {
-	_cleanup_list_free_ GList *updlist = NULL;
-	_cleanup_hashtable_unref_ GHashTable *ipkgs = NULL;
+	g_autoptr(GList) updlist = NULL;
+	g_autoptr(GHashTable) ipkgs = NULL;
 	GList *l;
 	GError *tmp_error = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
@@ -1226,7 +1226,7 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 	for (l = updlist; l != NULL; l = l->next) {
 		LiPkgInfo *ipki;
 		LiPkgInfo *apki;
-		_cleanup_ptrarray_unref_ GPtrArray *rts = NULL;
+		g_autoptr(GPtrArray) rts = NULL;
 
 		LiUpdateItem *uitem = LI_UPDATE_ITEM (l->data);
 
@@ -1254,7 +1254,7 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 
 		} else {
 			guint i;
-			_cleanup_ptrarray_unref_ GPtrArray *update_rts = NULL;
+			g_autoptr(GPtrArray) update_rts = NULL;
 
 			g_debug ("Performing complex upgrade of '%s'", li_pkg_info_get_id (ipki));
 

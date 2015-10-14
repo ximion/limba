@@ -84,6 +84,8 @@ struct _LiPkgCacheClass
 	void (*_as_reserved6)	(void);
 };
 
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPkgCache, g_object_unref)
+
 GType			li_pkg_cache_get_type	(void);
 LiPkgCache		*li_pkg_cache_new		(void);
 

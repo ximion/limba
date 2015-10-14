@@ -29,10 +29,10 @@ static gchar *datadir = NULL;
 void
 test_compile_foobar ()
 {
-	_cleanup_free_ gchar *dirname = NULL;
-	_cleanup_free_ gchar *inst_dir_all = NULL;
-	_cleanup_free_ gchar *inst_dir_app = NULL;
-	_cleanup_free_ gchar *inst_dir_lib = NULL;
+	g_autofree gchar *dirname = NULL;
+	g_autofree gchar *inst_dir_all = NULL;
+	g_autofree gchar *inst_dir_app = NULL;
+	g_autofree gchar *inst_dir_lib = NULL;
 	gchar *cmd;
 	gint ret;
 
@@ -87,10 +87,10 @@ void
 test_package_build ()
 {
 	LiPkgBuilder *builder;
-	_cleanup_free_ gchar *foo_dirname = NULL;
-	_cleanup_free_ gchar *libfoo_dirname;
+	g_autofree gchar *foo_dirname = NULL;
+	g_autofree gchar *libfoo_dirname;
 	gchar *pkgname;
-	_cleanup_free_ gchar *repo_path;
+	g_autofree gchar *repo_path;
 	gchar *tmp;
 	GError *error = NULL;
 

@@ -73,6 +73,16 @@ static guint signals[SIGNAL_LAST] = { 0 };
 #define LIMBA_CACHE_DIR "/var/cache/limba/"
 #define APPSTREAM_CACHE "/var/cache/app-info/"
 
+/* TODO: Remove when libappstream has autoptr as well */
+#define GS_DEFINE_CLEANUP_FUNCTION0(Type, name, func) \
+  static inline void name (void *v) \
+  { \
+    if (*(Type*)v) \
+      func (*(Type*)v); \
+  }
+GS_DEFINE_CLEANUP_FUNCTION0(GObject*, gs_local_obj_unref, g_object_unref)
+#define _cleanup_object_unref_ __attribute__ ((cleanup(gs_local_obj_unref)))
+
 typedef struct {
 	LiPkgCache *cache;
 	gchar *id;
@@ -270,8 +280,8 @@ _li_pkg_cache_signature_hash_matches (gchar **sigparts, const gchar *fname, cons
 {
 	gint i;
 	gboolean valid;
-	_cleanup_free_ gchar *hash = NULL;
-	_cleanup_free_ gchar *expected_hash = NULL;
+	g_autofree gchar *hash = NULL;
+	g_autofree gchar *expected_hash = NULL;
 
 	for (i = 0; sigparts[i] != NULL; i++) {
 		if (g_str_has_suffix (sigparts[i], id)) {
@@ -322,8 +332,8 @@ li_pkg_cache_extract_icon_tarball (LiPkgCache *cache, const gchar *tarball_fname
 	}
 
 	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
-		_cleanup_free_ gchar *fname = NULL;
-		_cleanup_free_ gchar *dest_fname = NULL;
+		g_autofree gchar *fname = NULL;
+		g_autofree gchar *dest_fname = NULL;
 		gint fd;
 		gboolean ret;
 
@@ -399,9 +409,9 @@ out:
 static void
 li_pkg_cache_update_icon_cache_for_size (LiPkgCache *cache, const gchar *tmp_dir, const gchar *url, const gchar *destination, const gchar *size, GError **error)
 {
-	_cleanup_free_ gchar *icon_url = NULL;
-	_cleanup_free_ gchar *tar_dest = NULL;
-	_cleanup_free_ gchar *icons_dest = NULL;
+	g_autofree gchar *icon_url = NULL;
+	g_autofree gchar *tar_dest = NULL;
+	g_autofree gchar *icons_dest = NULL;
 	GError *tmp_error = NULL;
 
 	/* download and extract icons */
@@ -434,7 +444,7 @@ li_pkg_cache_update_icon_cache_for_size (LiPkgCache *cache, const gchar *tmp_dir
 static void
 li_pkg_cache_update_icon_cache (LiPkgCache *cache, const gchar *repo_cache, const gchar *url, const gchar *destination, GError **error)
 {
-	_cleanup_free_ gchar *tmp_dir = NULL;
+	g_autofree gchar *tmp_dir = NULL;
 	GError *tmp_error = NULL;
 
 	tmp_dir = g_build_filename (repo_cache, "icon-tmp", NULL);
@@ -466,8 +476,8 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 {
 	guint i;
 	GError *tmp_error = NULL;
-	_cleanup_object_unref_ LiPkgIndex *global_index = NULL;
-	_cleanup_free_ gchar *current_arch = NULL;
+	g_autoptr(LiPkgIndex) global_index = NULL;
+	g_autofree gchar *current_arch = NULL;
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	/* ensure AppStream cache exists */
@@ -480,26 +490,26 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 	for (i = 0; i < priv->repo_urls->len; i++) {
 		const gchar *url;
-		_cleanup_free_ gchar *url_index_all = NULL;
-		_cleanup_free_ gchar *url_index_arch = NULL;
-		_cleanup_free_ gchar *url_signature = NULL;
-		_cleanup_free_ gchar *url_asdata_all = NULL;
-		_cleanup_free_ gchar *url_asdata_arch = NULL;
-		_cleanup_free_ gchar *dest = NULL;
-		_cleanup_free_ gchar *dest_index_all = NULL;
-		_cleanup_free_ gchar *dest_index_arch = NULL;
-		_cleanup_free_ gchar *dest_asdata_all = NULL;
-		_cleanup_free_ gchar *dest_asdata_arch = NULL;
-		_cleanup_free_ gchar *dest_repoconf = NULL;
-		_cleanup_free_ gchar *dest_signature = NULL;
-		_cleanup_object_unref_ GFile *idxfile = NULL;
-		_cleanup_object_unref_ GFile *asfile = NULL;
-		_cleanup_object_unref_ LiPkgIndex *tmp_index = NULL;
-		_cleanup_strv_free_ gchar **hashlist = NULL;
-		_cleanup_free_ gchar *fpr = NULL;
+		g_autofree gchar *url_index_all = NULL;
+		g_autofree gchar *url_index_arch = NULL;
+		g_autofree gchar *url_signature = NULL;
+		g_autofree gchar *url_asdata_all = NULL;
+		g_autofree gchar *url_asdata_arch = NULL;
+		g_autofree gchar *dest = NULL;
+		g_autofree gchar *dest_index_all = NULL;
+		g_autofree gchar *dest_index_arch = NULL;
+		g_autofree gchar *dest_asdata_all = NULL;
+		g_autofree gchar *dest_asdata_arch = NULL;
+		g_autofree gchar *dest_repoconf = NULL;
+		g_autofree gchar *dest_signature = NULL;
+		g_autoptr(GFile) idxfile = NULL;
+		g_autoptr(GFile) asfile = NULL;
+		g_autoptr(LiPkgIndex) tmp_index = NULL;
+		g_auto(GStrv) hashlist = NULL;
+		g_autofree gchar *fpr = NULL;
 		_cleanup_object_unref_ AsMetadata *metad = NULL;
-		_cleanup_free_ gchar *dest_ascache = NULL;
-		_cleanup_free_ gchar *md5sum = NULL;
+		g_autofree gchar *dest_ascache = NULL;
+		g_autofree gchar *md5sum = NULL;
 		gboolean index_read;
 		GPtrArray *pkgs;
 		guint j;
@@ -744,7 +754,7 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		/* ensure that all locations are set properly */
 		pkgs = li_pkg_index_get_packages (tmp_index);
 		for (j = 0; j < pkgs->len; j++) {
-			_cleanup_free_ gchar *new_url = NULL;
+			g_autofree gchar *new_url = NULL;
 			LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (pkgs, j));
 
 			/* mark package as available for installation */
@@ -780,7 +790,7 @@ void
 li_pkg_cache_open (LiPkgCache *cache, GError **error)
 {
 	GError *tmp_error = NULL;
-	_cleanup_object_unref_ GFile *file = NULL;
+	g_autoptr(GFile) file = NULL;
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	/* TODO: Implement li_pkg_index_clear() */
@@ -852,7 +862,7 @@ li_pkg_cache_fetch_remote (LiPkgCache *cache, const gchar *pkgid, GError **error
 	guint i;
 	LiPkgInfo *pki = NULL;
 	gchar *tmp;
-	_cleanup_free_ gchar *dest_fname = NULL;
+	g_autofree gchar *dest_fname = NULL;
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	/* find our package metadata */

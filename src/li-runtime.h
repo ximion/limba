@@ -59,31 +59,33 @@ struct _LiRuntimeClass
 	void (*_as_reserved8)	(void);
 };
 
-GType			li_runtime_get_type	(void);
-LiRuntime		*li_runtime_new		(void);
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiRuntime, g_object_unref)
+
+GType			li_runtime_get_type (void);
+LiRuntime		*li_runtime_new (void);
 
 gboolean		li_runtime_load_directory (LiRuntime *rt,
-											const gchar *dir,
-											GError **error);
+							const gchar *dir,
+							GError **error);
 gboolean		li_runtime_load_by_uuid (LiRuntime *rt,
-											const gchar *uuid,
-											GError **error);
+							const gchar *uuid,
+							GError **error);
 
 gboolean		li_runtime_save (LiRuntime *rt,
-								GError **error);
+						GError **error);
 
 const gchar		*li_runtime_get_uuid (LiRuntime *rt);
 
 LiRuntime		*li_runtime_create_with_members (GPtrArray *members,
-												GError **error);
+								GError **error);
 
 GHashTable		*li_runtime_get_requirements (LiRuntime *rt);
 GHashTable		*li_runtime_get_members (LiRuntime *rt);
 
 void			li_runtime_add_package (LiRuntime *rt,
-										LiPkgInfo *pki);
+							LiPkgInfo *pki);
 void			li_runtime_remove_package (LiRuntime *rt,
-										LiPkgInfo *pki);
+							LiPkgInfo *pki);
 
 gboolean		li_runtime_remove (LiRuntime *rt);
 

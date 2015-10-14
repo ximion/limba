@@ -368,7 +368,7 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 	gchar *tmp;
 	GList *l;
 	GList *start_pos;
-	_cleanup_free_ gchar *field_str = NULL;
+	g_autofree gchar *field_str = NULL;
 	gchar *field_data;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
@@ -541,9 +541,9 @@ li_config_data_save_to_file (LiConfigData *cdata, const gchar *filename, GError 
 	data = li_config_data_get_data (cdata);
 
 	if (g_str_has_suffix (filename, ".gz")) {
-		_cleanup_object_unref_ GOutputStream *out2 = NULL;
-		_cleanup_object_unref_ GOutputStream *out = NULL;
-		_cleanup_object_unref_ GZlibCompressor *compressor = NULL;
+		g_autoptr(GOutputStream) out2 = NULL;
+		g_autoptr(GOutputStream) out = NULL;
+		g_autoptr(GZlibCompressor) compressor = NULL;
 
 		/* write a gzip compressed file */
 		compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_GZIP, -1);
@@ -576,8 +576,8 @@ li_config_data_save_to_file (LiConfigData *cdata, const gchar *filename, GError 
 		}
 
 	} else {
-		_cleanup_object_unref_ GFileOutputStream *fos = NULL;
-		_cleanup_object_unref_ GDataOutputStream *dos = NULL;
+		g_autoptr(GFileOutputStream) fos = NULL;
+		g_autoptr(GDataOutputStream) dos = NULL;
 
 		/* write uncompressed file */
 		if (g_file_query_exists (file, NULL)) {

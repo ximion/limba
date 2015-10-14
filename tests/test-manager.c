@@ -53,8 +53,8 @@ void
 test_installer_simple ()
 {
 	LiInstaller *inst;
-	_cleanup_free_ gchar *fname_app = NULL;
-	_cleanup_free_ gchar *fname_lib = NULL;
+	g_autofree gchar *fname_app = NULL;
+	g_autofree gchar *fname_lib = NULL;
 	GError *error = NULL;
 
 	fname_app = g_build_filename (datadir, "foobar.ipk", NULL);
@@ -90,7 +90,7 @@ test_installer_embeddedpkg ()
 {
 	LiInstaller *inst;
 	GError *error = NULL;
-	_cleanup_free_ gchar *fname_full = NULL;
+	g_autofree gchar *fname_full = NULL;
 
 	fname_full = g_build_filename (datadir, "FooBar-1.0_full.ipk", NULL);
 
@@ -143,9 +143,9 @@ test_install_remove ()
 void
 test_repository ()
 {
-	_cleanup_free_ gchar *rdir;
-	_cleanup_free_ gchar *fname_app = NULL;
-	_cleanup_free_ gchar *fname_lib = NULL;
+	g_autofree gchar *rdir;
+	g_autofree gchar *fname_app = NULL;
+	g_autofree gchar *fname_lib = NULL;
 	LiRepository *repo;
 	GError *error = NULL;
 

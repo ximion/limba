@@ -58,18 +58,20 @@ struct _LiUpdateItemClass
 	void (*_as_reserved6)	(void);
 };
 
-GType			li_update_item_get_type	(void);
-LiUpdateItem	*li_update_item_new		(void);
-LiUpdateItem	*li_update_item_new_with_packages (LiPkgInfo *ipki,
-													LiPkgInfo *apki);
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiUpdateItem, g_object_unref)
+
+GType			li_update_item_get_type (void);
+LiUpdateItem		*li_update_item_new (void);
+LiUpdateItem		*li_update_item_new_with_packages (LiPkgInfo *ipki,
+								LiPkgInfo *apki);
 
 LiPkgInfo		*li_update_item_get_available_pkg (LiUpdateItem *uitem);
 void			li_update_item_set_available_pkg (LiUpdateItem *uitem,
-													LiPkgInfo *pki);
+								LiPkgInfo *pki);
 
 LiPkgInfo		*li_update_item_get_installed_pkg (LiUpdateItem *uitem);
 void			li_update_item_set_installed_pkg (LiUpdateItem *uitem,
-													LiPkgInfo *pki);
+								LiPkgInfo *pki);
 
 G_END_DECLS
 
