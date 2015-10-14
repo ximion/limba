@@ -1,3 +1,18 @@
+Version 0.5.2
+~~~~~~~~~~~~~~
+Released: 2015-10-14
+
+Features:
+ * Call limba binary in cleanup service
+ * bcli: Rescue build artifacts
+ * tests: Add simple build recipe for foobar
+ * docs: Add initial bits needed to build Limba documentation
+ * bcli: Move the make-template command to limba-build
+ * Make use of the new autoptr macro in GLib
+
+Bugfixes:
+ * Ensure user details are properly set when building a package
+
 Version 0.5.1
 ~~~~~~~~~~~~~~
 Released: 2015-09-02
