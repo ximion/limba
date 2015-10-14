@@ -45,10 +45,6 @@ git archive --prefix="Limba-$LIMBA_VERSION/" "$GIT_TAG^{tree}" | tar -x -C ./rel
 
 R_ROOT="./release-tar-tmp/Limba-$LIMBA_VERSION"
 
-# add precompiled documentation to the release tarball
-rm -r $R_ROOT/docs
-cp -dpr ./docs $R_ROOT/docs
-
 # cleanup files which should not go to the release tarball
 find ./release-tar-tmp -name .gitignore -type f -delete
 find ./release-tar-tmp -name '*~' -type f -delete
