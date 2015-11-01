@@ -73,6 +73,23 @@ typedef enum  {
 	LI_PACKAGE_FLAG_INSTALLED = 1 << 4,
 } LiPackageFlags;
 
+/**
+ * LiPackageKind:
+ * @LI_PACKAGE_KIND_UNKNOWN:		Unknown package type
+ * @LI_PACKAGE_KIND_NORMAL:		Standard Limba package
+ * @LI_PACKAGE_KIND_DEVEL:		Development package (SDK)
+ *
+ * Type of the Limba package
+ **/
+typedef enum  {
+	LI_PACKAGE_KIND_UNKNOWN,
+	LI_PACKAGE_KIND_NORMAL,
+	LI_PACKAGE_KIND_DEVEL,
+} LiPackageKind;
+
+const gchar	*li_package_kind_to_string (LiPackageKind kind);
+LiPackageKind	li_package_kind_from_string (const gchar *kind_str);
+
 typedef struct _LiPkgInfo	LiPkgInfo;
 typedef struct _LiPkgInfoClass	LiPkgInfoClass;
 
@@ -136,6 +153,10 @@ void		li_pkg_info_set_id (LiPkgInfo *pki,
 const gchar	*li_pkg_info_get_checksum_sha256 (LiPkgInfo *pki);
 void		li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki,
 					const gchar *hash);
+
+LiPackageKind	li_pkg_info_get_kind (LiPkgInfo *pki);
+void		li_pkg_info_set_kind (LiPkgInfo *pki,
+					LiPackageKind kind);
 
 void		li_pkg_info_set_flags (LiPkgInfo *pki,
 					LiPackageFlags flags);

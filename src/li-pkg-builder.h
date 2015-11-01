@@ -27,8 +27,8 @@
 
 #include <glib-object.h>
 
-#define LI_TYPE_PKG_BUILDER			(li_pkg_builder_get_type())
-#define LI_PKG_BUILDER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_BUILDER, LiPkgBuilder))
+#define LI_TYPE_PKG_BUILDER		(li_pkg_builder_get_type())
+#define LI_PKG_BUILDER(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_BUILDER, LiPkgBuilder))
 #define LI_PKG_BUILDER_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_BUILDER, LiPkgBuilderClass))
 #define LI_IS_PKG_BUILDER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_BUILDER))
 #define LI_IS_PKG_BUILDER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PKG_BUILDER))
@@ -77,8 +77,8 @@ struct _LiPkgBuilderClass
 	void (*_as_reserved6)	(void);
 };
 
-GType			li_pkg_builder_get_type	(void);
-LiPkgBuilder		*li_pkg_builder_new	(void);
+GType			li_pkg_builder_get_type (void);
+LiPkgBuilder		*li_pkg_builder_new (void);
 
 gboolean		li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder,
 								const gchar *data_dir,

@@ -131,7 +131,7 @@ li_get_package_fname (const gchar *root_dir, const gchar *disk_fname)
  * li_pkg_builder_write_payload:
  */
 static void
-li_pkg_builder_write_payload (const gchar *input_dir, const gchar *out_fname)
+li_pkg_builder_write_payload (const gchar *input_dir, const gchar *out_fname, LiPackageKind kind, gboolean auto_filter)
 {
 	GPtrArray *files;
 	struct archive *a;
@@ -151,15 +151,23 @@ li_pkg_builder_write_payload (const gchar *input_dir, const gchar *out_fname)
 
 
 	for (i = 0; i < files->len; i++) {
-		gchar *ar_fname;
+		g_autofree gchar *ar_fname;
 		const gchar *fname = (const gchar *) g_ptr_array_index (files, i);
 
 		ar_fname = li_get_package_fname (input_dir, fname);
+		if (auto_filter) {
+			if (kind == LI_PACKAGE_KIND_DEVEL) {
+				if (!g_str_has_prefix (ar_fname, "include/"))
+					continue;
+			} else {
+				if (g_str_has_prefix (ar_fname, "include/"))
+					continue;
+			}
+		}
 
 		stat(fname, &st);
 		entry = archive_entry_new ();
 		archive_entry_set_pathname (entry, ar_fname);
-		g_free (ar_fname);
 
 		archive_entry_copy_stat (entry, &st);
 		archive_write_header (a, entry);
@@ -643,30 +651,148 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, Li
 }
 
 /**
+ * li_pkg_builder_build_package_with_details:
+ *
+ * Helper function, to build a package with given parameters.
+ * This function expects all its parameters to be valid!
+ */
+static gboolean
+li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl, LiPackageKind kind, const gchar *as_metadata, const gchar *payload_root, const gchar *pkg_fname, gboolean split_sdk, GError **error)
+{
+	g_autofree gchar *tmp_dir = NULL;
+	g_autofree gchar *ctl_fname = NULL;
+
+	g_autofree gchar *payload_file = NULL;
+	g_autofree gchar *sig_fname = NULL;
+	g_autoptr(GPtrArray) files = NULL;
+	g_autoptr(GPtrArray) sign_files = NULL;
+
+	gchar *asdata;
+	GError *tmp_error = NULL;
+	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
+
+	tmp_dir = li_utils_get_tmp_dir ("build");
+	payload_file = g_build_filename (tmp_dir, "main-data.tar.xz", NULL);
+
+	if ((split_sdk) && (kind == LI_PACKAGE_KIND_DEVEL)) {
+		g_autofree gchar *tmp = NULL;
+
+		tmp = g_build_filename (payload_root, "include", NULL);
+		if (!g_file_test (tmp, G_FILE_TEST_IS_DIR)) {
+			g_free (tmp);
+			tmp = g_build_filename (payload_root, "opt", "bundle", "include", NULL);
+			if (!g_file_test (tmp, G_FILE_TEST_IS_DIR)) {
+				/* no headers? No automatically built SDK package! */
+				return TRUE;
+			}
+		}
+	}
+
+	/* create payload */
+	li_pkg_builder_write_payload (payload_root, payload_file, kind, split_sdk);
+
+	/* construct package contents */
+	files = g_ptr_array_new_with_free_func (g_free);
+	sign_files = g_ptr_array_new ();
+
+	/* check if we should embed a repository in the package structure */
+	if (kind == LI_PACKAGE_KIND_NORMAL) {
+		g_autofree gchar *repo_root = NULL;
+
+		repo_root = g_build_filename (payload_root, "..", "repo", NULL);
+		if (g_file_test (repo_root, G_FILE_TEST_IS_DIR)) {
+			gchar *repo_fname;
+
+			/* we have a dependency repo, embed extra packages */
+			repo_fname = li_pkg_builder_add_embedded_packages (tmp_dir, repo_root, files, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return FALSE;
+			}
+			g_ptr_array_add (files, repo_fname);
+			/* we need to sign the repo file */
+			g_ptr_array_add (sign_files, repo_fname);
+		}
+	}
+
+	/* set the package type we're building here */
+	li_pkg_info_set_kind (ctl, kind);
+
+	/* handle arch:any notation (resolve to current arch) */
+	if (g_strcmp0 (li_pkg_info_get_architecture (ctl), "any") == 0) {
+		gchar *arch;
+		arch = li_get_current_arch_h ();
+		li_pkg_info_set_architecture (ctl, arch);
+		g_free (arch);
+	}
+
+	/* save our new control metadata */
+	ctl_fname = g_build_filename (tmp_dir, "control", NULL);
+	li_pkg_info_save_to_file (ctl, ctl_fname);
+
+	/* we want these files in the package */
+	asdata = g_strdup (as_metadata);
+	g_ptr_array_add (files, g_strdup (ctl_fname));
+	g_ptr_array_add (files, asdata);
+	g_ptr_array_add (files, g_strdup (payload_file));
+
+	/* these files need to be signed in order to verify the whole package */
+	g_ptr_array_add (sign_files, ctl_fname);
+	g_ptr_array_add (sign_files, asdata);
+	g_ptr_array_add (sign_files, payload_file);
+
+	if (priv->sign_package) {
+		sig_fname = li_pkg_builder_sign_package (builder, tmp_dir, sign_files, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return FALSE;
+		}
+		g_ptr_array_add (files, g_strdup (sig_fname));
+	}
+
+	/* write package */
+	li_pkg_builder_write_package (files, pkg_fname, &tmp_error);
+	g_ptr_array_unref (files);
+
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	/* cleanup temporary dir */
+	li_delete_dir_recursive (tmp_dir);
+
+	/* write dsc file */
+	li_pkg_builder_write_dsc_file (builder, pkg_fname, ctl, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/**
  * li_pkg_builder_create_package_from_dir:
  */
 gboolean
 li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir, const gchar *out_fname, GError **error)
 {
-	g_autofree gchar *ctl_fname = NULL;
-	g_autofree gchar *payload_root = NULL;
-	g_autofree gchar *repo_root = NULL;
+	g_autofree gchar *payload_root_rt = NULL;
+	g_autofree gchar *payload_root_sdk = NULL;
 	g_autofree gchar *as_metadata = NULL;
-	g_autofree gchar *tmp_dir = NULL;
-	g_autofree gchar *payload_file = NULL;
-	g_autofree gchar *pkg_fname = NULL;
-	g_autofree gchar *sig_fname = NULL;
+
+	g_autofree gchar *pkg_fname_rt = NULL;
+	g_autofree gchar *pkg_fname_sdk = NULL;
 	g_autoptr(GFile) ctlfile = NULL;
 	g_autoptr(LiPkgInfo) ctl = NULL;
-	g_autoptr(GPtrArray) files = NULL;
-	g_autoptr(GPtrArray) sign_files = NULL;
+	gboolean auto_sdkpkg;
 	GError *tmp_error = NULL;
-	gchar *tmp;
-	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
+	gchar *ctlfile_fname;
 
-	tmp = g_build_filename (dir, "control", NULL);
-	ctlfile = g_file_new_for_path (tmp);
-	g_free (tmp);
+	ctlfile_fname = g_build_filename (dir, "control", NULL);
+	ctlfile = g_file_new_for_path (ctlfile_fname);
+	g_free (ctlfile_fname);
 	if (!g_file_query_exists (ctlfile, NULL)) {
 		g_set_error (error,
 				LI_BUILDER_ERROR,
@@ -681,15 +807,6 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		return FALSE;
 	}
 
-	payload_root = g_build_filename (dir, "target", NULL);
-	if (!g_file_test (payload_root, G_FILE_TEST_IS_DIR)) {
-		g_set_error (error,
-				LI_BUILDER_ERROR,
-				LI_BUILDER_ERROR_NOT_FOUND,
-				_("Could not find payload data in the 'target' subdirectory."));
-		return FALSE;
-	}
-
 	as_metadata = g_build_filename (dir, "metainfo.xml", NULL);
 	if (!g_file_test (as_metadata, G_FILE_TEST_IS_REGULAR)) {
 		g_set_error (error,
@@ -697,13 +814,6 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 				LI_BUILDER_ERROR_NOT_FOUND,
 				_("Could not find AppStream metadata for the new package!"));
 		return FALSE;
-	}
-
-	repo_root = g_build_filename (dir, "repo", NULL);
-	if (!g_file_test (repo_root, G_FILE_TEST_IS_DIR)) {
-		/* we have no dependency repository */
-		g_free (repo_root);
-		repo_root = NULL;
 	}
 
 	if (out_fname == NULL) {
@@ -738,87 +848,82 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 
 		tmp = li_str_replace (as_component_get_name (cpt), " ", "");
 		version = li_get_last_version_from_component (cpt);
-		if (version != NULL)
-			pkg_fname = g_strdup_printf ("%s/%s-%s.ipk", dir, tmp, version);
-		else
-			pkg_fname = g_strdup_printf ("%s/%s.ipk", dir, tmp);
+		if (version != NULL) {
+			pkg_fname_rt  = g_strdup_printf ("%s/%s-%s.ipk", dir, tmp, version);
+			pkg_fname_sdk = g_strdup_printf ("%s/%s-%s.devel.ipk", dir, tmp, version);
+		} else {
+			pkg_fname_rt  = g_strdup_printf ("%s/%s.ipk", dir, tmp);
+			pkg_fname_sdk = g_strdup_printf ("%s/%s.devel.ipk", dir, tmp);
+		}
 		g_free (tmp);
 		g_object_unref (mdata);
 	} else {
-		pkg_fname = g_strdup (out_fname);
+		g_autofree gchar *base_fname;
+		g_autofree gchar *dirname;
+
+		pkg_fname_rt = g_strdup (out_fname);
+
+		base_fname = g_path_get_basename (out_fname);
+		dirname = g_path_get_dirname (out_fname);
+		pkg_fname_sdk = g_strdup_printf ("%s/devel-%s", dirname, base_fname);
 	}
 
-	tmp_dir = li_utils_get_tmp_dir ("build");
-	payload_file = g_build_filename (tmp_dir, "main-data.tar.xz", NULL);
+	/* search for runtime payload */
+	auto_sdkpkg = TRUE;
+	payload_root_rt = g_build_filename (dir, "target", NULL);
+	if (!g_file_test (payload_root_rt, G_FILE_TEST_IS_DIR)) {
+		/* we don't automatically build an SDK package anymore */
+		auto_sdkpkg = FALSE;
 
-	/* create payload */
-	li_pkg_builder_write_payload (payload_root, payload_file);
+		g_free (payload_root_rt);
+		payload_root_rt = g_build_filename (dir, "rt.target", NULL);
+		if (!g_file_test (payload_root_rt, G_FILE_TEST_IS_DIR)) {
+			g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_NOT_FOUND,
+				_("Could not find payload data in the 'target' or 'rt.target' subdirectory."));
+			return FALSE;
+		}
+	}
 
-	/* construct package contents */
-	files = g_ptr_array_new_with_free_func (g_free);
-	sign_files = g_ptr_array_new ();
+	/* search if we have a dedicated SDK payload */
+	payload_root_sdk = g_build_filename (dir, "sdk.target", NULL);
+	if (!g_file_test (payload_root_sdk, G_FILE_TEST_IS_DIR)) {
+		g_free (payload_root_sdk);
+		payload_root_sdk = NULL;
+	}
 
-	if (repo_root != NULL) {
-		gchar *repo_fname;
-		/* we have extra packages to embed */
-		repo_fname = li_pkg_builder_add_embedded_packages (tmp_dir, repo_root, files, &tmp_error);
+	if (auto_sdkpkg) {
+		/* build package, automatically detect if we need a development package */
+		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_NORMAL, as_metadata, payload_root_rt, pkg_fname_rt, TRUE, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return FALSE;
 		}
-		g_ptr_array_add (files, repo_fname);
-		/* we need to sign the repo file */
-		g_ptr_array_add (sign_files, repo_fname);
-	}
 
-	/* handle arch:any notation (resolve to current arch) */
-	if (g_strcmp0 (li_pkg_info_get_architecture (ctl), "any") == 0) {
-		gchar *arch;
-		arch = li_get_current_arch_h ();
-		li_pkg_info_set_architecture (ctl, arch);
-		g_free (arch);
-	}
-
-	/* save our new control metadata */
-	ctl_fname = g_build_filename (tmp_dir, "control", NULL);
-	li_pkg_info_save_to_file (ctl, ctl_fname);
-
-	/* we want these files in the package */
-	g_ptr_array_add (files, g_strdup (ctl_fname));
-	g_ptr_array_add (files, g_strdup (as_metadata));
-	g_ptr_array_add (files, g_strdup (payload_file));
-
-	/* these files need to be signed in order to verify the whole package */
-	g_ptr_array_add (sign_files, ctl_fname);
-	g_ptr_array_add (sign_files, as_metadata);
-	g_ptr_array_add (sign_files, payload_file);
-
-	if (priv->sign_package) {
-		sig_fname = li_pkg_builder_sign_package (builder, tmp_dir, sign_files, &tmp_error);
+		/* run the development package build (will return no package if no SDK components are auto-detected) */
+		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_DEVEL, as_metadata, payload_root_rt, pkg_fname_sdk, TRUE, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return FALSE;
 		}
-		g_ptr_array_add (files, g_strdup (sig_fname));
-	}
 
-	/* write package */
-	li_pkg_builder_write_package (files, pkg_fname, &tmp_error);
-	g_ptr_array_unref (files);
+	} else {
+		/* build RT package */
+		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_NORMAL, as_metadata, payload_root_rt, pkg_fname_rt, FALSE, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return FALSE;
+		}
 
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
-	}
-
-	/* cleanup temporary dir */
-	li_delete_dir_recursive (tmp_dir);
-
-	/* write dsc file */
-	li_pkg_builder_write_dsc_file (builder, pkg_fname, ctl, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
+		if (payload_root_sdk != NULL) {
+			/* build SDK package */
+			li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_DEVEL, as_metadata, payload_root_sdk, pkg_fname_sdk, FALSE, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return FALSE;
+			}
+		}
 	}
 
 	return TRUE;

@@ -44,6 +44,7 @@ struct _LiPkgInfoPrivate
 	gchar *repo_location;
 	gchar *abi_break_versions;
 
+	LiPackageKind kind;
 	LiPackageFlags flags;
 	LiVersionFlags vrel;
 };
@@ -74,6 +75,11 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 
 	g_free (priv->format_version);
 	priv->format_version = li_config_data_get_value (cdata, "Format-Version");
+	str = li_config_data_get_value (cdata, "Type");
+	if (str != NULL) {
+		priv->kind = li_package_kind_from_string (str);
+		g_free (str);
+	}
 
 	/* jump to data block */
 	li_config_data_next (cdata);
@@ -145,6 +151,8 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 
 	/* write format header */
 	li_config_data_set_value (cdata, "Format-Version", priv->format_version);
+	if (priv->kind != LI_PACKAGE_KIND_NORMAL)
+		li_config_data_set_value (cdata, "Type", li_package_kind_to_string (priv->kind));
 	li_config_data_new_block (cdata);
 
 	/* write actual data block */
@@ -213,6 +221,9 @@ li_pkg_info_init (LiPkgInfo *pki)
 	priv->vrel = LI_VERSION_UNKNOWN;
 	priv->arch = li_get_current_arch_h ();
 	priv->format_version = g_strdup ("1.0");
+
+	/* for compatibility reasons, we assume the package to be normal by default */
+	priv->kind = LI_PACKAGE_KIND_NORMAL;
 }
 
 /**
@@ -478,6 +489,26 @@ li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki, const gchar *hash)
 }
 
 /**
+ * li_pkg_info_get_kind:
+ */
+LiPackageKind
+li_pkg_info_get_kind (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->kind;
+}
+
+/**
+ * li_pkg_info_set_kind:
+ */
+void
+li_pkg_info_set_kind (LiPkgInfo *pki, LiPackageKind kind)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	priv->kind = kind;
+}
+
+/**
  * li_pkg_info_set_flags:
  */
 void
@@ -726,4 +757,42 @@ li_pkg_info_new (void)
 	LiPkgInfo *pki;
 	pki = g_object_new (LI_TYPE_PKG_INFO, NULL);
 	return LI_PKG_INFO (pki);
+}
+
+/**
+ * li_package_kind_to_string:
+ * @kind: the %%LiPackageKind.
+ *
+ * Converts the enumerated value to an text representation.
+ *
+ * Returns: string version of @kind
+ **/
+const gchar*
+li_package_kind_to_string (LiPackageKind kind)
+{
+	if (kind == LI_PACKAGE_KIND_NORMAL)
+		return "normal";
+	if (kind == LI_PACKAGE_KIND_DEVEL)
+		return "devel";
+	return "unknown";
+}
+
+/**
+ * li_package_kind_from_string:
+ * @kind_str: the string.
+ *
+ * Converts the text representation to an enumerated value.
+ *
+ * Returns: a %LiPackageKind or %LI_PACKAGE_KIND_UNKNOWN for unknown
+ **/
+LiPackageKind
+li_package_kind_from_string (const gchar *kind_str)
+{
+	if (g_strcmp0 (kind_str, "normal") == 0)
+		return LI_PACKAGE_KIND_NORMAL;
+	if (g_strcmp0 (kind_str, "") == 0)
+		return LI_PACKAGE_KIND_NORMAL;
+	if (g_strcmp0 (kind_str, "devel") == 0)
+		return LI_PACKAGE_KIND_DEVEL;
+	return LI_PACKAGE_KIND_UNKNOWN;
 }
