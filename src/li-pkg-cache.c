@@ -730,9 +730,9 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 		/* fetch icons */
 		tmp = g_build_filename (APPSTREAM_CACHE,
-								"icons",
-								as_metadata_get_origin (metad),
-								NULL);
+						"icons",
+						as_metadata_get_origin (metad),
+						NULL);
 		g_debug ("Icon cache target set: %s", tmp);
 		li_pkg_cache_update_icon_cache (cache, dest, url, tmp, &tmp_error);
 		g_free (tmp);

@@ -657,17 +657,19 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, Li
  * This function expects all its parameters to be valid!
  */
 static gboolean
-li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl, LiPackageKind kind, const gchar *as_metadata, const gchar *payload_root, const gchar *pkg_fname, gboolean split_sdk, GError **error)
+li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl, LiPackageKind kind, AsComponent *cpt, const gchar *payload_root, const gchar *pkg_fname, gboolean split_sdk, GError **error)
 {
 	g_autofree gchar *tmp_dir = NULL;
 	g_autofree gchar *ctl_fname = NULL;
+	g_autofree gchar *asdata_fname = NULL;
+	g_autofree gchar *cpt_orig_id = NULL;
 
 	g_autofree gchar *payload_file = NULL;
 	g_autofree gchar *sig_fname = NULL;
 	g_autoptr(GPtrArray) files = NULL;
 	g_autoptr(GPtrArray) sign_files = NULL;
+	g_autoptr (AsMetadata) metad = NULL;
 
-	gchar *asdata;
 	GError *tmp_error = NULL;
 	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
 
@@ -690,6 +692,28 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 
 	/* create payload */
 	li_pkg_builder_write_payload (payload_root, payload_file, kind, split_sdk);
+
+	/* prepare component metadata */
+	metad = as_metadata_new ();
+	as_metadata_set_locale (metad, "ALL");
+	asdata_fname = g_build_filename (tmp_dir, "metainfo.xml", NULL);
+	cpt_orig_id = g_strdup (as_component_get_id (cpt));
+
+	/* development components must have an ID in the form of <cptid>.sdk, e.g. io.qt.Qt5Core.sdk */
+	if (kind == LI_PACKAGE_KIND_DEVEL) {
+		g_autofree gchar *sdk_id = NULL;
+
+		sdk_id = g_strdup_printf ("%s.sdk", cpt_orig_id);
+		as_component_set_id (cpt, sdk_id);
+	}
+
+	as_metadata_add_component (metad, cpt);
+	as_metadata_save_upstream_xml (metad, asdata_fname, &tmp_error);
+	as_component_set_id (cpt, cpt_orig_id);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
 
 	/* construct package contents */
 	files = g_ptr_array_new_with_free_func (g_free);
@@ -731,14 +755,13 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 	li_pkg_info_save_to_file (ctl, ctl_fname);
 
 	/* we want these files in the package */
-	asdata = g_strdup (as_metadata);
 	g_ptr_array_add (files, g_strdup (ctl_fname));
-	g_ptr_array_add (files, asdata);
+	g_ptr_array_add (files, g_strdup (asdata_fname));
 	g_ptr_array_add (files, g_strdup (payload_file));
 
 	/* these files need to be signed in order to verify the whole package */
 	g_ptr_array_add (sign_files, ctl_fname);
-	g_ptr_array_add (sign_files, asdata);
+	g_ptr_array_add (sign_files, asdata_fname);
 	g_ptr_array_add (sign_files, payload_file);
 
 	if (priv->sign_package) {
@@ -780,12 +803,15 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 {
 	g_autofree gchar *payload_root_rt = NULL;
 	g_autofree gchar *payload_root_sdk = NULL;
-	g_autofree gchar *as_metadata = NULL;
+	g_autofree gchar *asdata_fname = NULL;
 
 	g_autofree gchar *pkg_fname_rt = NULL;
 	g_autofree gchar *pkg_fname_sdk = NULL;
 	g_autoptr(GFile) ctlfile = NULL;
 	g_autoptr(LiPkgInfo) ctl = NULL;
+	g_autoptr(AsComponent) cpt = NULL;
+	g_autoptr(AsMetadata) mdata = NULL;
+	g_autoptr(GFile) asfile = NULL;
 	gboolean auto_sdkpkg;
 	GError *tmp_error = NULL;
 	gchar *ctlfile_fname;
@@ -807,45 +833,33 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 		return FALSE;
 	}
 
-	as_metadata = g_build_filename (dir, "metainfo.xml", NULL);
-	if (!g_file_test (as_metadata, G_FILE_TEST_IS_REGULAR)) {
+	/* load AppStream metadata */
+	asdata_fname = g_build_filename (dir, "metainfo.xml", NULL);
+	asfile = g_file_new_for_path (asdata_fname);
+	if (!g_file_query_exists (asfile, NULL)) {
 		g_set_error (error,
-				LI_BUILDER_ERROR,
-				LI_BUILDER_ERROR_NOT_FOUND,
-				_("Could not find AppStream metadata for the new package!"));
+			LI_BUILDER_ERROR,
+			LI_BUILDER_ERROR_FAILED,
+			_("Could not build package: AppStream metadata is missing."));
 		return FALSE;
 	}
 
+	mdata = as_metadata_new ();
+	as_metadata_set_locale (mdata, "ALL");
+
+	as_metadata_parse_file (mdata, asfile, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+	cpt = as_metadata_get_component (mdata);
+	g_object_ref (cpt);
+
 	if (out_fname == NULL) {
-		AsMetadata *mdata;
-		AsComponent *cpt;
-		GFile *asfile;
 		gchar *tmp;
 		const gchar *version;
 
 		/* we need to auto-generate a package filename */
-		asfile = g_file_new_for_path (as_metadata);
-		if (!g_file_query_exists (asfile, NULL)) {
-			g_set_error (error,
-				LI_BUILDER_ERROR,
-				LI_BUILDER_ERROR_FAILED,
-				_("Could not generate package filename: AppStream metadata is missing."));
-			g_object_unref (asfile);
-			return FALSE;
-		}
-
-		mdata = as_metadata_new ();
-		as_metadata_set_locale (mdata, "ALL");
-
-		as_metadata_parse_file (mdata, asfile, &tmp_error);
-		cpt = as_metadata_get_component (mdata);
-		g_object_unref (asfile);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
-			g_object_unref (mdata);
-			return FALSE;
-		}
-
 		tmp = li_str_replace (as_component_get_name (cpt), " ", "");
 		version = li_get_last_version_from_component (cpt);
 		if (version != NULL) {
@@ -856,7 +870,6 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 			pkg_fname_sdk = g_strdup_printf ("%s/%s.devel.ipk", dir, tmp);
 		}
 		g_free (tmp);
-		g_object_unref (mdata);
 	} else {
 		g_autofree gchar *base_fname;
 		g_autofree gchar *dirname;
@@ -895,14 +908,14 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 
 	if (auto_sdkpkg) {
 		/* build package, automatically detect if we need a development package */
-		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_NORMAL, as_metadata, payload_root_rt, pkg_fname_rt, TRUE, &tmp_error);
+		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_NORMAL, cpt, payload_root_rt, pkg_fname_rt, TRUE, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return FALSE;
 		}
 
 		/* run the development package build (will return no package if no SDK components are auto-detected) */
-		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_DEVEL, as_metadata, payload_root_rt, pkg_fname_sdk, TRUE, &tmp_error);
+		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_DEVEL, cpt, payload_root_rt, pkg_fname_sdk, TRUE, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return FALSE;
@@ -910,7 +923,7 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 
 	} else {
 		/* build RT package */
-		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_NORMAL, as_metadata, payload_root_rt, pkg_fname_rt, FALSE, &tmp_error);
+		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_NORMAL, cpt, payload_root_rt, pkg_fname_rt, FALSE, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return FALSE;
@@ -918,7 +931,7 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 
 		if (payload_root_sdk != NULL) {
 			/* build SDK package */
-			li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_DEVEL, as_metadata, payload_root_sdk, pkg_fname_sdk, FALSE, &tmp_error);
+			li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_DEVEL, cpt, payload_root_sdk, pkg_fname_sdk, FALSE, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				return FALSE;
