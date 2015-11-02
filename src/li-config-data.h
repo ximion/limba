@@ -28,8 +28,8 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 
-#define LI_TYPE_CONFIG_DATA			(li_config_data_get_type())
-#define LI_CONFIG_DATA(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_CONFIG_DATA, LiConfigData))
+#define LI_TYPE_CONFIG_DATA		(li_config_data_get_type())
+#define LI_CONFIG_DATA(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_CONFIG_DATA, LiConfigData))
 #define LI_CONFIG_DATA_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_CONFIG_DATA, LiConfigDataClass))
 #define LI_IS_CONFIG_DATA(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_CONFIG_DATA))
 #define LI_IS_CONFIG_DATA_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_CONFIG_DATA))

@@ -31,7 +31,7 @@
 
 #define LI_TYPE_PACKAGE			(li_package_get_type())
 #define LI_PACKAGE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PACKAGE, LiPackage))
-#define LI_PACKAGE_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PACKAGE, LiPackageClass))
+#define LI_PACKAGE_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PACKAGE, LiPackageClass))
 #define LI_IS_PACKAGE(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PACKAGE))
 #define LI_IS_PACKAGE_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PACKAGE))
 #define LI_PACKAGE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PACKAGE, LiPackageClass))
@@ -160,8 +160,8 @@ gboolean		li_package_download (LiPackage *pkg,
 gboolean		li_package_install (LiPackage *pkg,
 						GError **error);
 
-LiTrustLevel	li_package_verify_signature (LiPackage *pkg,
-						GError **error);
+LiTrustLevel		li_package_verify_signature (LiPackage *pkg,
+							GError **error);
 
 const gchar		*li_package_get_install_root (LiPackage *pkg);
 void			li_package_set_install_root (LiPackage *pkg,

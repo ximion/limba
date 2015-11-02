@@ -29,8 +29,8 @@
 #include <gio/gio.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_UPDATE_ITEM			(li_update_item_get_type())
-#define LI_UPDATE_ITEM(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_UPDATE_ITEM, LiUpdateItem))
+#define LI_TYPE_UPDATE_ITEM		(li_update_item_get_type())
+#define LI_UPDATE_ITEM(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_UPDATE_ITEM, LiUpdateItem))
 #define LI_UPDATE_ITEM_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_UPDATE_ITEM, LiUpdateItemClass))
 #define LI_IS_UPDATE_ITEM(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_UPDATE_ITEM))
 #define LI_IS_UPDATE_ITEM_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_UPDATE_ITEM))

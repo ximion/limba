@@ -28,9 +28,9 @@
 #include <glib-object.h>
 #include "li-package.h"
 
-#define LI_TYPE_INSTALLER			(li_installer_get_type())
-#define LI_INSTALLER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_INSTALLER, LiInstaller))
-#define LI_INSTALLER_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_INSTALLER, LiInstallerClass))
+#define LI_TYPE_INSTALLER		(li_installer_get_type())
+#define LI_INSTALLER(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_INSTALLER, LiInstaller))
+#define LI_INSTALLER_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_INSTALLER, LiInstallerClass))
 #define LI_IS_INSTALLER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_INSTALLER))
 #define LI_IS_INSTALLER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_INSTALLER))
 #define LI_INSTALLER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_INSTALLER, LiInstallerClass))
@@ -82,22 +82,22 @@ struct _LiInstallerClass
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiInstaller, g_object_unref)
 
-GType			li_installer_get_type	(void);
-LiInstaller		*li_installer_new		(void);
+GType			li_installer_get_type (void);
+LiInstaller		*li_installer_new (void);
 
 gboolean		li_installer_open_file (LiInstaller *inst,
-									const gchar *filename,
-									GError **error);
+							const gchar *filename,
+							GError **error);
 gboolean		li_installer_open_remote (LiInstaller *inst,
-									const gchar *pkgid,
-									GError **error);
+							const gchar *pkgid,
+							GError **error);
 
 gboolean		li_installer_install (LiInstaller *inst,
-										GError **error);
+						GError **error);
 
 LiPkgInfo		*li_installer_get_package_info (LiInstaller *inst);
 gchar			*li_installer_get_appstream_data (LiInstaller *inst);
-LiTrustLevel	li_installer_get_package_trust_level (LiInstaller *inst);
+LiTrustLevel		li_installer_get_package_trust_level (LiInstaller *inst);
 
 G_END_DECLS
 

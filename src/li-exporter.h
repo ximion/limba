@@ -28,9 +28,9 @@
 #include <glib-object.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_EXPORTER			(li_exporter_get_type())
-#define LI_EXPORTER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_EXPORTER, LiExporter))
-#define LI_EXPORTER_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_EXPORTER, LiExporterClass))
+#define LI_TYPE_EXPORTER		(li_exporter_get_type())
+#define LI_EXPORTER(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_EXPORTER, LiExporter))
+#define LI_EXPORTER_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_EXPORTER, LiExporterClass))
 #define LI_IS_EXPORTER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_EXPORTER))
 #define LI_IS_EXPORTER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_EXPORTER))
 #define LI_EXPORTER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_EXPORTER, LiExporterClass))

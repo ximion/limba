@@ -29,8 +29,8 @@
 #include <gio/gio.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_PKG_INDEX			(li_pkg_index_get_type())
-#define LI_PKG_INDEX(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_INDEX, LiPkgIndex))
+#define LI_TYPE_PKG_INDEX		(li_pkg_index_get_type())
+#define LI_PKG_INDEX(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_INDEX, LiPkgIndex))
 #define LI_PKG_INDEX_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_INDEX, LiPkgIndexClass))
 #define LI_IS_PKG_INDEX(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_INDEX))
 #define LI_IS_PKG_INDEX_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PKG_INDEX))

@@ -540,7 +540,7 @@ li_installer_install_node (LiInstaller *inst, GNode *node, GError **error)
 			}
 		}
 		li_pkg_info_set_runtime_dependency (info,
-										li_runtime_get_uuid (rt));
+							li_runtime_get_uuid (rt));
 		g_object_unref (rt);
 	} else {
 		/* if the installed software does not need a runtime to run, we explicity state that */

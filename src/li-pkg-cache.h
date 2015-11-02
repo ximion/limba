@@ -28,12 +28,12 @@
 #include <glib-object.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_PKG_CACHE			(li_pkg_cache_get_type())
-#define LI_PKG_CACHE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_CACHE, LiPkgCache))
+#define LI_TYPE_PKG_CACHE		(li_pkg_cache_get_type())
+#define LI_PKG_CACHE(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_CACHE, LiPkgCache))
 #define LI_PKG_CACHE_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_CACHE, LiPkgCacheClass))
 #define LI_IS_PKG_CACHE(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_CACHE))
 #define LI_IS_PKG_CACHE_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PKG_CACHE))
-#define LI_PKG_CACHE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PKG_CACHE, LiPkgCacheClass))
+#define LI_PKG_CACHE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PKG_CACHE, LiPkgCacheClass))
 
 G_BEGIN_DECLS
 

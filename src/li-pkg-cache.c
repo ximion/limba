@@ -73,16 +73,6 @@ static guint signals[SIGNAL_LAST] = { 0 };
 #define LIMBA_CACHE_DIR "/var/cache/limba/"
 #define APPSTREAM_CACHE "/var/cache/app-info/"
 
-/* TODO: Remove when libappstream has autoptr as well */
-#define GS_DEFINE_CLEANUP_FUNCTION0(Type, name, func) \
-  static inline void name (void *v) \
-  { \
-    if (*(Type*)v) \
-      func (*(Type*)v); \
-  }
-GS_DEFINE_CLEANUP_FUNCTION0(GObject*, gs_local_obj_unref, g_object_unref)
-#define _cleanup_object_unref_ __attribute__ ((cleanup(gs_local_obj_unref)))
-
 typedef struct {
 	LiPkgCache *cache;
 	gchar *id;
@@ -505,9 +495,9 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		g_autoptr(GFile) idxfile = NULL;
 		g_autoptr(GFile) asfile = NULL;
 		g_autoptr(LiPkgIndex) tmp_index = NULL;
+		g_autoptr (AsMetadata) metad = NULL;
 		g_auto(GStrv) hashlist = NULL;
 		g_autofree gchar *fpr = NULL;
-		_cleanup_object_unref_ AsMetadata *metad = NULL;
 		g_autofree gchar *dest_ascache = NULL;
 		g_autofree gchar *md5sum = NULL;
 		gboolean index_read;

@@ -30,7 +30,7 @@
 
 #define LI_TYPE_KEYRING			(li_keyring_get_type())
 #define LI_KEYRING(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_KEYRING, LiKeyring))
-#define LI_KEYRING_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_KEYRING, LiKeyringClass))
+#define LI_KEYRING_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_KEYRING, LiKeyringClass))
 #define LI_IS_KEYRING(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_KEYRING))
 #define LI_IS_KEYRING_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_KEYRING))
 #define LI_KEYRING_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_KEYRING, LiKeyringClass))

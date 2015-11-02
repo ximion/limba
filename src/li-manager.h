@@ -30,7 +30,7 @@
 
 #define LI_TYPE_MANAGER			(li_manager_get_type())
 #define LI_MANAGER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_MANAGER, LiManager))
-#define LI_MANAGER_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_MANAGER, LiManagerClass))
+#define LI_MANAGER_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_MANAGER, LiManagerClass))
 #define LI_IS_MANAGER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_MANAGER))
 #define LI_IS_MANAGER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_MANAGER))
 #define LI_MANAGER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_MANAGER, LiManagerClass))
