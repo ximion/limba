@@ -44,6 +44,9 @@ struct _LiPkgInfoPrivate
 	gchar *repo_location;
 	gchar *abi_break_versions;
 
+	gchar *sdk_dependencies;
+	gchar *build_dependencies;
+
 	LiPackageKind kind;
 	LiPackageFlags flags;
 	LiVersionFlags vrel;
@@ -117,6 +120,12 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 	g_free (priv->dependencies);
 	priv->dependencies = li_config_data_get_value (cdata, "Requires");
 
+	g_free (priv->sdk_dependencies);
+	priv->sdk_dependencies = li_config_data_get_value (cdata, "SDK-Requires");
+
+	g_free (priv->build_dependencies);
+	priv->build_dependencies = li_config_data_get_value (cdata, "Build-Requires");
+
 	g_free (priv->runtime_uuid);
 	priv->runtime_uuid = li_config_data_get_value (cdata, "Runtime-UUID");
 
@@ -173,6 +182,12 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 
 	if (priv->dependencies != NULL)
 		li_config_data_set_value (cdata, "Requires", priv->dependencies);
+
+	if (priv->sdk_dependencies != NULL)
+		li_config_data_set_value (cdata, "SDK-Requires", priv->sdk_dependencies);
+
+	if (priv->build_dependencies != NULL)
+		li_config_data_set_value (cdata, "Build-Requires", priv->build_dependencies);
 
 	if (priv->runtime_uuid != NULL)
 		li_config_data_set_value (cdata, "Runtime-UUID", priv->runtime_uuid);
@@ -411,16 +426,6 @@ li_pkg_info_set_runtime_dependency (LiPkgInfo *pki, const gchar *uuid)
 }
 
 /**
- * li_pkg_info_get_dependencies:
- */
-const gchar*
-li_pkg_info_get_dependencies (LiPkgInfo *pki)
-{
-	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
-	return priv->dependencies;
-}
-
-/**
  * li_pkg_info_get_id:
  */
 const gchar*
@@ -453,6 +458,16 @@ li_pkg_info_set_id (LiPkgInfo *pki, const gchar *id)
 }
 
 /**
+ * li_pkg_info_get_dependencies:
+ */
+const gchar*
+li_pkg_info_get_dependencies (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->dependencies;
+}
+
+/**
  * li_pkg_info_set_dependencies:
  */
 void
@@ -462,6 +477,60 @@ li_pkg_info_set_dependencies (LiPkgInfo *pki, const gchar *deps_string)
 
 	g_free (priv->dependencies);
 	priv->dependencies = g_strdup (deps_string);
+}
+
+/**
+ * li_pkg_info_set_sdk_dependencies:
+ *
+ * Set dependencies used by the development version of this package.
+ * This is only useful for IPK source packages.
+ */
+void
+li_pkg_info_set_sdk_dependencies (LiPkgInfo *pki, const gchar *deps_string)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+
+	g_free (priv->sdk_dependencies);
+	priv->sdk_dependencies = g_strdup (deps_string);
+}
+
+/**
+ * li_pkg_info_get_sdk_dependencies:
+ *
+ * Dependencies used by the development version of this package.
+ * This is only useful for IPK source packages.
+ */
+const gchar*
+li_pkg_info_get_sdk_dependencies (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->sdk_dependencies;
+}
+
+/**
+ * li_pkg_info_set_build_dependencies:
+ *
+ * Set dependencies needed to build this package.
+ */
+void
+li_pkg_info_set_build_dependencies (LiPkgInfo *pki, const gchar *deps_string)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+
+	g_free (priv->build_dependencies);
+	priv->build_dependencies = g_strdup (deps_string);
+}
+
+/**
+ * li_pkg_info_get_build_dependencies:
+ *
+ * Dependencies needed to build this package.
+ */
+const gchar*
+li_pkg_info_get_build_dependencies (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->build_dependencies;
 }
 
 /**

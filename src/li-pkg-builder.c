@@ -662,13 +662,16 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 	g_autofree gchar *tmp_dir = NULL;
 	g_autofree gchar *ctl_fname = NULL;
 	g_autofree gchar *asdata_fname = NULL;
-	g_autofree gchar *cpt_orig_id = NULL;
 
 	g_autofree gchar *payload_file = NULL;
 	g_autofree gchar *sig_fname = NULL;
 	g_autoptr(GPtrArray) files = NULL;
 	g_autoptr(GPtrArray) sign_files = NULL;
 	g_autoptr (AsMetadata) metad = NULL;
+
+	g_autofree gchar *cpt_orig_id = NULL;
+	g_autofree gchar *orig_deps = NULL;
+	g_autofree gchar *orig_sdk_deps = NULL;
 
 	GError *tmp_error = NULL;
 	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
@@ -750,9 +753,33 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 		g_free (arch);
 	}
 
+	/* Ensure SDK packages always depend on their runtime package */
+	orig_deps = g_strdup (li_pkg_info_get_dependencies (ctl));
+	orig_sdk_deps = g_strdup (li_pkg_info_get_sdk_dependencies (ctl));
+	if (kind == LI_PACKAGE_KIND_DEVEL) {
+		g_autofree gchar *tmp = NULL;
+
+		if ((li_pkg_info_get_sdk_dependencies (ctl) == NULL) || (g_strcmp0 (li_pkg_info_get_sdk_dependencies (ctl), "") == 0)) {
+			tmp = g_strdup_printf ("%s (== %s)",
+						cpt_orig_id,
+						li_get_last_version_from_component (cpt));
+		} else {
+			tmp = g_strdup_printf ("%s (== %s), %s",
+						cpt_orig_id,
+						li_get_last_version_from_component (cpt),
+						li_pkg_info_get_sdk_dependencies (ctl));
+		}
+		li_pkg_info_set_dependencies (ctl, tmp);
+	}
+
 	/* save our new control metadata */
+	li_pkg_info_set_sdk_dependencies (ctl, NULL);
 	ctl_fname = g_build_filename (tmp_dir, "control", NULL);
 	li_pkg_info_save_to_file (ctl, ctl_fname);
+
+	/* restore LiPkgInfo to previous state */
+	li_pkg_info_set_dependencies (ctl, orig_deps);
+	li_pkg_info_set_sdk_dependencies (ctl, orig_sdk_deps);
 
 	/* we want these files in the package */
 	g_ptr_array_add (files, g_strdup (ctl_fname));

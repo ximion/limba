@@ -146,6 +146,14 @@ const gchar	*li_pkg_info_get_dependencies (LiPkgInfo *pki);
 void		li_pkg_info_set_dependencies (LiPkgInfo *pki,
 					const gchar *deps_string);
 
+const gchar	*li_pkg_info_get_sdk_dependencies (LiPkgInfo *pki);
+void		li_pkg_info_set_sdk_dependencies (LiPkgInfo *pki,
+					const gchar *deps_string);
+
+const gchar	*li_pkg_info_get_build_dependencies (LiPkgInfo *pki);
+void		li_pkg_info_set_build_dependencies (LiPkgInfo *pki,
+					const gchar *deps_string);
+
 const gchar	*li_pkg_info_get_id (LiPkgInfo *pki);
 void		li_pkg_info_set_id (LiPkgInfo *pki,
 					const gchar *id);
