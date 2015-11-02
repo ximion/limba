@@ -534,7 +534,7 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 		g_propagate_error (error, tmp_error);
 		return NULL;
 	}
-	g_print ("%s\n", _("Packages signed."));
+	g_print ("%s\n", _("Package signed."));
 
 	sig_fname = g_build_filename (tmp_dir, "_signature", NULL);
 	file = fopen (sig_fname, "w");
@@ -560,6 +560,28 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 }
 
 /**
+ * li_pkg_builder_filelist_entry_for_pkgfile:
+ */
+static gchar*
+li_pkg_builder_filelist_entry_for_pkgfile (LiPkgBuilder *builder, const gchar *pkg_fname)
+{
+	gchar *tmp;
+	gchar *tmp2;
+	gchar *tmp3;
+
+	if (!g_file_test (pkg_fname, G_FILE_TEST_EXISTS))
+		return NULL;
+
+	tmp2 = g_path_get_basename (pkg_fname);
+	tmp3 = li_compute_checksum_for_file (pkg_fname);
+	tmp = g_strdup_printf ("%s %s", tmp3, tmp2);
+	g_free (tmp2);
+	g_free (tmp3);
+
+	return tmp;
+}
+
+/**
  * li_pkg_builder_write_dsc_file:
  *
  * The .dsc description is meant to be used to upload one or more packages
@@ -567,7 +589,7 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
  * This function generates a basic .dsc file for the new package.
  */
 void
-li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, LiPkgInfo *ctl, GError **error)
+li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname_rt, const gchar *pkg_fname_sdk, LiPkgInfo *ctl, GError **error)
 {
 	g_autoptr(LiConfigData) cdata = NULL;
 	g_autofree gchar *fname = NULL;
@@ -590,13 +612,16 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, Li
 	/* set basic information */
 	li_config_data_set_value (cdata, "Limba-Version", VERSION);
 
-	tmp2 = g_path_get_basename (pkg_fname);
-	tmp3 = li_compute_checksum_for_file (pkg_fname);
-	tmp = g_strdup_printf ("%s %s", tmp3, tmp2);
-	g_free (tmp2);
-	g_free (tmp3);
+	tmp2 = li_pkg_builder_filelist_entry_for_pkgfile (builder, pkg_fname_rt);
+	tmp3 = li_pkg_builder_filelist_entry_for_pkgfile (builder, pkg_fname_sdk);
+	if (tmp3 == NULL)
+		tmp = g_strdup (tmp2);
+	else
+		tmp = g_strdup_printf ("%s\n%s", tmp2, tmp3);
 	li_config_data_set_value (cdata, "Files", tmp);
 	g_free (tmp);
+	g_free (tmp2);
+	g_free (tmp3);
 	tmp = NULL;
 
 	/* set uploader field */
@@ -628,7 +653,7 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname, Li
 	}
 	g_print ("%s\n", _("DSC file signed."));
 
-	fname = g_strdup_printf ("%s.dsc", pkg_fname);
+	fname = g_strdup_printf ("%s.dsc", pkg_fname_rt);
 	tmp = li_config_data_get_data (cdata);
 
 	file = fopen (fname, "w");
@@ -812,13 +837,6 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 	/* cleanup temporary dir */
 	li_delete_dir_recursive (tmp_dir);
 
-	/* write dsc file */
-	li_pkg_builder_write_dsc_file (builder, pkg_fname, ctl, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
-	}
-
 	return TRUE;
 }
 
@@ -964,6 +982,13 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 				return FALSE;
 			}
 		}
+	}
+
+	/* write dsc file */
+	li_pkg_builder_write_dsc_file (builder, pkg_fname_rt, pkg_fname_sdk, ctl, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
 	}
 
 	return TRUE;
