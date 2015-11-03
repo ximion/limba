@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -88,18 +88,18 @@ li_exporter_copy_file (LiExporter *exp, const gchar *source, const gchar *destin
 
 	if ((!priv->override) && (g_file_query_exists (fdest, NULL))) {
 		g_set_error (error,
-					G_FILE_ERROR,
-					G_FILE_ERROR_EXIST,
-					_("File '%s' already exists."), destination);
+				G_FILE_ERROR,
+				G_FILE_ERROR_EXIST,
+				_("File '%s' already exists."), destination);
 		return;
 	}
 
 
 
 	g_file_copy (fsrc,
-				fdest,
-				G_FILE_COPY_OVERWRITE,
-				NULL, NULL, NULL, &tmp_error);
+			fdest,
+			G_FILE_COPY_OVERWRITE,
+			NULL, NULL, NULL, &tmp_error);
 
 	if (tmp_error != NULL) {
 		g_propagate_prefixed_error (error, tmp_error, "Unable to export file.");
@@ -145,8 +145,8 @@ li_exporter_process_desktop_file (LiExporter *exp, const gchar *disk_location, G
 
 	kfile = g_key_file_new ();
 	g_key_file_load_from_file (kfile, dest,
-							G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS,
-							&tmp_error);
+					G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS,
+					&tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		goto out;
@@ -233,23 +233,23 @@ li_exporter_process_binary (LiExporter *exp, const gchar *disk_location, GError 
 
 	exec_cmd = g_path_get_basename (disk_location);
 	tmp = g_strdup_printf ("%s-%s",
-						exec_cmd,
-						li_pkg_info_get_version (priv->pki));
+				exec_cmd,
+				li_pkg_info_get_version (priv->pki));
 	dest = g_build_filename (PREFIXDIR, "local", "bin", tmp, NULL);
 	g_free (tmp);
 
 	if ((!priv->override) && (g_file_test (dest, G_FILE_TEST_EXISTS))) {
 		g_set_error (error,
-					G_FILE_ERROR,
-					G_FILE_ERROR_EXIST,
-					_("File '%s' already exists."), dest);
+				G_FILE_ERROR,
+				G_FILE_ERROR_EXIST,
+				_("File '%s' already exists."), dest);
 		return FALSE;
 	}
 
 	/* create a wrapper script for our new application */
 	tmp = g_strdup_printf ("#!/bin/sh\nrunapp %s:/bin/%s $@\n",
-						li_pkg_info_get_id (priv->pki),
-						exec_cmd);
+					li_pkg_info_get_id (priv->pki),
+					exec_cmd);
 	g_file_set_contents (dest, tmp, -1, &tmp_error);
 	g_free (tmp);
 	if (tmp_error != NULL) {

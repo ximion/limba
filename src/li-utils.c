@@ -279,29 +279,29 @@ li_str_replace (const gchar *str, const gchar *old, const gchar *new)
 {
 	gchar *ret, *r;
 	const gchar *p, *q;
-	size_t oldlen = strlen(old);
-	size_t count, retlen, newlen = strlen(new);
+	size_t oldlen = strlen (old);
+	size_t count, retlen, newlen = strlen (new);
 
 	if (oldlen != newlen) {
-		for (count = 0, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen)
+		for (count = 0, p = str; (q = strstr (p, old)) != NULL; p = q + oldlen)
 			count++;
 		/* this is undefined if p - str > PTRDIFF_MAX */
-		retlen = p - str + strlen(p) + count * (newlen - oldlen);
+		retlen = p - str + strlen (p) + count * (newlen - oldlen);
 	} else
-		retlen = strlen(str);
+		retlen = strlen (str);
 
-	if ((ret = malloc(retlen + 1)) == NULL)
+	if ((ret = malloc (retlen + 1)) == NULL)
 		return NULL;
 
 	for (r = ret, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen) {
 		/* this is undefined if q - p > PTRDIFF_MAX */
 		ptrdiff_t l = q - p;
-		memcpy(r, p, l);
+		memcpy (r, p, l);
 		r += l;
-		memcpy(r, new, newlen);
+		memcpy (r, new, newlen);
 		r += newlen;
 	}
-	strcpy(r, p);
+	strcpy (r, p);
 
 	return ret;
 }

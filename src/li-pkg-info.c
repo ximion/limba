@@ -441,7 +441,7 @@ li_pkg_info_get_id (LiPkgInfo *pki)
 		}
 
 		/* re-generate id if necessary */
-		priv->id = g_strdup_printf ("%s-%s", priv->name, priv->version);
+		priv->id = g_strdup_printf ("%s/%s", priv->name, priv->version);
 	}
 
 	return priv->id;

@@ -40,7 +40,7 @@
 typedef struct _LiRuntimePrivate	LiRuntimePrivate;
 struct _LiRuntimePrivate
 {
-	gchar *dir;
+	gchar *fname;
 	gchar *uuid; /* auto-generated */
 	GHashTable *members;
 	GHashTable *requirements;
@@ -138,7 +138,7 @@ li_runtime_finalize (GObject *object)
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
 	g_free (priv->uuid);
-	g_free (priv->dir);
+	g_free (priv->fname);
 	g_hash_table_unref (priv->requirements);
 	g_hash_table_unref (priv->members);
 
@@ -153,32 +153,32 @@ li_runtime_init (LiRuntime *rt)
 {
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
-	priv->dir = NULL;
+	priv->fname = NULL;
 	priv->uuid = li_get_uuid_string ();
 	priv->requirements = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 	priv->members = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 }
 
 /**
- * li_runtime_load_directory:
+ * li_runtime_load_from_file:
+ *
+ * Load dynamic runtime information from a cache file.
  */
 gboolean
-li_runtime_load_directory (LiRuntime *rt, const gchar *dir, GError **error)
+li_runtime_load_from_file (LiRuntime *rt, const gchar *fname, GError **error)
 {
 	gchar *uuid;
 	g_autoptr(GFile) ctlfile;
-	g_autofree gchar *ctlpath = NULL;
 	g_autoptr(LiConfigData) cdata = NULL;
 	GError *tmp_error = NULL;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
-	uuid = g_path_get_basename (dir);
+	uuid = g_path_get_basename (fname);
 	if (strlen (uuid) != 36) {
 		g_warning ("Loading runtime with uuid '%s', which doesn't look valid.", uuid);
 	}
 
-	ctlpath = g_build_filename (dir, "control", NULL);
-	ctlfile = g_file_new_for_path (ctlpath);
+	ctlfile = g_file_new_for_path (fname);
 	if (!g_file_query_exists (ctlfile, NULL)) {
 		g_set_error (error,
 				G_FILE_ERROR,
@@ -201,7 +201,7 @@ li_runtime_load_directory (LiRuntime *rt, const gchar *dir, GError **error)
 	g_free (priv->uuid);
 	priv->uuid = uuid;
 
-	priv->dir = g_strdup (dir);
+	priv->fname = g_strdup (fname);
 
 	return TRUE;
 }
@@ -212,7 +212,7 @@ li_runtime_load_directory (LiRuntime *rt, const gchar *dir, GError **error)
 gboolean
 li_runtime_load_by_uuid (LiRuntime *rt, const gchar *uuid, GError **error)
 {
-	g_autofree gchar *runtime_dir = NULL;
+	g_autofree gchar *rt_ctlfile = NULL;
 	gboolean ret;
 	GError *tmp_error = NULL;
 
@@ -220,9 +220,9 @@ li_runtime_load_by_uuid (LiRuntime *rt, const gchar *uuid, GError **error)
 		g_warning ("Loading runtime with uuid '%s', which doesn't look valid.", uuid);
 	}
 
-	runtime_dir = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", uuid, NULL);
+	rt_ctlfile = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", uuid, NULL);
 
-	ret = li_runtime_load_directory (rt, runtime_dir, &tmp_error);
+	ret = li_runtime_load_from_file (rt, rt_ctlfile, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 	}
@@ -272,9 +272,9 @@ li_runtime_add_package (LiRuntime *rt, LiPkgInfo *pki)
 {
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 	g_hash_table_add (priv->members,
-						g_strdup (li_pkg_info_get_id (pki)));
+				g_strdup (li_pkg_info_get_id (pki)));
 	g_hash_table_add (priv->requirements,
-						li_pkg_info_get_name_relation_string (pki));
+				li_pkg_info_get_name_relation_string (pki));
 }
 
 /**
@@ -285,9 +285,9 @@ li_runtime_remove_package (LiRuntime *rt, LiPkgInfo *pki)
 {
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 	g_hash_table_remove (priv->members,
-						g_strdup (li_pkg_info_get_id (pki)));
+				g_strdup (li_pkg_info_get_id (pki)));
 	g_hash_table_remove (priv->requirements,
-						li_pkg_info_get_name_relation_string (pki));
+				li_pkg_info_get_name_relation_string (pki));
 }
 
 /**
@@ -299,30 +299,29 @@ gboolean
 li_runtime_save (LiRuntime *rt, GError **error)
 {
 	gboolean ret;
-	LiConfigData *cdata;
+	g_autoptr(LiConfigData) cdata = NULL;
 	g_autofree gchar *control_fname = NULL;
-	g_autofree gchar *rt_path = NULL;
+	g_autofree gchar *rt_basedir = NULL;
 	GError *tmp_error = NULL;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
-	rt_path = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", priv->uuid, NULL);
-	control_fname = g_build_filename (rt_path, "control", NULL);
+	rt_basedir = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", NULL);
 
-	if (!g_file_test (rt_path, G_FILE_TEST_IS_DIR)) {
-		if (g_mkdir_with_parents (rt_path, 0755) != 0) {
+	if (!g_file_test (rt_basedir, G_FILE_TEST_IS_DIR)) {
+		if (g_mkdir_with_parents (rt_basedir, 0755) != 0) {
 			g_set_error (error,
 				G_FILE_ERROR,
 				G_FILE_ERROR_FAILED,
-				_("Could not create directory structure for runtime. %s"), g_strerror (errno));
+				_("Could not create runtime cache directory. %s"), g_strerror (errno));
 			return FALSE;
 		}
 	}
 
+	control_fname = g_build_filename (rt_basedir, priv->uuid, NULL);
 	cdata = li_config_data_new ();
 	li_runtime_update_cdata_values (rt, cdata);
-	ret = li_config_data_save_to_file (cdata, control_fname, &tmp_error);
-	g_object_unref (cdata);
 
+	ret = li_config_data_save_to_file (cdata, control_fname, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 	}
@@ -397,16 +396,17 @@ li_runtime_create_with_members (GPtrArray *members, GError **error)
 gboolean
 li_runtime_remove (LiRuntime *rt)
 {
-	gboolean ret;
+	gboolean ret = TRUE;
 	LiRuntimePrivate *priv = GET_PRIVATE (rt);
 
-	if (priv->dir == NULL)
+	if (priv->fname == NULL)
 		return FALSE;
 
-	ret = li_delete_dir_recursive (priv->dir);
-	if (ret) {
-		g_free (priv->dir);
-		priv->dir = NULL;
+	if (g_unlink (priv->fname) == 0) {
+		g_free (priv->fname);
+		priv->fname = NULL;
+	} else {
+		ret = FALSE;
 	}
 
 	return ret;

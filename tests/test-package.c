@@ -158,7 +158,7 @@ test_package_read ()
 	li_package_open_file (ipk, fname, &error);
 	g_assert_no_error (error);
 
-	g_assert (g_strcmp0 (li_package_get_id (ipk), "libfoo-1.0") == 0);
+	g_assert (g_strcmp0 (li_package_get_id (ipk), "libfoo/1.0") == 0);
 
 	g_object_unref (ipk);
 }

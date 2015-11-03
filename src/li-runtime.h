@@ -64,8 +64,8 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiRuntime, g_object_unref)
 GType			li_runtime_get_type (void);
 LiRuntime		*li_runtime_new (void);
 
-gboolean		li_runtime_load_directory (LiRuntime *rt,
-							const gchar *dir,
+gboolean		li_runtime_load_from_file (LiRuntime *rt,
+							const gchar *fname,
 							GError **error);
 gboolean		li_runtime_load_by_uuid (LiRuntime *rt,
 							const gchar *uuid,

@@ -237,6 +237,7 @@ main (gint argc, gchar *argv[])
 {
 	int ret;
 	g_autofree gchar *swname = NULL;
+	g_autofree gchar *scope_name = NULL;
 	g_autofree gchar *executable = NULL;
 	struct utsname uts_data;
 	gchar *ma_lib_path = NULL;
@@ -286,7 +287,8 @@ main (gint argc, gchar *argv[])
 	setuid (getuid ());
 
 	/* place this process in a new cgroup */
-	li_add_to_new_scope ("app", swname, &error);
+	scope_name = li_str_replace (swname, "/", "");
+	li_add_to_new_scope ("app", scope_name, &error);
 	if (error != NULL) {
 		fprintf (stderr, "Could not add process to new scope. %s\n", error->message);
 		g_error_free (error);
@@ -310,6 +312,12 @@ main (gint argc, gchar *argv[])
 	if (child_argv == NULL) {
 		ret = FALSE;
 		fprintf (stderr, "Out of memory!\n");
+		goto error;
+	}
+
+	if (!g_file_test (executable, G_FILE_TEST_EXISTS)) {
+		ret = FALSE;
+		fprintf (stderr, "Executable '%s' was not found.\n", executable);
 		goto error;
 	}
 

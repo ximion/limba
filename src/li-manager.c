@@ -121,9 +121,9 @@ li_manager_init (LiManager *mgr)
 	priv->pkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	priv->rts = g_ptr_array_new_with_free_func (g_object_unref);
 	priv->updates = g_hash_table_new_full ((GHashFunc) li_pki_hash_func,
-									(GEqualFunc) li_pki_equal_func,
-									g_object_unref,
-									g_object_unref);
+						(GEqualFunc) li_pki_equal_func,
+						g_object_unref,
+						g_object_unref);
 	priv->loop = g_main_loop_new (NULL, FALSE);
 }
 
@@ -148,8 +148,8 @@ static GHashTable*
 li_manager_get_installed_software (LiManager *mgr, GError **error)
 {
 	GError *tmp_error = NULL;
-	GFile *fdir;
-	GFileEnumerator *enumerator = NULL;
+	g_autoptr(GFile) fdir = NULL;
+	g_autoptr(GFileEnumerator) enumerator = NULL;
 	GFileInfo *file_info;
 	GHashTable *pkgs = NULL;
 
@@ -167,47 +167,68 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 	pkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		g_autofree gchar *path = NULL;
+		g_autoptr(GFile) fsdir = NULL;
+		g_autoptr(GFileEnumerator) senum = NULL;
+		g_autofree gchar *mpath = NULL;
+		GFileInfo *s_finfo;
+
+		if (tmp_error != NULL)
+			goto out;
+		if (g_file_info_get_is_hidden (file_info))
+			continue;
+		/* ignore the runtimes directory */
+		if (g_strcmp0 (g_file_info_get_name (file_info), "runtimes") == 0)
+			continue;
+
+		mpath = g_build_filename (LI_SOFTWARE_ROOT, g_file_info_get_name (file_info), NULL);
+
+		fsdir = g_file_new_for_path (mpath);
+		senum = g_file_enumerate_children (fsdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
 		if (tmp_error != NULL)
 			goto out;
 
-		if (g_file_info_get_is_hidden (file_info))
-			continue;
-		path = g_build_filename (LI_SOFTWARE_ROOT,
-						g_file_info_get_name (file_info),
-						 "control",
-						 NULL);
-		if (g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
-			g_autoptr(GFile) ctlfile = NULL;
-			ctlfile = g_file_new_for_path (path);
-			if (g_file_query_exists (ctlfile, NULL)) {
-				LiPkgInfo *pki;
+		while ((s_finfo = g_file_enumerator_next_file (senum, NULL, &tmp_error)) != NULL) {
+			g_autofree gchar *cpath = NULL;
 
-				/* create new LiPkgInfo for an installed package */
-				pki = li_pkg_info_new ();
+			if (tmp_error != NULL)
+				goto out;
+			if (g_file_info_get_is_hidden (s_finfo))
+				continue;
 
-				li_pkg_info_load_file (pki, ctlfile, &tmp_error);
-				if (tmp_error != NULL) {
-					g_object_unref (pki);
-					goto out;
+			cpath = g_build_filename (mpath,
+						g_file_info_get_name (s_finfo),
+						"control",
+						NULL);
+
+			if (g_file_test (cpath, G_FILE_TEST_IS_REGULAR)) {
+				g_autoptr(GFile) ctlfile = NULL;
+				ctlfile = g_file_new_for_path (cpath);
+				if (g_file_query_exists (ctlfile, NULL)) {
+					LiPkgInfo *pki;
+
+					/* create new LiPkgInfo for an installed package */
+					pki = li_pkg_info_new ();
+
+					li_pkg_info_load_file (pki, ctlfile, &tmp_error);
+					if (tmp_error != NULL) {
+						g_object_unref (pki);
+						goto out;
+					}
+
+					/* do not list as installed if the software is faded */
+					if (!li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_FADED)) {
+						li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_INSTALLED);
+					}
+
+					g_hash_table_insert (pkgs,
+								g_strdup (li_pkg_info_get_id (pki)),
+								pki);
 				}
-
-				/* do not list as installed if the software is faded */
-				if (!li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_FADED)) {
-					li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_INSTALLED);
-				}
-
-				g_hash_table_insert (pkgs,
-							g_strdup (li_pkg_info_get_id (pki)),
-							pki);
 			}
 		}
 	}
 
 out:
-	g_object_unref (fdir);
-	if (enumerator != NULL)
-		g_object_unref (enumerator);
 	if (tmp_error != NULL) {
 		g_propagate_prefixed_error (error,
 					tmp_error,
@@ -338,32 +359,24 @@ li_manager_find_installed_runtimes (LiManager *mgr)
 		goto out;
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		gchar *path;
+		g_autofree gchar *rt_path = NULL;
 		if (tmp_error != NULL)
 			goto out;
 
 		if (g_file_info_get_is_hidden (file_info))
 			continue;
-		path = g_build_filename (runtime_root,
-						g_file_info_get_name (file_info),
-						 "control",
-						 NULL);
-		if (g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
-			gchar *rt_path;
+		rt_path = g_build_filename (runtime_root, g_file_info_get_name (file_info), NULL);
+		if (g_file_test (rt_path, G_FILE_TEST_IS_REGULAR)) {
 			gboolean ret;
 			LiRuntime *rt;
 
-			rt_path = g_build_filename (runtime_root, g_file_info_get_name (file_info), NULL);
-
 			rt = li_runtime_new ();
-			ret = li_runtime_load_directory (rt, rt_path, &tmp_error);
+			ret = li_runtime_load_from_file (rt, rt_path, &tmp_error);
 			if (ret)
 				g_ptr_array_add (priv->rts, g_object_ref (rt));
 
-			g_free (rt_path);
 			g_object_unref (rt);
 		}
-		g_free (path);
 	}
 
 
@@ -761,9 +774,9 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	/* now delete the directory */
 	if (!li_delete_dir_recursive (swpath)) {
 		g_set_error (error,
-					LI_MANAGER_ERROR,
-					LI_MANAGER_ERROR_REMOVE_FAILED,
-					_("Could not remove software directory."));
+				LI_MANAGER_ERROR,
+				LI_MANAGER_ERROR_REMOVE_FAILED,
+				_("Could not remove software directory."));
 		return FALSE;
 	}
 
@@ -787,8 +800,8 @@ li_manager_package_is_installed (LiManager *mgr, LiPkgInfo *pki)
 	g_autofree gchar *pkid = NULL;
 	g_autofree gchar *path = NULL;
 
-	pkid = g_strdup_printf ("%s-%s",
-							li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
+	pkid = g_strdup_printf ("%s/%s",
+				li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
 	path = g_build_filename (LI_SOFTWARE_ROOT, pkid, "control", NULL);
 
 	if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
@@ -806,8 +819,8 @@ static void
 li_manager_cleanup_broken_packages (LiManager *mgr, GError **error)
 {
 	GError *tmp_error = NULL;
-	GFile *fdir;
-	GFileEnumerator *enumerator = NULL;
+	g_autoptr(GFile) fdir = NULL;
+	g_autoptr(GFileEnumerator) enumerator = NULL;
 	GFileInfo *file_info;
 
 	if (!g_file_test (LI_SOFTWARE_ROOT, G_FILE_TEST_IS_DIR)) {
@@ -817,38 +830,70 @@ li_manager_cleanup_broken_packages (LiManager *mgr, GError **error)
 
 	/* get stuff in the software directory */
 	fdir = g_file_new_for_path (LI_SOFTWARE_ROOT);
-	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
+	enumerator = g_file_enumerate_children (fdir,
+						G_FILE_ATTRIBUTE_STANDARD_NAME,
+						G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+						NULL,
+						&tmp_error);
 	if (tmp_error != NULL)
 		goto out;
 
 	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
-		g_autofree gchar *path = NULL;
+		g_autoptr(GFile) fsdir = NULL;
+		g_autoptr(GFileEnumerator) senum = NULL;
+		g_autofree gchar *mpath = NULL;
+		gint child_count = 0;
+		GFileInfo *s_finfo;
+
 		if (tmp_error != NULL)
 			goto out;
-
+		if (g_file_info_get_is_hidden (file_info))
+			continue;
 		/* the "runtimes" directory is special, never remove it */
 		if (g_strcmp0 (g_file_info_get_name (file_info), "runtimes") == 0)
 			continue;
 
-		path = g_build_filename (LI_SOFTWARE_ROOT,
-								 g_file_info_get_name (file_info),
-								 "control",
-								 NULL);
+		mpath = g_build_filename (LI_SOFTWARE_ROOT, g_file_info_get_name (file_info), NULL);
 
-		/* no control file means this is garbage, probably from a previous failed installation */
-		if (!g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
-			g_autofree gchar *tmp_path;
-			tmp_path = g_build_filename (LI_SOFTWARE_ROOT,
-									g_file_info_get_name (file_info),
-									NULL);
-			li_delete_dir_recursive (tmp_path);
+		fsdir = g_file_new_for_path (mpath);
+		senum = g_file_enumerate_children (fsdir,
+						   G_FILE_ATTRIBUTE_STANDARD_NAME,
+						   G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+						   NULL,
+						   &tmp_error);
+		if (tmp_error != NULL)
+			goto out;
+
+		while ((s_finfo = g_file_enumerator_next_file (senum, NULL, &tmp_error)) != NULL) {
+			g_autofree gchar *path = NULL;
+			if (tmp_error != NULL)
+				goto out;
+			if (g_file_info_get_is_hidden (file_info))
+				continue;
+
+			path = g_build_filename (mpath,
+						 g_file_info_get_name (s_finfo),
+						 "control",
+						 NULL);
+
+			/* no control file means this is garbage, probably from a previous failed installation */
+			if (!g_file_test (path, G_FILE_TEST_IS_REGULAR)) {
+				g_autofree gchar *tmp_path;
+				tmp_path = g_build_filename (mpath,
+								g_file_info_get_name (file_info),
+								NULL);
+				li_delete_dir_recursive (tmp_path);
+			} else {
+				child_count++;
+			}
 		}
+
+		/* check if directory is empty, delete it in that case */
+		if (child_count == 0)
+			g_remove (mpath);
 	}
 
 out:
-	g_object_unref (fdir);
-	if (enumerator != NULL)
-		g_object_unref (enumerator);
 	if (tmp_error != NULL) {
 		g_propagate_prefixed_error (error,
 						tmp_error,
@@ -940,8 +985,8 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 		g_free (rt_members);
 
 		g_hash_table_insert (rts,
-							g_strdup (li_runtime_get_uuid (rt)),
-							g_object_ref (rt));
+					g_strdup (li_runtime_get_uuid (rt)),
+					g_object_ref (rt));
 	}
 
 	/* remove every software from the kill-list which references a valid runtime */
@@ -1033,9 +1078,9 @@ li_manager_clear_updates_table (LiManager *mgr)
 
 	g_hash_table_unref (priv->updates);
 	priv->updates = g_hash_table_new_full ((GHashFunc) li_pki_hash_func,
-									(GEqualFunc) li_pki_equal_func,
-									g_object_unref,
-									g_object_unref);
+						(GEqualFunc) li_pki_equal_func,
+						g_object_unref,
+						g_object_unref);
 }
 
 /**
@@ -1089,8 +1134,8 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 		}
 
 		g_hash_table_replace (apkgs,
-							g_strdup (li_pkg_info_get_name (b_pki)),
-							g_object_ref (b_pki));
+					g_strdup (li_pkg_info_get_name (b_pki)),
+					g_object_ref (b_pki));
 	}
 
 	/* ensure we have a clean updates table */
@@ -1113,8 +1158,8 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 			/* we have a potential update */
 			uitem = li_update_item_new_with_packages (ipki, apki);
 			g_hash_table_insert (priv->updates,
-							g_object_ref (ipki),
-							uitem);
+						g_object_ref (ipki),
+						uitem);
 		}
 	}
 
@@ -1133,8 +1178,8 @@ li_manager_remove_exported_files_by_pki (LiManager *mgr, LiPkgInfo *pki, GError 
 	gchar *tmp;
 
 	swpath = g_build_filename (LI_SOFTWARE_ROOT,
-								li_pkg_info_get_id (pki),
-								NULL);
+					li_pkg_info_get_id (pki),
+					NULL);
 
 	/* delete exported files */
 	/* FIXME: Move them away at first, to allow a later rollback */

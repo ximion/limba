@@ -453,8 +453,7 @@ li_package_read_component_data (LiPackage *pkg, const gchar *data, GError **erro
 	li_pkg_info_set_version (priv->info, version);
 
 	/* now get the package-id */
-	li_package_set_id (pkg,
-					li_pkg_info_get_id (priv->info));
+	li_package_set_id (pkg, li_pkg_info_get_id (priv->info));
 
 	return TRUE;
 }
