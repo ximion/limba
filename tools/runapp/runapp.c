@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
- * Copyright (C) 2012 Alexander Larsson <alexl@redhat.com>
+ * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C)      2012 Alexander Larsson <alexl@redhat.com>
  *
  * Licensed under the GNU General Public License Version 2
  *
@@ -34,8 +34,75 @@
 #include <errno.h>
 #include <linux/version.h>
 #include <sys/utsname.h>
+#include <sys/capability.h>
+#include <sys/prctl.h>
 
 #include <gio/gio.h>
+
+#define REQUIRED_CAPS (CAP_TO_MASK(CAP_SYS_ADMIN))
+
+/**
+ * Ensure we have just the capabilities we need
+ */
+static gboolean
+acquire_caps (void)
+{
+	struct __user_cap_header_struct hdr;
+	struct __user_cap_data_struct data;
+
+	if (getuid () != geteuid ()) {
+		/* Tell kernel not clear capabilities when dropping root */
+		if (prctl (PR_SET_KEEPCAPS, 1, 0, 0, 0) < 0) {
+			g_printerr ("prctl(PR_SET_KEEPCAPS) failed\n");
+			return FALSE;
+		}
+
+		/* Drop root uid, but retain the required permitted caps */
+		if (setuid (getuid ()) < 0) {
+			g_printerr ("unable to drop privileges\n");
+			return FALSE;
+		}
+	}
+
+	memset (&hdr, 0, sizeof(hdr));
+	hdr.version = _LINUX_CAPABILITY_VERSION;
+
+	/* Drop all non-require capabilities */
+	data.effective = REQUIRED_CAPS;
+	data.permitted = REQUIRED_CAPS;
+	data.inheritable = 0;
+	if (capset (&hdr, &data) < 0) {
+		g_printerr ("capset failed\n");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/**
+ * drop_caps:
+ *
+ * Drop all remaining capabilities we have.
+ */
+static gboolean
+drop_caps (void)
+{
+	struct __user_cap_header_struct hdr;
+	struct __user_cap_data_struct data;
+
+	memset (&hdr, 0, sizeof(hdr));
+	hdr.version = _LINUX_CAPABILITY_VERSION;
+	data.effective = 0;
+	data.permitted = 0;
+	data.inheritable = 0;
+
+	if (capset (&hdr, &data) < 0) {
+		g_printerr ("capset failed\n");
+		return FALSE;
+	}
+
+	return TRUE;
+}
 
 /**
  * create_mount_namespace:
@@ -246,10 +313,10 @@ main (gint argc, gchar *argv[])
 	gchar **child_argv = NULL;
 	guint i;
 	GError *error = NULL;
-	uid_t uid = getuid(), euid = geteuid();
 
-	if ((uid > 0) && (uid == euid)) {
-		g_error ("This program needs the suid bit to be set to function correctly.");
+	/* ensue we have required capabilities, and drop all the ones we don't need */
+	if (!acquire_caps ()) {
+		g_printerr ("This program needs the suid bit to be set to function correctly.\n");
 		return 3;
 	}
 
@@ -283,8 +350,11 @@ main (gint argc, gchar *argv[])
 	if (ret > 0)
 		goto error;
 
-	/* Now we have everything we need CAP_SYS_ADMIN for, so drop setuid */
-	setuid (getuid ());
+	/* Now we have everything we need CAP_SYS_ADMIN for, so drop that capability */
+	if (!drop_caps ()) {
+		g_printerr ("Unable to drop capabilities.\n");
+		return 3;
+	}
 
 	/* place this process in a new cgroup */
 	scope_name = li_str_replace (swname, "/", "");
