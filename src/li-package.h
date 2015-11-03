@@ -160,6 +160,10 @@ gboolean		li_package_download (LiPackage *pkg,
 gboolean		li_package_install (LiPackage *pkg,
 						GError **error);
 
+gboolean		li_package_get_auto_verify (LiPackage *pkg);
+void			li_package_set_auto_verify (LiPackage *pkg,
+							gboolean verify);
+
 LiTrustLevel		li_package_verify_signature (LiPackage *pkg,
 							GError **error);
 

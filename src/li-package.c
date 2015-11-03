@@ -63,6 +63,7 @@ struct _LiPackagePrivate
 	LiKeyring *kr;
 	gchar *signature_data;
 	gchar *sig_fpr;
+	gboolean auto_verify;
 	LiTrustLevel tlevel;
 	GHashTable *contents_hash;
 
@@ -138,6 +139,7 @@ li_package_init (LiPackage *pkg)
 	priv->kr = li_keyring_new ();
 	priv->contents_hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
 	priv->tlevel = LI_TRUST_LEVEL_NONE;
+	priv->auto_verify = TRUE; /* we verify the package signature by default */
 }
 
 /**
@@ -244,9 +246,9 @@ li_package_extract_entry_to (LiPackage *pkg, struct archive* ar, struct archive_
 
 	if (g_file_test (fname, G_FILE_TEST_EXISTS)) {
 		g_set_error (error,
-				LI_PACKAGE_ERROR,
-				LI_PACKAGE_ERROR_OVERRIDE,
-				_("Could not override file '%s'. The file already exists!"), fname);
+			LI_PACKAGE_ERROR,
+			LI_PACKAGE_ERROR_OVERRIDE,
+			_("Could not override file '%s'. The file already exists!"), fname);
 		return FALSE;
 	}
 
@@ -761,13 +763,16 @@ li_package_install (LiPackage *pkg, GError **error)
 		return FALSE;
 	}
 
-	if (priv->tlevel < LI_TRUST_LEVEL_LOW) {
-		/* we we have a below-low trust level, we either didn't validate yet or validation failed.
-		 * in both cases, better validate (again). */
-		li_package_verify_signature (pkg, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
-			return FALSE;
+	/* verify the package signature before installing */
+	if (priv->auto_verify) {
+		if (priv->tlevel < LI_TRUST_LEVEL_LOW) {
+			/* we we have a below-low trust level, we either didn't validate yet or validation failed.
+			* in both cases, better validate (again). */
+			li_package_verify_signature (pkg, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return FALSE;
+			}
 		}
 	}
 
@@ -1331,7 +1336,7 @@ li_package_get_id (LiPackage *pkg)
  * li_package_set_id:
  * @unique_name: A unique name, build from the package name and version
  *
- * Se the unique name for this package.
+ * Set the unique name for this package.
  */
 void
 li_package_set_id (LiPackage *pkg, const gchar *unique_name)
@@ -1339,6 +1344,35 @@ li_package_set_id (LiPackage *pkg, const gchar *unique_name)
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 	g_free (priv->id);
 	priv->id = g_strdup (unique_name);
+}
+
+/**
+ * li_package_get_auto_verify:
+ *
+ * %TRUE if the package should be automatically verified against the
+ * trusted keyring at install-time.
+ */
+gboolean
+li_package_get_auto_verify (LiPackage *pkg)
+{
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+	return priv->auto_verify;
+}
+
+/**
+ * li_package_set_auto_verify:
+ * @verify: %TRUE if automatic verification should be done
+ *
+ * Set if the package should be automatically verified against the default
+ * keyring at install-time. Defaults to %TRUE.
+ * Do not disable this, unless you have already verified the package's origin
+ * (e.g. by checking the signature on the repository it originates from).
+ */
+void
+li_package_set_auto_verify (LiPackage *pkg, gboolean verify)
+{
+	LiPackagePrivate *priv = GET_PRIVATE (pkg);
+	priv->auto_verify = verify;
 }
 
 /**
