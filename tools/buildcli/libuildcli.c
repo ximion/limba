@@ -98,7 +98,6 @@ bcli_repo_add_package (const gchar *fname, const gchar *repodir)
 	}
 
 	repo = li_repository_new ();
-
 	li_repository_open (repo, rdir, &error);
 	if (error != NULL) {
 		li_print_stderr (_("Failed to open repository: %s"), error->message);

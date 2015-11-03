@@ -378,6 +378,10 @@ li_utils_get_tmp_dir (const gchar *prefix)
 	gchar *tmp_dir = NULL;
 	const gchar *tmp_root_path = "/var/tmp/limba";
 
+	/* ensure nobody symlinked this directory to a different location */
+	if (g_file_test (tmp_root_path, G_FILE_TEST_IS_SYMLINK))
+		g_assert (g_unlink (tmp_root_path) == 0);
+
 	g_mkdir_with_parents (tmp_root_path, 0777);
 
 	template = g_strdup_printf ("%s-XXXXXX", prefix);
@@ -392,6 +396,9 @@ li_utils_get_tmp_dir (const gchar *prefix)
 	}
 	tmp_dir = g_strdup (tmp_dir);
 	g_free (path);
+
+	/* ensure that the permissions on the root path haven't changed */
+	g_chmod (tmp_root_path, 0777);
 
 	return tmp_dir;
 }
