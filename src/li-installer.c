@@ -882,7 +882,7 @@ li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error
 gboolean
 li_installer_open_remote (LiInstaller *inst, const gchar *pkgid, GError **error)
 {
-	LiPackage *pkg;
+	g_autoptr(LiPackage) pkg = NULL;
 	GError *tmp_error = NULL;
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
@@ -897,12 +897,16 @@ li_installer_open_remote (LiInstaller *inst, const gchar *pkgid, GError **error)
 	li_package_open_remote (pkg, priv->cache, pkgid, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
-		g_object_unref (pkg);
 		return FALSE;
 	}
 
+	/* when downloading packages from the cache, we already verified the index file,
+	 * and after download we also verify the SHA256 checksums of the index - no need
+	 * to also verify the internal signature of the IPK package (especially if we may
+	 * not have its public-key in the keyring). */
+	li_package_set_auto_verify (pkg, FALSE);
+
 	li_installer_set_package (inst, pkg);
-	g_object_unref (pkg);
 
 	return TRUE;
 }
