@@ -80,22 +80,24 @@ struct _LiRepositoryClass
 	void (*_as_reserved6)	(void);
 };
 
-GType			li_repository_get_type	(void);
-LiRepository	*li_repository_new		(void);
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiRepository, g_object_unref)
+
+GType			li_repository_get_type (void);
+LiRepository		*li_repository_new (void);
 
 gboolean		li_repository_open (LiRepository *repo,
-									const gchar *directory,
-									GError **error);
+						const gchar *directory,
+						GError **error);
 
 gboolean		li_repository_save (LiRepository *repo,
-									GError **error);
+						GError **error);
 
 gboolean		li_repository_add_package (LiRepository *repo,
-									const gchar *pkg_fname,
-									GError **error);
+							const gchar *pkg_fname,
+							GError **error);
 
 gboolean		li_repository_create_icon_tarballs (LiRepository *repo,
-									GError **error);
+								GError **error);
 
 G_END_DECLS
 

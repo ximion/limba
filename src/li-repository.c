@@ -160,8 +160,8 @@ li_repository_load_indices (LiRepository *repo, const gchar* dir, GError **error
 		if (g_file_info_get_is_hidden (file_info))
 			continue;
 		path = g_build_filename (dir,
-								g_file_info_get_name (file_info),
-								NULL);
+					 g_file_info_get_name (file_info),
+					 NULL);
 
 		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
 			g_autofree gchar *arch = NULL;
@@ -293,10 +293,10 @@ li_repository_sign (LiRepository *repo, const gchar *sigtext, GError **error)
 	err = gpgme_new (&ctx);
 	if (err != 0) {
 		g_set_error (error,
-				LI_REPOSITORY_ERROR,
-				LI_REPOSITORY_ERROR_SIGN,
-				_("Signing of repository failed: %s"),
-				gpgme_strsource (err));
+			LI_REPOSITORY_ERROR,
+			LI_REPOSITORY_ERROR_SIGN,
+			_("Signing of repository failed: %s"),
+			gpgme_strsource (err));
 		return;
 	}
 
@@ -311,20 +311,20 @@ li_repository_sign (LiRepository *repo, const gchar *sigtext, GError **error)
 		err = gpgme_get_key (ctx, gpg_key, &akey, 1);
 		if (err != 0) {
 			g_set_error (error,
-					LI_REPOSITORY_ERROR,
-					LI_REPOSITORY_ERROR_SIGN,
-					_("Signing of repository failed: %s"),
-					gpgme_strsource (err));
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_SIGN,
+				_("Signing of repository failed: %s"),
+				gpgme_strsource (err));
 			return;
 		}
 
 		err = gpgme_signers_add (ctx, akey);
 		if (err != 0) {
 			g_set_error (error,
-					LI_REPOSITORY_ERROR,
-					LI_REPOSITORY_ERROR_SIGN,
-					_("Signing of repository failed: %s"),
-					gpgme_strsource (err));
+				LI_REPOSITORY_ERROR,
+				LI_REPOSITORY_ERROR_SIGN,
+				_("Signing of repository failed: %s"),
+				gpgme_strsource (err));
 			return;
 		}
 
@@ -334,20 +334,20 @@ li_repository_sign (LiRepository *repo, const gchar *sigtext, GError **error)
 	err = gpgme_data_new_from_mem (&din, sigtext, strlen (sigtext), 0);
 	if (err != 0) {
 		g_set_error (error,
-				LI_REPOSITORY_ERROR,
-				LI_REPOSITORY_ERROR_SIGN,
-				_("Signing of repository failed: %s"),
-				gpgme_strsource (err));
+			LI_REPOSITORY_ERROR,
+			LI_REPOSITORY_ERROR_SIGN,
+			_("Signing of repository failed: %s"),
+			gpgme_strsource (err));
 		return;
 	}
 
 	err = gpgme_data_new (&dout);
 	if (err != 0) {
 		g_set_error (error,
-				LI_REPOSITORY_ERROR,
-				LI_REPOSITORY_ERROR_SIGN,
-				_("Signing of repository failed: %s"),
-				gpgme_strsource (err));
+			LI_REPOSITORY_ERROR,
+			LI_REPOSITORY_ERROR_SIGN,
+			_("Signing of repository failed: %s"),
+			gpgme_strsource (err));
 		return;
 	}
 
@@ -355,10 +355,10 @@ li_repository_sign (LiRepository *repo, const gchar *sigtext, GError **error)
 
 	if (err != 0) {
 		g_set_error (error,
-				LI_REPOSITORY_ERROR,
-				LI_REPOSITORY_ERROR_SIGN,
-				_("Signing of repository failed: %s"),
-				gpgme_strsource (err));
+			LI_REPOSITORY_ERROR,
+			LI_REPOSITORY_ERROR_SIGN,
+			_("Signing of repository failed: %s"),
+			gpgme_strsource (err));
 		return;
 	}
 
@@ -366,10 +366,10 @@ li_repository_sign (LiRepository *repo, const gchar *sigtext, GError **error)
 	file = fopen (sig_fname, "w");
 	if (file == NULL) {
 		g_set_error (error,
-				LI_REPOSITORY_ERROR,
-				LI_REPOSITORY_ERROR_SIGN,
-				_("Unable to write signature: %s"),
-				g_strerror (errno));
+			LI_REPOSITORY_ERROR,
+			LI_REPOSITORY_ERROR_SIGN,
+			_("Unable to write signature: %s"),
+			g_strerror (errno));
 		g_free (sig_fname);
 		return;
 	}
@@ -525,8 +525,8 @@ li_repository_save (LiRepository *repo, GError **error)
 	helper.error = NULL;
 
 	g_hash_table_foreach (priv->indices,
-						(GHFunc) li_repository_save_indices,
-						&helper);
+				(GHFunc) li_repository_save_indices,
+				&helper);
 	if (helper.error != NULL) {
 		g_propagate_error (error, helper.error);
 		return FALSE;
@@ -534,8 +534,8 @@ li_repository_save (LiRepository *repo, GError **error)
 
 	/* save AppStream metadata */
 	g_hash_table_foreach (priv->asmeta,
-						(GHFunc) li_repository_save_asmeta,
-						&helper);
+				(GHFunc) li_repository_save_asmeta,
+				&helper);
 	if (helper.error != NULL) {
 		g_propagate_error (error, helper.error);
 		return FALSE;
@@ -569,9 +569,9 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	g_autofree gchar *dest_path = NULL;
 	g_autofree gchar *icon_dir = NULL;
 	g_autofree gchar *hash = NULL;
-	AsComponent *cpt;
 	LiPkgIndex *index;
 	AsMetadata *metad;
+	LiPackageKind kind;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
 	pkg = li_package_new ();
@@ -590,9 +590,9 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 		 * the packages signature and make it invalid.
 		 */
 		g_set_error (error,
-				LI_REPOSITORY_ERROR,
-				LI_REPOSITORY_ERROR_EMBEDDED_COPY,
-				_("The package contains embedded dependencies. Packages with that property are not allowed in repositories, please add dependencies separately."));
+			LI_REPOSITORY_ERROR,
+			LI_REPOSITORY_ERROR_EMBEDDED_COPY,
+			_("The package contains embedded dependencies. Packages with that property are not allowed in repositories, please add dependencies separately."));
 		return FALSE;
 	}
 
@@ -602,6 +602,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	pkgname = li_pkg_info_get_name (pki);
 	pkgversion = li_pkg_info_get_version (pki);
 	pkgarch = li_pkg_info_get_architecture (pki);
+	kind = li_pkg_info_get_kind (pki);
 	tmp = g_str_to_ascii (pkgname, NULL);
 
 	for (i = 0; tmp[i] != '\0'; i++) {
@@ -613,10 +614,10 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	c = g_unichar_tolower (c);
 
 	dest_path = g_strdup_printf ("pool/%c/%s-%s_%s.ipk",
-							c,
-							pkgname,
-							pkgversion,
-							pkgarch);
+					c,
+					pkgname,
+					pkgversion,
+					pkgarch);
 	tmp = g_strdup_printf ("%s/pool/%c/", priv->repo_path, c);
 	g_mkdir_with_parents (tmp, 0755);
 	g_free (tmp);
@@ -640,10 +641,10 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 
 	/* extract the icons */
 	icon_dir = g_build_filename (priv->repo_path,
-									"assets",
-									li_pkg_info_get_id (pki),
-									"icons",
-									NULL);
+					"assets",
+					li_pkg_info_get_id (pki),
+					"icons",
+					NULL);
 	li_package_extract_appstream_icons (pkg, icon_dir, &tmp_error);
 	if (tmp_error != NULL) {
 		g_free (tmp);
@@ -660,27 +661,32 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	}
 	g_free (tmp);
 
-	cpt = li_package_get_appstream_cpt (pkg);
-	/* set an icon name */
-	if (g_file_test (icon_dir, G_FILE_TEST_EXISTS)) {
-		tmp = g_strdup_printf ("%s.png", li_pkg_info_get_id (pki));
-		/* TODO: Determine which sizes we exported, and set that information correctly */
-		as_component_add_icon (cpt, AS_ICON_KIND_CACHED, 0, 0, tmp);
-		g_free (tmp);
-	}
-
-	/* set a unique AppStream bundle name */
-	as_component_add_bundle_id (cpt, AS_BUNDLE_KIND_LIMBA,
-							li_pkg_info_get_id (pki));
-	/* remove all package names - just in case */
-	as_component_set_pkgnames (cpt, NULL);
-
 	/* add to indices */
 	index = li_repository_get_index (repo, pkgarch);
 	li_pkg_index_add_package (index, pki);
 
-	metad = li_repository_get_asmeta (repo, pkgarch);
-	as_metadata_add_component (metad, cpt);
+	/* don't add to AppStream index, development packages don't belong there */
+	if (kind != LI_PACKAGE_KIND_DEVEL) {
+		AsComponent *cpt;
+
+		cpt = li_package_get_appstream_cpt (pkg);
+		/* set an icon name */
+		if (g_file_test (icon_dir, G_FILE_TEST_EXISTS)) {
+			tmp = g_strdup_printf ("%s.png", li_pkg_info_get_id (pki));
+			/* TODO: Determine which sizes we exported, and set that information correctly */
+			as_component_add_icon (cpt, AS_ICON_KIND_CACHED, 0, 0, tmp);
+			g_free (tmp);
+		}
+
+		/* set a unique AppStream bundle name */
+		as_component_add_bundle_id (cpt, AS_BUNDLE_KIND_LIMBA,
+						li_pkg_info_get_id (pki));
+		/* remove all package names - just in case */
+		as_component_set_pkgnames (cpt, NULL);
+
+		metad = li_repository_get_asmeta (repo, pkgarch);
+		as_metadata_add_component (metad, cpt);
+	}
 
 	return TRUE;
 }
@@ -725,8 +731,8 @@ li_repository_find_icons (const gchar* repo_dir, const gchar *icon_size, GError 
 		if (g_file_info_get_is_hidden (file_info))
 			continue;
 		path = g_build_filename (asset_dir,
-								g_file_info_get_name (file_info),
-								NULL);
+					 g_file_info_get_name (file_info),
+					 NULL);
 
 		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
 			g_autofree gchar *icon_dir = NULL;
