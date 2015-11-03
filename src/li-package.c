@@ -590,13 +590,6 @@ li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 		goto out;
 	}
 
-	/* adjust install directory, in case we have a development package */
-	if (li_pkg_info_get_kind (priv->info) == LI_PACKAGE_KIND_DEVEL) {
-		g_autofree gchar *tmp = NULL;
-		tmp = g_build_filename (LI_SOFTWARE_ROOT, "sdks", NULL);
-		li_package_set_install_root (pkg, tmp);
-	}
-
 	priv->max_progress += 100;
 
 	ret = TRUE;
