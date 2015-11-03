@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -60,6 +60,14 @@ li_pkg_index_fetch_values_from_cdata (LiPkgIndex *pkidx, LiConfigData *cdata)
 		li_pkg_info_set_name (pki, str);
 		g_free (str);
 
+		str = li_config_data_get_value (cdata, "Type");
+		if (str != NULL) {
+			LiPackageKind kind;
+			kind = li_package_kind_from_string (str);
+			li_pkg_info_set_kind (pki, kind);
+			g_free (str);
+		}
+
 		str = li_config_data_get_value (cdata, "Name");
 		li_pkg_info_set_appname (pki, str);
 		g_free (str);
@@ -103,6 +111,8 @@ li_pkg_index_write_cdata_values (LiPkgIndex *pkidx, LiConfigData *cdata)
 
 		li_config_data_new_block (cdata);
 		li_config_data_set_value (cdata, "PkgName", li_pkg_info_get_name (pki));
+		if (li_pkg_info_get_kind (pki) != LI_PACKAGE_KIND_NORMAL)
+			li_config_data_set_value (cdata, "Type", li_package_kind_to_string (li_pkg_info_get_kind (pki)));
 		li_config_data_set_value (cdata, "Name", li_pkg_info_get_appname (pki));
 		li_config_data_set_value (cdata, "Version", li_pkg_info_get_version (pki));
 		li_config_data_set_value (cdata, "Requires", li_pkg_info_get_dependencies (pki));
