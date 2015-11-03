@@ -1128,7 +1128,9 @@ li_package_extract_appstream_icons (LiPackage *pkg, const gchar *dest_dir, GErro
 		return;
 	}
 
-	icon_dest_name = g_strdup_printf ("%s.%s", priv->id, "png");
+	icon_dest_name = g_strdup_printf ("%s-%s.%s",
+					  li_pkg_info_get_name (priv->info),
+					  li_pkg_info_get_version (priv->info), "png");
 
 	while (archive_read_next_header (ar, &e) == ARCHIVE_OK) {
 		g_autofree gchar *tmp = NULL;

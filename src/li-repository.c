@@ -642,7 +642,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	/* extract the icons */
 	icon_dir = g_build_filename (priv->repo_path,
 					"assets",
-					li_pkg_info_get_id (pki),
+					li_pkg_info_get_name (pki),
 					"icons",
 					NULL);
 	li_package_extract_appstream_icons (pkg, icon_dir, &tmp_error);
@@ -672,7 +672,9 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 		cpt = li_package_get_appstream_cpt (pkg);
 		/* set an icon name */
 		if (g_file_test (icon_dir, G_FILE_TEST_EXISTS)) {
-			tmp = g_strdup_printf ("%s.png", li_pkg_info_get_id (pki));
+			tmp = g_strdup_printf ("%s-%s.png",
+						li_pkg_info_get_name (pki),
+						li_pkg_info_get_version (pki));
 			/* TODO: Determine which sizes we exported, and set that information correctly */
 			as_component_add_icon (cpt, AS_ICON_KIND_CACHED, 0, 0, tmp);
 			g_free (tmp);
