@@ -169,6 +169,7 @@ mount_overlay (const gchar *pkgid)
 	const gchar *runtime_uuid;
 	gchar *tmp;
 	GError *error = NULL;
+	GString *lowerdirs = NULL;
 	LiPkgInfo *pki = NULL;
 
 	/* check if the software exists */
@@ -199,19 +200,11 @@ mount_overlay (const gchar *pkgid)
 		goto out;
 	}
 
-	wdir = g_build_filename (LI_SOFTWARE_ROOT, "runtimes", "ofs_work", NULL);
-	res = g_mkdir_with_parents (wdir, 0775);
-	if (res != 0) {
-		fprintf (stderr, "Unable to create OverlayFS workdir. %s\n", strerror (errno));
-		res = 1;
-		goto out;
-	}
-
+	lowerdirs = g_string_new ("");
 	if (g_strcmp0 (runtime_uuid, "None") != 0) {
 		/* mount the desired runtime */
-		LiRuntime *rt;
+		g_autoptr(LiRuntime) rt = NULL;
 		gchar **rt_members;
-		GString *mergedirs_str;
 		guint i;
 
 		rt = li_runtime_new ();
@@ -225,38 +218,25 @@ mount_overlay (const gchar *pkgid)
 		rt_members = (gchar**) g_hash_table_get_keys_as_array (li_runtime_get_members (rt), NULL);
 
 		/* build our lowerdir directive */
-		mergedirs_str = g_string_new ("");
 		for (i = 0; rt_members[i] != NULL; i++) {
-			g_string_append_printf (mergedirs_str, "%s/%s/data:", LI_SOFTWARE_ROOT, rt_members[i]);
+			g_string_append_printf (lowerdirs, "%s/%s/data:", LI_SOFTWARE_ROOT, rt_members[i]);
 		}
 
 		/* cleanup */
 		g_free (rt_members);
-		g_object_unref (rt);
-
-		/* safeguard againt the case where only one path is set for lowerdir.
-		 * OFS doesn't like that, so we always set the root path as source too. */
-		g_string_append_printf (mergedirs_str, "%s", LI_SW_ROOT_PREFIX);
-
-		tmp = g_strdup_printf ("lowerdir=%s", mergedirs_str->str);
-		res = mount ("overlay", LI_SW_ROOT_PREFIX,
-					"overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
-
-		g_free (tmp);
-		g_string_free (mergedirs_str, TRUE);
-
-		if (res != 0) {
-			fprintf (stderr, "Unable to mount runtime directory. %s\n", strerror (errno));
-			res = 1;
-			goto out;
-		}
 	}
 
-	/* TODO: We don't need a workdir/upperdir here - adjust that later when the sandbox is implemented */
-	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", LI_SW_ROOT_PREFIX, main_data_path, wdir);
+	/* append main data path */
+	g_string_append_printf (lowerdirs, "%s:", main_data_path);
+
+	/* safeguard againt the case where only one path is set for lowerdir.
+	 * OFS doesn't like that, so we always set the root path as source too.
+	 * This also terminates the lowerdir parameter. */
+	g_string_append_printf (lowerdirs, "%s", LI_SW_ROOT_PREFIX);
+
+	tmp = g_strdup_printf ("lowerdir=%s", lowerdirs->str);
 	res = mount ("overlay", LI_SW_ROOT_PREFIX,
 				 "overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
-
 	g_free (tmp);
 	if (res != 0) {
 		fprintf (stderr, "Unable to mount directory. %s\n", strerror (errno));
@@ -265,6 +245,8 @@ mount_overlay (const gchar *pkgid)
 	}
 
 out:
+	if (lowerdirs != NULL)
+		g_string_free (lowerdirs, TRUE);
 	if (main_data_path != NULL)
 		g_free (main_data_path);
 	if (pki != NULL)
