@@ -588,6 +588,16 @@ li_pkg_info_set_flags (LiPkgInfo *pki, LiPackageFlags flags)
 }
 
 /**
+ * li_pkg_info_get_flags:
+ */
+LiPackageFlags
+li_pkg_info_get_flags (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->flags;
+}
+
+/**
  * li_pkg_info_add_flag:
  */
 void
@@ -601,16 +611,6 @@ li_pkg_info_add_flag (LiPkgInfo *pki, LiPackageFlags flag)
 		g_warning ("Trying to set bad package flags: AVAILABLE add to package which already has INSTALLED flag.");
 
 	priv->flags |= flag;
-}
-
-/**
- * li_pkg_info_get_flags:
- */
-LiPackageFlags
-li_pkg_info_get_flags (LiPkgInfo *pki)
-{
-	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
-	return priv->flags;
 }
 
 /**
@@ -830,7 +830,7 @@ li_pkg_info_new (void)
 
 /**
  * li_package_kind_to_string:
- * @kind: the %%LiPackageKind.
+ * @kind: the %LiPackageKind.
  *
  * Converts the enumerated value to an text representation.
  *

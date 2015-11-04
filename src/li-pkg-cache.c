@@ -42,6 +42,7 @@
 
 #include "li-utils.h"
 #include "li-utils-private.h"
+#include "li-repo-entry.h"
 #include "li-pkg-index.h"
 #include "li-keyring.h"
 
@@ -51,7 +52,7 @@ typedef struct _LiPkgCachePrivate	LiPkgCachePrivate;
 struct _LiPkgCachePrivate
 {
 	LiPkgIndex *index;
-	GPtrArray *repo_urls;
+	GPtrArray *repo_srcs; /* of LiRepoEntry */
 
 	LiKeyring *kr;
 	gchar *cache_index_fname;
@@ -88,7 +89,7 @@ li_pkg_cache_finalize (GObject *object)
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	g_object_unref (priv->index);
-	g_ptr_array_unref (priv->repo_urls);
+	g_ptr_array_unref (priv->repo_srcs);
 	g_free (priv->cache_index_fname);
 	g_object_unref (priv->kr);
 
@@ -118,16 +119,23 @@ li_pkg_cache_load_repolist (LiPkgCache *cache, const gchar *fname)
 	g_free (content);
 
 	for (i = 0; lines[i] != NULL; i++) {
+		g_autoptr(LiRepoEntry) re = NULL;
 		g_strstrip (lines[i]);
 
-		/* ignore comments */
+		/* ignore comments and disabled repos */
 		if (g_str_has_prefix (lines[i], "#"))
 			continue;
 		/* ignore empty lines */
 		if (g_strcmp0 (lines[i], "") == 0)
 			continue;
 
-		g_ptr_array_add (priv->repo_urls, g_strdup (lines[i]));
+		re = li_repo_entry_new ();
+		if (!li_repo_entry_parse (re, lines[i])) {
+			g_warning ("Ignoring broken repository-source line: %s", lines[i]);
+			continue;
+		}
+
+		g_ptr_array_add (priv->repo_srcs, g_object_ref (re));
 	}
 
 	g_strfreev (lines);
@@ -142,7 +150,7 @@ li_pkg_cache_init (LiPkgCache *cache)
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
 	priv->index = li_pkg_index_new ();
-	priv->repo_urls = g_ptr_array_new_with_free_func (g_free);
+	priv->repo_srcs = g_ptr_array_new_with_free_func (g_object_unref);
 	priv->cache_index_fname = g_build_filename (LIMBA_CACHE_DIR, "available.index", NULL);
 	priv->kr = li_keyring_new ();
 
@@ -478,7 +486,8 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 	current_arch = li_get_current_arch_h ();
 
-	for (i = 0; i < priv->repo_urls->len; i++) {
+	for (i = 0; i < priv->repo_srcs->len; i++) {
+		LiRepoEntry *re;
 		const gchar *url;
 		g_autofree gchar *url_index_all = NULL;
 		g_autofree gchar *url_index_arch = NULL;
@@ -508,7 +517,8 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 
 		LiTrustLevel tlevel;
 
-		url = (const gchar*) g_ptr_array_index (priv->repo_urls, i);
+		re = LI_REPO_ENTRY (g_ptr_array_index (priv->repo_srcs, i));
+		url = li_repo_entry_get_url (re);
 
 		metad = as_metadata_new ();
 		/* do not filter languages */

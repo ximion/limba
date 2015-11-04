@@ -39,13 +39,13 @@ G_BEGIN_DECLS
 
 /**
  * LiPkgCacheError:
- * @LI_PKG_CACHE_ERROR_FAILED:				Generic failure
+ * @LI_PKG_CACHE_ERROR_FAILED:			Generic failure
  * @LI_PKG_CACHE_ERROR_DOWNLOAD_FAILED:		Failed to download a file
  * @LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND:	Data could not be found on remote server
- * @LI_PKG_CACHE_ERROR_WRITE:				Writing to cache was not possible
- * @LI_PKG_CACHE_ERROR_NOT_FOUND:			A cache entity was not found
+ * @LI_PKG_CACHE_ERROR_WRITE:			Writing to cache was not possible
+ * @LI_PKG_CACHE_ERROR_NOT_FOUND:		A cache entity was not found
  * @LI_PKG_CACHE_ERROR_VERIFICATION:		Validation of repository data failed.
- * @LI_PKG_CACHE_ERROR_UNPACK:				Unpacking of data (e.g. from the icon tarball) has failed.
+ * @LI_PKG_CACHE_ERROR_UNPACK:			Unpacking of data (e.g. from the icon tarball) has failed.
  *
  * The error type.
  **/
@@ -64,7 +64,7 @@ typedef enum {
 #define	LI_PKG_CACHE_ERROR li_pkg_cache_error_quark ()
 GQuark li_pkg_cache_error_quark (void);
 
-typedef struct _LiPkgCache		LiPkgCache;
+typedef struct _LiPkgCache	LiPkgCache;
 typedef struct _LiPkgCacheClass	LiPkgCacheClass;
 
 struct _LiPkgCache
@@ -86,21 +86,21 @@ struct _LiPkgCacheClass
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPkgCache, g_object_unref)
 
-GType			li_pkg_cache_get_type	(void);
-LiPkgCache		*li_pkg_cache_new		(void);
+GType			li_pkg_cache_get_type (void);
+LiPkgCache		*li_pkg_cache_new (void);
 
 void			li_pkg_cache_open (LiPkgCache *cache,
-									GError **error);
+						GError **error);
 void			li_pkg_cache_update (LiPkgCache *cache,
-									GError **error);
+						GError **error);
 
 GPtrArray		*li_pkg_cache_get_packages (LiPkgCache *cache);
 LiPkgInfo		*li_pkg_cache_get_pkg_info (LiPkgCache *cache,
-											const gchar *pkid);
+							const gchar *pkid);
 
 gchar			*li_pkg_cache_fetch_remote (LiPkgCache *cache,
-											const gchar *pkgid,
-											GError **error);
+							const gchar *pkgid,
+							GError **error);
 
 G_END_DECLS
 
