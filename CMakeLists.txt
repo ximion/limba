@@ -141,6 +141,8 @@ if(MAINTAINER)
 	endif()
 endif(MAINTAINER)
 add_definitions(${MAINTAINER_CFLAGS})
+# enable C11 (Clang wants this)
+set(CMAKE_C_STANDARD "11")
 
 # Required if GPGme was compiled with _FILE_OFFSET_BITS=64
 add_definitions("-D_FILE_OFFSET_BITS=64")
