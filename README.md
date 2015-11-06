@@ -47,6 +47,8 @@ at [Limba-Neverball](https://github.com/ximion/limba-neverball/).
  * systemd (optional)
 
 ### Compilation instructions
+[![Build Status](https://semaphoreci.com/api/v1/projects/723d8655-b508-4fbf-ba10-517db063b9a4/592515/badge.svg)](https://semaphoreci.com/ximion/limba)
+
 Ensure all build dependencies are installed.
 Then run the following commands to compile (and install) Limba:
 
