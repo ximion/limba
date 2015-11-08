@@ -39,7 +39,11 @@
 #include <sys/mount.h>
 #include <sched.h>
 
+#include "li-utils.h"
 #include "li-utils-private.h"
+#include "li-pkg-info.h"
+#include "li-package-graph.h"
+#include "li-manager.h"
 #include "li-build-conf.h"
 
 typedef struct _LiBuildMasterPrivate	LiBuildMasterPrivate;
@@ -53,6 +57,8 @@ struct _LiBuildMasterPrivate
 	GPtrArray *cmds_pre;
 	GPtrArray *cmds;
 	GPtrArray *cmds_post;
+
+	gchar **dep_data_paths;
 
 	gchar *username;
 	gchar *email;
@@ -80,6 +86,8 @@ li_build_master_finalize (GObject *object)
 		g_ptr_array_unref (priv->cmds);
 	if (priv->cmds_post != NULL)
 		g_ptr_array_unref (priv->cmds_post);
+	if (priv->dep_data_paths != NULL)
+		g_strfreev (priv->dep_data_paths);
 	g_free (priv->email);
 	g_free (priv->username);
 	g_free (priv->target_repo);
@@ -96,6 +104,147 @@ li_build_master_init (LiBuildMaster *bmaster)
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
 	priv->build_root = NULL;
+	priv->dep_data_paths = NULL;
+}
+
+/**
+ * li_build_master_check_dependencies:
+ */
+static void
+li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, GNode *root, GError **error)
+{
+	g_autoptr(GList) all_pkgs = NULL;
+	GError *tmp_error = NULL;
+	LiPkgInfo *pki;
+	g_autoptr(GPtrArray) deps = NULL;
+	guint i;
+
+	pki = LI_PKG_INFO (root->data);
+
+
+	if (G_NODE_IS_ROOT (root)) {
+		/* we need to take the build-deps from the package we want to build... */
+		deps = li_parse_dependencies_string (li_pkg_info_get_build_dependencies (pki));
+	} else {
+		/* and the regular deps from any other pkg */
+		deps = li_parse_dependencies_string (li_pkg_info_get_dependencies (pki));
+	}
+
+	/* do we have dependencies at all? */
+	if (deps == NULL)
+		return;
+
+	all_pkgs = li_manager_get_software_list (mgr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	for (i = 0; i < deps->len; i++) {
+		LiPkgInfo *ipki;
+		gboolean ret;
+		LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, i));
+
+		/* test if we have a dependency on a system component */
+		ret = li_package_graph_test_foundation_dependency (pg, dep, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+		/* continue if dependency is already satisfied */
+		if (ret)
+			continue;
+
+		/* test if this package is already in the installed set */
+		ipki = li_find_satisfying_pkg (all_pkgs, dep);
+		if (ipki == NULL) {
+			/* no installed package found that satisfies our requirements */
+			g_set_error (error,
+					LI_BUILD_MASTER_ERROR,
+					LI_BUILD_MASTER_ERROR_BUILD_DEP_MISSING,
+					_("Could not find bundle '%s' which is necessary to build this software."),
+					li_pkg_info_get_name (pki));
+		} else {
+			GNode *node;
+
+			if (!li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_INSTALLED))
+				g_warning ("Found package '%s' which should be in INSTALLED state, but actually is not. Ignoring issue and assuming INSTALLED.",
+							li_pkg_info_get_id (ipki));
+
+			/* dependency is already installed, add it as satisfied */
+			node = li_package_graph_add_package (pg, root, ipki, dep);
+
+			/* we need a full dependency tree */
+			li_build_master_check_dependencies (pg, mgr, node, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return;
+			}
+		}
+	}
+}
+
+/**
+ * li_build_master_resolve_builddeps:
+ */
+void
+li_build_master_resolve_builddeps (LiBuildMaster *bmaster, LiPkgInfo *pki, GError **error)
+{
+	g_autoptr(LiPackageGraph) pg = NULL;
+	g_autoptr(GPtrArray) full_deps = NULL;
+	g_autoptr(GHashTable) depdirs = NULL;
+	g_autoptr(LiManager) mgr = NULL;
+	guint i;
+	GNode *root;
+	GError *tmp_error = NULL;
+	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
+
+	pg = li_package_graph_new ();
+
+	/* ensure the graph is initialized and additional data (foundations list) is loaded */
+	li_package_graph_initialize (pg, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	li_package_graph_set_root (pg, pki);
+	root = li_package_graph_get_root (pg);
+	mgr = li_manager_new ();
+
+	li_build_master_check_dependencies (pg, mgr, root, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	full_deps = li_package_graph_branch_to_array (root);
+	if (full_deps == NULL) {
+		g_warning ("Building package with no build-dependencies defined.");
+		return;
+	}
+
+	depdirs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	for (i = 0; i < full_deps->len; i++) {
+		const gchar *pkid;
+		g_autofree gchar *datapath = NULL;
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (full_deps, i));
+		pkid = li_pkg_info_get_id (pki);
+
+		/* filter system dependencies */
+		if (g_str_has_prefix (li_pkg_info_get_name (pki), "foundation:")) {
+			continue;
+		}
+
+		datapath = g_build_filename (LI_SW_ROOT_PREFIX, pkid, "data", NULL);
+		g_hash_table_add (depdirs, g_strdup (datapath));
+	}
+
+	if (priv->dep_data_paths != NULL)
+		g_strfreev (priv->dep_data_paths);
+
+	priv->dep_data_paths = (gchar**) g_hash_table_get_keys_as_array (depdirs, NULL);
+	g_hash_table_steal_all (depdirs);
 }
 
 /**
@@ -104,7 +253,8 @@ li_build_master_init (LiBuildMaster *bmaster)
 void
 li_build_master_init_build (LiBuildMaster *bmaster, const gchar *dir, const gchar *chroot_orig, GError **error)
 {
-	LiBuildConf *bconf;
+	g_autoptr(LiBuildConf) bconf = NULL;
+	g_autoptr(LiPkgInfo) pki = NULL;
 	GError *tmp_error = NULL;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
@@ -123,7 +273,6 @@ li_build_master_init_build (LiBuildMaster *bmaster, const gchar *dir, const gcha
 	li_build_conf_open_from_dir (bconf, dir, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
-		g_object_unref (bconf);
 		return;
 	}
 
@@ -133,7 +282,6 @@ li_build_master_init_build (LiBuildMaster *bmaster, const gchar *dir, const gcha
 				LI_BUILD_MASTER_ERROR,
 				LI_BUILD_MASTER_ERROR_NO_COMMANDS,
 				_("Could not find commands to build this application!"));
-		g_object_unref (bconf);
 		return;
 	}
 
@@ -142,15 +290,22 @@ li_build_master_init_build (LiBuildMaster *bmaster, const gchar *dir, const gcha
 
 	priv->build_root = g_strdup (dir);
 
+	/* get list of build dependencies */
+	pki = li_build_conf_get_pkginfo (bconf);
+	li_build_master_resolve_builddeps (bmaster, pki, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
 	priv->init_done = TRUE;
-	g_object_unref (bconf);
 }
 
 /**
- * li_copy_directory_recusrive:
+ * li_copy_directory_recursive:
  */
 static gint
-li_copy_directory_recusrive (const gchar *srcdir, const gchar *destdir)
+li_copy_directory_recursive (const gchar *srcdir, const gchar *destdir)
 {
 	gchar *cmd;
 	gint res;
@@ -234,7 +389,7 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	build_tmp_root = g_build_filename (env_root, "build", NULL);
 
 	/* copy over the sources to not taint the original source tree */
-	res = li_copy_directory_recusrive (priv->build_root, build_tmp_root);
+	res = li_copy_directory_recursive (priv->build_root, build_tmp_root);
 	if (res != 0) {
 		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
 		goto out;

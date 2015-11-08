@@ -30,11 +30,13 @@
 #include <glib-object.h>
 #include <glib/gi18n-lib.h>
 #include <yaml.h>
+#include "limba.h"
 
 typedef struct _LiBuildConfPrivate	LiBuildConfPrivate;
 struct _LiBuildConfPrivate
 {
 	GNode *yroot;
+	LiPkgInfo *pki;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiBuildConf, li_build_conf, G_TYPE_OBJECT)
@@ -59,6 +61,8 @@ li_build_conf_finalize (GObject *object)
 	LiBuildConfPrivate *priv = GET_PRIVATE (bconf);
 
 	li_build_conf_free_doctree (priv->yroot);
+	if (priv->pki != NULL)
+		g_object_unref (priv->pki);
 
 	G_OBJECT_CLASS (li_build_conf_parent_class)->finalize (object);
 }
@@ -166,6 +170,18 @@ li_build_conf_get_after_script (LiBuildConf *bconf)
 	}
 
 	return cmds;
+}
+
+/**
+ * li_build_conf_get_pkginfo:
+ *
+ * Returns: (transfer full): LiPkgInfo
+ */
+LiPkgInfo*
+li_build_conf_get_pkginfo (LiBuildConf *bconf)
+{
+	LiBuildConfPrivate *priv = GET_PRIVATE (bconf);
+	return g_object_ref (priv->pki);
 }
 
 /**
@@ -337,7 +353,10 @@ void
 li_build_conf_open_from_dir (LiBuildConf *bconf, const gchar *dir, GError **error)
 {
 	GFile *file;
+	LiPkgInfo *pki = NULL;
+	GError *tmp_error = NULL;
 	gchar *fname = NULL;
+	LiBuildConfPrivate *priv = GET_PRIVATE (bconf);
 
 	fname = g_build_filename (dir, "lipkg", "build.yml", NULL);
 	file = g_file_new_for_path (fname);
@@ -375,6 +394,30 @@ li_build_conf_open_from_dir (LiBuildConf *bconf, const gchar *dir, GError **erro
 
 	li_build_conf_open_file (bconf, file, error);
 	g_free (fname);
+	g_object_unref (file);
+
+	/* get list of build dependencies */
+	fname = g_build_filename (dir, "lipkg", "control", NULL);
+	file = g_file_new_for_path (fname);
+	g_free (fname);
+	if (!g_file_query_exists (file, NULL)) {
+		g_object_unref (file);
+		g_set_error_literal (error,
+					G_FILE_ERROR,
+					G_FILE_ERROR_NOENT,
+					_("Could not find an IPK control file!"));
+		return;
+	}
+
+	pki = li_pkg_info_new ();
+	li_pkg_info_load_file (pki, file, &tmp_error);
+	g_object_unref (file);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	priv->pki = pki;
 }
 
 /**

@@ -24,6 +24,8 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 
+#include "li-pkg-info.h"
+
 #define LI_TYPE_BUILD_CONF		(li_build_conf_get_type())
 #define LI_BUILD_CONF(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_BUILD_CONF, LiBuildConf))
 #define LI_BUILD_CONF_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_BUILD_CONF, LiBuildConfClass))
@@ -53,6 +55,8 @@ struct _LiBuildConfClass
 	void (*_as_reserved6)	(void);
 };
 
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiBuildConf, g_object_unref)
+
 GType			li_build_conf_get_type	(void);
 LiBuildConf		*li_build_conf_new	(void);
 
@@ -66,6 +70,7 @@ void			li_build_conf_open_from_dir (LiBuildConf *bconf,
 GPtrArray		*li_build_conf_get_before_script (LiBuildConf *bconf);
 GPtrArray		*li_build_conf_get_script (LiBuildConf *bconf);
 GPtrArray		*li_build_conf_get_after_script (LiBuildConf *bconf);
+LiPkgInfo		*li_build_conf_get_pkginfo (LiBuildConf *bconf);
 
 G_END_DECLS
 

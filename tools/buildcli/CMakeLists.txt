@@ -13,7 +13,7 @@ set(LIMBA_LIBUILD_SRC
 	li-build-templates.c
 )
 
-add_definitions("-DG_LOG_DOMAIN=\"LimbaBuildCLI\"")
+add_definitions("-DLI_COMPILATION" "-DG_LOG_DOMAIN=\"LimbaBuildCLI\"")
 
 add_executable(limba-build ${LIMBA_LIBUILD_SRC} ${LIMBA_TOOLS_COMMON_SRC})
 

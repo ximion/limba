@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -72,18 +72,18 @@ gboolean		li_runtime_load_by_uuid (LiRuntime *rt,
 							GError **error);
 
 gboolean		li_runtime_save (LiRuntime *rt,
-						GError **error);
+					 GError **error);
 
 const gchar		*li_runtime_get_uuid (LiRuntime *rt);
 
 LiRuntime		*li_runtime_create_with_members (GPtrArray *members,
-								GError **error);
+							 GError **error);
 
 GHashTable		*li_runtime_get_requirements (LiRuntime *rt);
 GHashTable		*li_runtime_get_members (LiRuntime *rt);
 
 void			li_runtime_add_package (LiRuntime *rt,
-							LiPkgInfo *pki);
+						LiPkgInfo *pki);
 void			li_runtime_remove_package (LiRuntime *rt,
 							LiPkgInfo *pki);
 

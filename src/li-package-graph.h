@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -59,35 +59,47 @@ struct _LiPackageGraphClass
 	void (*_as_reserved6)	(void);
 };
 
-GType				li_package_graph_get_type	(void);
-LiPackageGraph		*li_package_graph_new		(void);
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPackageGraph, g_object_unref)
 
-GNode				*li_package_graph_get_root (LiPackageGraph *pg);
-void				li_package_graph_set_root (LiPackageGraph *pg,
-											LiPkgInfo *data);
-void				li_package_graph_set_root_install_todo (LiPackageGraph *pg,
-															LiPackage *pkg);
+GType			li_package_graph_get_type (void);
+LiPackageGraph		*li_package_graph_new (void);
 
-void				li_package_graph_reset (LiPackageGraph *pg);
+void			li_package_graph_initialize (LiPackageGraph *pg,
+							GError **error);
 
-GPtrArray			*li_package_graph_branch_to_array (GNode *root);
+GNode			*li_package_graph_get_root (LiPackageGraph *pg);
+void			li_package_graph_set_root (LiPackageGraph *pg,
+							LiPkgInfo *data);
+void			li_package_graph_set_root_install_todo (LiPackageGraph *pg,
+									LiPackage *pkg);
 
-GNode				*li_package_graph_add_package (LiPackageGraph *pg,
-												GNode *parent,
-												LiPkgInfo *pki,
-												LiPkgInfo *satisfied_dep);
+void			li_package_graph_reset (LiPackageGraph *pg);
 
-GNode				*li_package_graph_add_package_install_todo (LiPackageGraph *pg,
-															GNode *parent,
-															LiPackage *pkg,
-															LiPkgInfo *satisfied_dep);
+GPtrArray		*li_package_graph_branch_to_array (GNode *root);
 
-LiPackage			*li_package_graph_get_install_candidate (LiPackageGraph *pg,
-															LiPkgInfo *pki);
-gboolean			li_package_graph_mark_installed (LiPackageGraph *pg,
-													LiPkgInfo *pki);
+GNode			*li_package_graph_add_package (LiPackageGraph *pg,
+							GNode *parent,
+							LiPkgInfo *pki,
+							LiPkgInfo *satisfied_dep);
 
-guint				li_package_graph_get_install_todo_count (LiPackageGraph *pg);
+GNode			*li_package_graph_add_package_install_todo (LiPackageGraph *pg,
+									GNode *parent,
+									LiPackage *pkg,
+									LiPkgInfo *satisfied_dep);
+
+LiPackage		*li_package_graph_get_install_candidate (LiPackageGraph *pg,
+									LiPkgInfo *pki);
+gboolean		li_package_graph_mark_installed (LiPackageGraph *pg,
+								LiPkgInfo *pki);
+
+guint			li_package_graph_get_install_todo_count (LiPackageGraph *pg);
+
+gboolean		li_package_graph_test_foundation_dependency (LiPackageGraph *pg,
+									LiPkgInfo *dep_pki,
+									GError **error);
+
+LiPkgInfo		*li_find_satisfying_pkg (GList *pkglist,
+						 LiPkgInfo *dep);
 
 G_END_DECLS
 

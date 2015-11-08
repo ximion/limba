@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -28,9 +28,14 @@
  */
 
 #include "config.h"
+#include <glib/gi18n-lib.h>
+#include <math.h>
 #include "li-package-graph.h"
 
-#include <math.h>
+#include "li-utils.h"
+#include "li-config-data.h"
+#include "li-installer.h"
+
 
 typedef struct _LiPackageGraphPrivate	LiPackageGraphPrivate;
 struct _LiPackageGraphPrivate
@@ -40,6 +45,8 @@ struct _LiPackageGraphPrivate
 
 	guint progress;
 	guint max_progress;
+
+	GHashTable *foundations;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPackageGraph, li_package_graph, G_TYPE_OBJECT)
@@ -67,6 +74,7 @@ li_package_graph_finalize (GObject *object)
 
 	li_package_graph_teardown (priv->root_pkg);
 	g_hash_table_unref (priv->install_todo);
+	g_hash_table_unref (priv->foundations);
 
 	G_OBJECT_CLASS (li_package_graph_parent_class)->finalize (object);
 }
@@ -81,6 +89,86 @@ li_package_graph_init (LiPackageGraph *pg)
 
 	priv->root_pkg = g_node_new (NULL);
 	priv->install_todo = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	priv->foundations = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+}
+
+/**
+ * li_package_graph_update_foundations_table:
+ */
+static void
+li_package_graph_update_foundations_table (LiPackageGraph *pg, GError **error)
+{
+	g_autoptr(LiConfigData) fdconf = NULL;
+	GError *tmp_error = NULL;
+	GFile *file;
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+
+	if (g_hash_table_size (priv->foundations) > 0)
+		return;
+
+	fdconf = li_config_data_new ();
+	file = g_file_new_for_path (DATADIR "/foundations.list");
+	if (g_file_query_exists (file, NULL)) {
+		li_config_data_load_file (fdconf, file, &tmp_error);
+	} else {
+		g_warning ("No foundation (system-component) was defined. Continuing without that knowledge.");
+	}
+	g_object_unref (file);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	li_config_data_reset (fdconf);
+
+	do {
+		g_autofree gchar *fid = NULL;
+		gchar *condition;
+		gboolean ret;
+		fid = li_config_data_get_value (fdconf, "ID");
+
+		/* skip invalid data */
+		if (fid == NULL)
+			continue;
+
+		condition = li_config_data_get_value (fdconf, "ConditionFileExists");
+		if (condition != NULL) {
+			ret = g_file_test (condition, G_FILE_TEST_IS_REGULAR);
+			/* skip foundation if condition was not satisfied */
+			if (!ret) {
+				g_debug ("Foundation '%s' is not installed.", fid);
+				continue;
+			}
+		}
+
+		/* TODO: Implement ConditionLibraryExists */
+
+		/* TODO: Create a LiPkgInfo for each foundation, to produce better (error) messages later, and
+		 * to be more verbose */
+		g_hash_table_insert (priv->foundations,
+					g_strdup (fid),
+					g_strdup (fid));
+
+	} while (li_config_data_next (fdconf));
+}
+
+/**
+ * li_package_graph_initialize:
+ *
+ * Load additional data to aid the resolving process.
+ */
+void
+li_package_graph_initialize (LiPackageGraph *pg, GError **error)
+{
+	GError *tmp_error = NULL;
+
+	/* populate the foundations registry, if not yet done */
+	li_package_graph_update_foundations_table (pg, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error,
+						"Could not load foundations list.");
+		return;
+	}
 }
 
 /**
@@ -96,11 +184,11 @@ li_package_graph_package_progress_cb (LiPackage *pkg, guint percentage, LiPackag
 
 	/* emit individual progress */
 	g_signal_emit (pg, signals[SIGNAL_PROGRESS], 0,
-					percentage, li_package_get_id (pkg));
+			percentage, li_package_get_id (pkg));
 
 	/* emit main progress */
 	g_signal_emit (pg, signals[SIGNAL_PROGRESS], 0,
-					main_percentage, NULL);
+			main_percentage, NULL);
 }
 
 /**
@@ -111,7 +199,7 @@ li_package_graph_package_stage_changed_cb (LiPackage *pkg, LiPackageStage stage,
 {
 	/* forward the signal, with the package-id attached */
 	g_signal_emit (pg, signals[SIGNAL_STAGE_CHANGED], 0,
-					stage, li_package_get_id (pkg));
+			stage, li_package_get_id (pkg));
 }
 
 /**
@@ -133,11 +221,11 @@ static void
 li_package_graph_teardown (GNode *root)
 {
 	g_node_traverse (root,
-					G_IN_ORDER,
-					G_TRAVERSE_ALL,
-					-1,
-					_li_package_graph_free_node,
-					NULL);
+			 G_IN_ORDER,
+			 G_TRAVERSE_ALL,
+			 -1,
+			 _li_package_graph_free_node,
+			 NULL);
 	g_node_destroy (root);
 }
 
@@ -159,7 +247,7 @@ li_package_graph_add_package (LiPackageGraph *pg, GNode *parent, LiPkgInfo *pki,
 
 	if (satisfied_dep != NULL)
 		li_pkg_info_set_version_relation (pki,
-									li_pkg_info_get_version_relation (satisfied_dep));
+						  li_pkg_info_get_version_relation (satisfied_dep));
 
 	return node;
 }
@@ -182,8 +270,8 @@ li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, Li
 	g_node_append (parent, node);
 
 	ret = g_hash_table_insert (priv->install_todo,
-						g_strdup (li_package_get_id (pkg)),
-						g_object_ref (pkg));
+					g_strdup (li_package_get_id (pkg)),
+					g_object_ref (pkg));
 	if (ret) {
 		g_debug ("Package %s marked for installation.", li_package_get_id (pkg));
 
@@ -191,14 +279,14 @@ li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, Li
 		g_signal_connect (pkg, "progress",
 					G_CALLBACK (li_package_graph_package_progress_cb), pg);
 		g_signal_connect (pkg, "stage-changed",
-						G_CALLBACK (li_package_graph_package_stage_changed_cb), pg);
+					G_CALLBACK (li_package_graph_package_stage_changed_cb), pg);
 	} else {
 		g_debug ("Package %s already marked for installation.", li_package_get_id (pkg));
 	}
 
 	if (satisfied_dep != NULL)
 		li_pkg_info_set_version_relation (li_package_get_info (pkg),
-									li_pkg_info_get_version_relation (satisfied_dep));
+							li_pkg_info_get_version_relation (satisfied_dep));
 
 	priv->max_progress = g_hash_table_size (priv->install_todo)*100;
 
@@ -215,11 +303,11 @@ li_package_graph_get_install_candidate (LiPackageGraph *pg, LiPkgInfo *pki)
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
 	pkg = g_hash_table_lookup (priv->install_todo,
-						li_pkg_info_get_id (pki));
+					li_pkg_info_get_id (pki));
 
 	if (pkg != NULL)
 		li_pkg_info_set_version_relation (li_package_get_info (pkg),
-									li_pkg_info_get_version_relation (pki));
+						  li_pkg_info_get_version_relation (pki));
 
 	return pkg;
 }
@@ -234,7 +322,7 @@ li_package_graph_mark_installed (LiPackageGraph *pg, LiPkgInfo *pki)
 
 	priv->progress += 100;
 	return g_hash_table_remove (priv->install_todo,
-						li_pkg_info_get_id (pki));
+					li_pkg_info_get_id (pki));
 }
 
 /**
@@ -264,11 +352,11 @@ li_package_graph_branch_to_array (GNode *root)
 
 	array = g_ptr_array_new ();
 	g_node_traverse (root,
-					G_PRE_ORDER,
-					G_TRAVERSE_ALL,
-					-1,
-					_li_package_graph_add_pki_to_array,
-					array);
+			 G_PRE_ORDER,
+			 G_TRAVERSE_ALL,
+			 -1,
+			 _li_package_graph_add_pki_to_array,
+			 array);
 
 	/* remove the root node value from the array */
 	if (array->len > 0)
@@ -323,15 +411,15 @@ li_package_graph_set_root_install_todo (LiPackageGraph *pg, LiPackage *pkg)
 
 	li_package_graph_set_root (pg, li_package_get_info (pkg));
 	ret = g_hash_table_insert (priv->install_todo,
-						g_strdup (li_package_get_id (pkg)),
-						g_object_ref (pkg));
+					g_strdup (li_package_get_id (pkg)),
+					g_object_ref (pkg));
 
 	if (ret) {
 		/* connect signals */
 		g_signal_connect (pkg, "progress",
-						G_CALLBACK (li_package_graph_package_progress_cb), pg);
+				  G_CALLBACK (li_package_graph_package_progress_cb), pg);
 		g_signal_connect (pkg, "stage-changed",
-						G_CALLBACK (li_package_graph_package_stage_changed_cb), pg);
+				  G_CALLBACK (li_package_graph_package_stage_changed_cb), pg);
 	}
 
 	priv->max_progress = g_hash_table_size (priv->install_todo)*100;
@@ -357,6 +445,108 @@ li_package_graph_get_root (LiPackageGraph *pg)
 {
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 	return priv->root_pkg;
+}
+
+/**
+ * li_package_graph_test_foundation_dependency:
+ *
+ * Check if we have a foundation dependency.
+ *
+ * Returns: %TRUE if dependency is satisfied, and %FALSE if it is not.
+ * In case we have failed to find the dependency, error is set.
+ */
+gboolean
+li_package_graph_test_foundation_dependency (LiPackageGraph *pg, LiPkgInfo *dep_pki, GError **error)
+{
+	const gchar *pkname;
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+
+	pkname = li_pkg_info_get_name (dep_pki);
+
+	/* check if this dependency is a foundation dependency */
+	if (!g_str_has_prefix (pkname, "foundation:"))
+		return FALSE;
+
+	if (g_hash_table_lookup (priv->foundations, pkname) != NULL) {
+		/* foundation was found, dependency is satisfied! */
+		g_debug ("Detected system dependency '%s' as satisfied.", pkname);
+		return TRUE;
+	} else {
+		g_set_error (error,
+			LI_INSTALLER_ERROR,
+			LI_INSTALLER_ERROR_FOUNDATION_NOT_FOUND,
+			_("Could not find system component: '%s'. Please install it manually."), pkname);
+		return FALSE;
+	}
+}
+
+/**
+ * li_find_satisfying_pkg:
+ *
+ * Return a package from the given package-list which matches the criteria
+ * defined in dep.
+ *
+ * TODO: Return the highest version of a package matching the constraints.
+ */
+LiPkgInfo*
+li_find_satisfying_pkg (GList *pkglist, LiPkgInfo *dep)
+{
+	GList *l;
+	const gchar *dep_name;
+	const gchar *dep_version;
+	LiVersionFlags dep_vrel;
+	LiPkgInfo *res_pki = NULL;
+
+	if (pkglist == NULL)
+		return NULL;
+
+	dep_name = li_pkg_info_get_name (dep);
+	dep_version = li_pkg_info_get_version (dep);
+	dep_vrel = li_pkg_info_get_version_relation (dep);
+
+	for (l = pkglist; l != NULL; l = l->next) {
+		const gchar *pname;
+		LiPkgInfo *pki = LI_PKG_INFO (l->data);
+
+		pname = li_pkg_info_get_name (pki);
+		if (g_strcmp0 (dep_name, pname) == 0) {
+			gint cmp;
+			const gchar *pver;
+			/* we found something which has the same name as the software we are looking for */
+			pver = li_pkg_info_get_version (pki);
+			if (dep_version == NULL) {
+				/* any version satisfies this dependency - so we are happy already */
+				res_pki = pki;
+				goto out;
+			}
+
+			/* now verify that its version is sufficient */
+			cmp = li_compare_versions (pver, dep_version);
+			if (((cmp == 1) && (dep_vrel & LI_VERSION_HIGHER)) ||
+				((cmp == 0) && (dep_vrel & LI_VERSION_EQUAL)) ||
+				((cmp == -1) && (dep_vrel & LI_VERSION_LOWER))) {
+				/* we are good, the found package satisfies our requirements */
+
+				res_pki = pki;
+				goto out;
+			} else {
+				g_debug ("Found %s (%s), skipping because version does not satisfy requirements(%i#%s).",
+						pname, pver, dep_vrel, dep_version);
+			}
+		}
+	}
+
+out:
+	if (res_pki != NULL) {
+		/* update the version of the dependency to what we found */
+		li_pkg_info_set_version (dep,
+					 li_pkg_info_get_version (res_pki));
+
+		/* update the version restrictions of the found package - kind of hackish to do it here, but very convenient */
+		li_pkg_info_set_version_relation (res_pki, dep_vrel);
+	}
+
+	return res_pki;
 }
 
 /**

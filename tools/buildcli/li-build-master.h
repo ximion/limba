@@ -48,14 +48,13 @@ struct _LiBuildMasterClass
 	void (*_as_reserved2)	(void);
 	void (*_as_reserved3)	(void);
 	void (*_as_reserved4)	(void);
-	void (*_as_reserved5)	(void);
-	void (*_as_reserved6)	(void);
 };
 
 /**
  * LiBuildMasterError:
  * @LI_BUILD_MASTER_ERROR_FAILED:		Generic failure
  * @LI_BUILD_MASTER_ERROR_NO_COMMANDS:		No commands to execute
+ * @LI_BUILD_MASTER_ERROR_BUILD_DEP_MISSING:	A build dependency is missing
  * @LI_BUILD_MASTER_ERROR_STEP_FAILED:		A build step failed
  *
  * The error type.
@@ -63,6 +62,7 @@ struct _LiBuildMasterClass
 typedef enum {
 	LI_BUILD_MASTER_ERROR_FAILED,
 	LI_BUILD_MASTER_ERROR_NO_COMMANDS,
+	LI_BUILD_MASTER_ERROR_BUILD_DEP_MISSING,
 	LI_BUILD_MASTER_ERROR_STEP_FAILED,
 	/*< private >*/
 	LI_BUILD_MASTER_ERROR_LAST
@@ -71,8 +71,8 @@ typedef enum {
 #define	LI_BUILD_MASTER_ERROR li_build_master_error_quark ()
 GQuark li_build_master_error_quark (void);
 
-GType			li_build_master_get_type	(void);
-LiBuildMaster		*li_build_master_new	(void);
+GType			li_build_master_get_type (void);
+LiBuildMaster		*li_build_master_new (void);
 
 void			li_build_master_init_build (LiBuildMaster *bmaster,
 							const gchar *dir,
