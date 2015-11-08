@@ -81,6 +81,8 @@ void			li_build_master_init_build (LiBuildMaster *bmaster,
 
 gint			li_build_master_run (LiBuildMaster *bmaster,
 						GError **error);
+gint			li_build_master_get_shell (LiBuildMaster *bmaster,
+							GError **error);
 
 G_END_DECLS
 

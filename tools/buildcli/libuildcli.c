@@ -139,7 +139,7 @@ out:
  * bcli_execute_build:
  */
 static gint
-bcli_execute_build (const gchar *srcdir)
+bcli_execute_build (const gchar *srcdir, gboolean shell_session)
 {
 	LiBuildMaster *bmaster = NULL;
 	gint res = 0;
@@ -176,7 +176,10 @@ bcli_execute_build (const gchar *srcdir)
 		goto out;
 	}
 
-	res = li_build_master_run (bmaster, &error);
+	if (shell_session)
+		res = li_build_master_get_shell (bmaster, &error);
+	else
+		res = li_build_master_run (bmaster, &error);
 	if (error != NULL) {
 		printf ("\n── Error ──\n");
 		li_print_stderr ("%s", error->message);
@@ -289,7 +292,9 @@ main (int argc, char *argv[])
 	} else if (g_strcmp0 (command, "repo-add") == 0) {
 		exit_code = bcli_repo_add_package (value1, value2);
 	} else if (g_strcmp0 (command, "run") == 0) {
-		exit_code = bcli_execute_build (value1);
+		exit_code = bcli_execute_build (value1, FALSE);
+	} else if (g_strcmp0 (command, "run-shell") == 0) {
+		exit_code = bcli_execute_build (value1, TRUE);
 	} else if (g_strcmp0 (command, "make-template") == 0) {
 		exit_code = libuild_make_template (value1);
 	} else {

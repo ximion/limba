@@ -63,6 +63,8 @@ struct _LiBuildMasterPrivate
 	gchar *username;
 	gchar *email;
 	gchar *target_repo;
+
+	gboolean get_shell;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiBuildMaster, li_build_master, G_TYPE_OBJECT)
@@ -105,6 +107,7 @@ li_build_master_init (LiBuildMaster *bmaster)
 
 	priv->build_root = NULL;
 	priv->dep_data_paths = NULL;
+	priv->get_shell = FALSE;
 }
 
 /**
@@ -120,7 +123,6 @@ li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, GNode *r
 	guint i;
 
 	pki = LI_PKG_INFO (root->data);
-
 
 	if (G_NODE_IS_ROOT (root)) {
 		/* we need to take the build-deps from the package we want to build... */
@@ -163,13 +165,9 @@ li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, GNode *r
 					LI_BUILD_MASTER_ERROR,
 					LI_BUILD_MASTER_ERROR_BUILD_DEP_MISSING,
 					_("Could not find bundle '%s' which is necessary to build this software."),
-					li_pkg_info_get_name (pki));
-		} else {
+					li_pkg_info_get_name (dep));
+		} else if (li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_INSTALLED)) {
 			GNode *node;
-
-			if (!li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_INSTALLED))
-				g_warning ("Found package '%s' which should be in INSTALLED state, but actually is not. Ignoring issue and assuming INSTALLED.",
-							li_pkg_info_get_id (ipki));
 
 			/* dependency is already installed, add it as satisfied */
 			node = li_package_graph_add_package (pg, root, ipki, dep);
@@ -180,6 +178,13 @@ li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, GNode *r
 				g_propagate_error (error, tmp_error);
 				return;
 			}
+		} else {
+			g_set_error (error,
+					LI_BUILD_MASTER_ERROR,
+					LI_BUILD_MASTER_ERROR_BUILD_DEP_MISSING,
+					_("Bundle '%s' needs to be installed in order to build this software."),
+					li_pkg_info_get_id (dep));
+			return;
 		}
 	}
 }
@@ -236,7 +241,7 @@ li_build_master_resolve_builddeps (LiBuildMaster *bmaster, LiPkgInfo *pki, GErro
 			continue;
 		}
 
-		datapath = g_build_filename (LI_SW_ROOT_PREFIX, pkid, "data", NULL);
+		datapath = g_build_filename (LI_SOFTWARE_ROOT, pkid, "data", NULL);
 		g_hash_table_add (depdirs, g_strdup (datapath));
 	}
 
@@ -260,6 +265,8 @@ li_build_master_init_build (LiBuildMaster *bmaster, const gchar *dir, const gcha
 
 	if (chroot_orig != NULL)
 		priv->chroot_orig_dir = g_strdup (chroot_orig);
+	else
+		priv->chroot_orig_dir = g_strdup ("/"); /* we take the normal root dir insread of a clean environment */
 
 	if (priv->init_done) {
 		g_set_error_literal (error,
@@ -369,6 +376,68 @@ li_build_master_exec (LiBuildMaster *bmaster, const gchar *cmd)
 }
 
 /**
+ * li_build_master_mount_deps:
+ *
+ * Mount the depdenencies into the environment as an overlay.
+ */
+static gint
+li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir)
+{
+	guint i;
+	gint res;
+	g_autoptr(GString) lowerdirs = NULL;
+	g_autofree gchar *mount_target = NULL;
+	gchar *tmp;
+	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
+
+	if ((priv->dep_data_paths == NULL) || (priv->dep_data_paths[0] == NULL))
+		return 0;
+
+	/* The payload of Limba bundles follows a strict directory layout, with directories
+	 * like bin/, share/, include/, lib/, etc. being at the toplevel.
+	 * This means we can simply mount all payload over /usr here, and bindmount
+	 * /opt/bundle to /usr to make things work at build-time.
+	 */
+	mount_target = g_build_filename (chroot_dir, "usr", NULL);
+
+	g_debug ("Mounting build dependencies into environment.");
+	lowerdirs = g_string_new (mount_target);
+	for (i = 0; priv->dep_data_paths[i] != NULL; i++) {
+		const gchar *dep_data_path = priv->dep_data_paths[i];
+
+		g_string_append_printf (lowerdirs, ":%s", dep_data_path);
+	}
+
+	tmp = g_strdup_printf ("lowerdir=%s", lowerdirs->str);
+	res = mount ("overlay", mount_target,
+				 "overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
+	g_free (tmp);
+	if (res != 0) {
+		fprintf (stderr, "Unable to mount directory. %s\n", strerror (errno));
+		res = 1;
+		goto out;
+	}
+
+	/* bind-mount /opt/software to /usr, so binaries compiled with that prefix can find their data  */
+	tmp = g_build_filename (chroot_dir, LI_SW_ROOT_PREFIX, NULL);
+	res = mount (mount_target, tmp,
+				 NULL, MS_BIND, NULL);
+	g_free (tmp);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		goto out;
+	}
+
+out:
+	if (res != 0) {
+		if (mount_target != NULL)
+			umount (mount_target);
+	}
+
+	return res;
+}
+
+/**
  * li_build_master_run_executor:
  *
  * Run the actual build setup and build steps as parent
@@ -384,6 +453,8 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	guint mount_count = 0;
 	g_autofree gchar *build_tmp_root = NULL;
 	g_autofree gchar *chroot_dir = NULL;
+	g_autofree gchar *ofs_wdir = NULL;
+	g_autofree gchar *volatile_data_dir = NULL;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
 	build_tmp_root = g_build_filename (env_root, "build", NULL);
@@ -395,98 +466,97 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		goto out;
 	}
 
-	if (priv->chroot_orig_dir != NULL) {
-		g_autofree gchar *ofs_wdir = NULL;
-		g_autofree gchar *volatile_data_dir = NULL;
+	volatile_data_dir = g_build_filename (env_root, "volatile", NULL);
+	ofs_wdir = g_build_filename (env_root, "ofs_work", NULL);
+	chroot_dir = g_build_filename (env_root, "chroot", NULL);
 
-		/* yay, we are building in a chroot environment! */
-
-		volatile_data_dir = g_build_filename (env_root, "volatile", NULL);
-		ofs_wdir = g_build_filename (env_root, "ofs_work", NULL);
-		chroot_dir = g_build_filename (env_root, "chroot", NULL);
-
-		/* create our build directory and volatile files directory */
-		tmp = g_build_filename (volatile_data_dir, "build", NULL);
-		res = g_mkdir_with_parents (tmp, 0755);
-		g_free (tmp);
-		if (res != 0) {
-			g_warning ("Unable to set up the environment: %s", g_strerror (errno));
-			goto out;
-		}
-
-		/* create OverlayFS work dir */
-		res = g_mkdir_with_parents (ofs_wdir, 0755);
-		if (res != 0) {
-			g_warning ("Unable to set up the environment: %s", g_strerror (errno));
-			goto out;
-		}
-
-		/* create chroot dir */
-		res = g_mkdir_with_parents (chroot_dir, 0755);
-		if (res != 0) {
-			g_warning ("Unable to set up the environment: %s", g_strerror (errno));
-			goto out;
-		}
-
-		/* create new mount namespace */
-		res = unshare (CLONE_NEWNS);
-		if (res != 0) {
-			g_warning ("Failed to create new namespace: %s", strerror(errno));
-			goto out;
-		}
-
-		/* create a private mountpoint */
-		res = mount (chroot_dir, chroot_dir,
-				 NULL, MS_PRIVATE, NULL);
-		if (res != 0 && errno == EINVAL) {
-			/* maybe we can't make the mountpoint private yet? */
-			res = mount (chroot_dir, chroot_dir,
-					 NULL, MS_BIND, NULL);
-			/* try again */
-			if (res == 0) {
-				mount_count++;
-				res = mount (chroot_dir, chroot_dir,
-						 NULL, MS_PRIVATE, NULL);
-			}
-		}
-		mount_count++;
-		if (res != 0) {
-			g_warning ("Unable to create private mountpoint: %s", g_strerror (errno));
-			goto out;
-		}
-		g_debug ("%s", chroot_dir);
-
-		/* mount our chroot environment */
-		tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", priv->chroot_orig_dir, volatile_data_dir, ofs_wdir);
-		res = mount ("overlay", chroot_dir,
-				 "overlay", MS_MGC_VAL | MS_NOSUID, tmp);
-		g_free (tmp);
-		if (res != 0) {
-			g_warning ("Unable to set up the environment: %s", g_strerror (errno));
-			goto out;
-		}
-
-		/* now bind-mount our build data into the chroot */
-		tmp = g_build_filename (chroot_dir, "build", NULL);
-		res = mount (build_tmp_root, tmp,
-					 NULL, MS_BIND, NULL);
-		g_free (tmp);
-		if (res != 0) {
-			g_warning ("Unable to set up the environment: %s", g_strerror (errno));
-			goto out;
-		}
-
-		res = chroot (chroot_dir);
-		g_chdir ("/");
-		if (res != 0) {
-			g_warning ("Could not chroot: %s", g_strerror (errno));
-			goto out;
-		}
-
-		/* set the correct build root in the chroot environment */
-		g_free (build_tmp_root);
-		build_tmp_root = g_strdup ("/build");
+	/* create our build directory and volatile files directory */
+	tmp = g_build_filename (volatile_data_dir, "build", NULL);
+	res = g_mkdir_with_parents (tmp, 0755);
+	g_free (tmp);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		goto out;
 	}
+
+	/* create OverlayFS work dir */
+	res = g_mkdir_with_parents (ofs_wdir, 0755);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* create chroot dir */
+	res = g_mkdir_with_parents (chroot_dir, 0755);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* create new mount namespace */
+	res = unshare (CLONE_NEWNS);
+	if (res != 0) {
+		g_warning ("Failed to create new namespace: %s", strerror(errno));
+		goto out;
+	}
+
+	/* create a private mountpoint */
+	res = mount (chroot_dir, chroot_dir,
+			 NULL, MS_PRIVATE, NULL);
+	if (res != 0 && errno == EINVAL) {
+		/* maybe we can't make the mountpoint private yet? */
+		res = mount (chroot_dir, chroot_dir,
+				 NULL, MS_BIND, NULL);
+		/* try again */
+		if (res == 0) {
+			mount_count++;
+			res = mount (chroot_dir, chroot_dir,
+					 NULL, MS_PRIVATE, NULL);
+		}
+	}
+	mount_count++;
+	if (res != 0) {
+		g_warning ("Unable to create private mountpoint: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* mount our chroot environment */
+	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", priv->chroot_orig_dir, volatile_data_dir, ofs_wdir);
+	res = mount ("overlay", chroot_dir,
+			 "overlay", MS_MGC_VAL | MS_NOSUID, tmp);
+	g_free (tmp);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* overlay the base filesystem with the build-dependency data */
+	res = li_build_master_mount_deps (bmaster, chroot_dir);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* now bind-mount our build data into the chroot */
+	tmp = g_build_filename (chroot_dir, "build", NULL);
+	res = mount (build_tmp_root, tmp,
+				 NULL, MS_BIND, NULL);
+	g_free (tmp);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		goto out;
+	}
+
+	res = chroot (chroot_dir);
+	g_chdir ("/");
+	if (res != 0) {
+		g_warning ("Could not chroot: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* set the correct build root in the chroot environment */
+	g_free (build_tmp_root);
+	build_tmp_root = g_strdup ("/build");
 
 	ret = g_setenv ("BUILDROOT", build_tmp_root, TRUE);
 	res = g_chdir (build_tmp_root);
@@ -511,13 +581,19 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		}
 	}
 
-	li_build_master_print_section (bmaster, "Build");
-	for (i = 0; i < priv->cmds->len; i++) {
-		gchar *cmd;
-		cmd = (gchar*) g_ptr_array_index (priv->cmds, i);
-		res = li_build_master_exec (bmaster, cmd);
-		if (res != 0)
-			goto out;
+	if (priv->get_shell) {
+		g_debug ("Starting new shell session...");
+		system ("sh");
+	} else {
+		/* we don't start an interactive shell, and get to business instead */
+		li_build_master_print_section (bmaster, "Build");
+		for (i = 0; i < priv->cmds->len; i++) {
+			gchar *cmd;
+			cmd = (gchar*) g_ptr_array_index (priv->cmds, i);
+			res = li_build_master_exec (bmaster, cmd);
+			if (res != 0)
+				goto out;
+		}
 	}
 
 	li_build_master_print_section (bmaster, "Cleanup");
@@ -591,7 +667,7 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 
 	g_debug ("Forking build executor");
 
-	/* for our build helper */
+	/* fork our build helper */
 	pid = fork ();
 
 	if (pid == 0) {
@@ -622,6 +698,11 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 				"Waiting for build executor failed: %s", g_strerror (errno));
 			break;
 		}
+	}
+
+	if (priv->get_shell) {
+		g_debug ("Shell session executor is done, finalizing...");
+		goto finish;
 	}
 
 	g_debug ("Executor is done, rescuing build artifacts...");
@@ -656,6 +737,7 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 	}
 
 
+finish:
 	g_debug ("Unmounting...");
 	tmp = g_build_filename (env_root, "chroot", NULL);
 	umount (tmp);
@@ -674,6 +756,30 @@ out:
 	if (res > 255)
 		res = 2;
 
+	return res;
+}
+
+/**
+ * li_build_master_get_shell:
+ *
+ * Get an interactive shell in the build environment, instead of building the software.
+ */
+gint
+li_build_master_get_shell (LiBuildMaster *bmaster, GError **error)
+{
+	GError *tmp_error = NULL;
+	gint res;
+	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
+
+	priv->get_shell = TRUE;
+	res = li_build_master_run (bmaster, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+out:
+	priv->get_shell = FALSE;
 	return res;
 }
 
