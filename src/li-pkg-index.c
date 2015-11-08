@@ -227,6 +227,18 @@ li_pkg_index_get_packages (LiPkgIndex *pkidx)
 }
 
 /**
+ * li_pkg_index_get_packages_count:
+ *
+ * Returns: Count of packages in the index
+ */
+guint
+li_pkg_index_get_packages_count (LiPkgIndex *pkidx)
+{
+	LiPkgIndexPrivate *priv = GET_PRIVATE (pkidx);
+	return priv->packages->len;
+}
+
+/**
  * li_pkg_index_add_package:
  */
 void

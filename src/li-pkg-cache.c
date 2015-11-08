@@ -71,9 +71,6 @@ static guint signals[SIGNAL_LAST] = { 0 };
 
 #define GET_PRIVATE(o) (li_pkg_cache_get_instance_private (o))
 
-#define LIMBA_CACHE_DIR "/var/cache/limba/"
-#define APPSTREAM_CACHE "/var/cache/app-info/"
-
 typedef struct {
 	LiPkgCache *cache;
 	gchar *id;
@@ -465,6 +462,113 @@ li_pkg_cache_update_icon_cache (LiPkgCache *cache, const gchar *repo_cache, cons
 }
 
 /**
+ * li_pkg_cache_download_repodata:
+ */
+void
+li_pkg_cache_download_repodata (LiPkgCache *cache, LiRepoEntry *re, const gchar *arch, gchar **hashlist, LiPkgIndex *dest_index, AsMetadata *metad, GError **error)
+{
+	g_auto(GStrv) urls = NULL;
+	g_autofree gchar *asurl = NULL;
+	guint i;
+	g_autofree gchar *dest_asfname = NULL;
+	g_autoptr(GFile) asfile = NULL;
+	gchar *tmp = NULL;
+	GError *tmp_error = NULL;
+
+	urls = li_repo_entry_get_index_urls_for_arch (re, arch);
+	if (urls == NULL)
+		return;
+
+	/* download indices for this architecture */
+	for (i = 0; urls[i] != NULL; i++) {
+		g_autofree gchar *dest_fname = NULL;
+		g_autofree gchar *basename = NULL;
+		g_autoptr(GFile) idxfile = NULL;
+
+		basename = g_path_get_basename (urls[i]);
+
+		tmp = g_strdup_printf ("%s-%s", arch, basename);
+		dest_fname = g_build_filename (li_repo_entry_get_cache_dir (re), tmp, NULL);
+		g_free (tmp);
+
+		/* download the index */
+		li_pkg_cache_download_file_sync (cache, urls[i], dest_fname, NULL, &tmp_error);
+		if (tmp_error != NULL) {
+			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
+				/* we can ignore the error here, this repository is not for us */
+				g_debug ("Skipping %s [%s] for repository: %s", basename, arch, li_repo_entry_get_url (re));
+				g_error_free (tmp_error);
+				tmp_error = NULL;
+				continue;
+			} else {
+				g_propagate_error (error, tmp_error);
+				return;
+			}
+		}
+
+		/* validate the recently downloaded index */
+		tmp = g_strdup_printf ("indices/%s/%s", arch, basename);
+		if (!_li_pkg_cache_signature_hash_matches (hashlist, dest_fname, tmp)) {
+			g_set_error (error,
+					LI_PKG_CACHE_ERROR,
+					LI_PKG_CACHE_ERROR_VERIFICATION,
+					_("Siganture on '%s' is invalid."), urls[i]);
+			g_free (tmp);
+			return;
+		}
+		g_free (tmp);
+
+		/* we can load the index now */
+		idxfile = g_file_new_for_path (dest_fname);
+		li_pkg_index_load_file (dest_index, idxfile, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_prefixed_error (error, tmp_error, "Unable to load %s index for repository: %s", arch, li_repo_entry_get_url (re));
+			return;
+		}
+	}
+
+	/* download AppStream metadata */
+	asurl = li_repo_entry_get_metadata_url_for_arch (re, arch);
+	tmp = g_strdup_printf ("Metainfo_%s.xml.gz", arch);
+	dest_asfname = g_build_filename (li_repo_entry_get_cache_dir (re), tmp, NULL);
+	g_free (tmp);
+
+	li_pkg_cache_download_file_sync (cache, asurl, dest_asfname, NULL, &tmp_error);
+	if (tmp_error != NULL) {
+		if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
+			/* we can ignore the error here, no AppStream metadata for us */
+			g_debug ("No AppStream metadata for arch '%s' on repository: %s", arch, li_repo_entry_get_url (re));
+			g_error_free (tmp_error);
+			tmp_error = NULL;
+			return;
+		} else {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+	}
+
+	/* validate the AppStream metadata */
+	tmp = g_strdup_printf ("indices/%s/Metadata.xml.gz", arch);
+	if (!_li_pkg_cache_signature_hash_matches (hashlist, dest_asfname, tmp)) {
+		g_set_error (error,
+				LI_PKG_CACHE_ERROR,
+				LI_PKG_CACHE_ERROR_VERIFICATION,
+				_("Siganture on '%s' is invalid."), asurl);
+		g_free (tmp);
+		return;
+	}
+	g_free (tmp);
+
+	/* add AppStream metadata to the pool */
+	asfile = g_file_new_for_path (dest_asfname);
+	as_metadata_parse_file (metad, asfile, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_prefixed_error (error, tmp_error, "Unable to load AppStream data for: %s", li_repo_entry_get_url (re));
+		return;
+	}
+}
+
+/**
  * li_pkg_cache_update:
  *
  * Update the package cache by downloading new package indices from the web.
@@ -478,9 +582,6 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 	g_autofree gchar *current_arch = NULL;
 	LiPkgCachePrivate *priv = GET_PRIVATE (cache);
 
-	/* ensure AppStream cache exists */
-	g_mkdir_with_parents (APPSTREAM_CACHE, 0755);
-
 	/* create index of available packages */
 	global_index = li_pkg_index_new ();
 
@@ -489,27 +590,13 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 	for (i = 0; i < priv->repo_srcs->len; i++) {
 		LiRepoEntry *re;
 		const gchar *url;
-		g_autofree gchar *url_index_all = NULL;
-		g_autofree gchar *url_index_arch = NULL;
 		g_autofree gchar *url_signature = NULL;
-		g_autofree gchar *url_asdata_all = NULL;
-		g_autofree gchar *url_asdata_arch = NULL;
-		g_autofree gchar *dest = NULL;
-		g_autofree gchar *dest_index_all = NULL;
-		g_autofree gchar *dest_index_arch = NULL;
-		g_autofree gchar *dest_asdata_all = NULL;
-		g_autofree gchar *dest_asdata_arch = NULL;
 		g_autofree gchar *dest_repoconf = NULL;
 		g_autofree gchar *dest_signature = NULL;
-		g_autoptr(GFile) idxfile = NULL;
-		g_autoptr(GFile) asfile = NULL;
 		g_autoptr(LiPkgIndex) tmp_index = NULL;
 		g_autoptr (AsMetadata) metad = NULL;
 		g_auto(GStrv) hashlist = NULL;
 		g_autofree gchar *fpr = NULL;
-		g_autofree gchar *dest_ascache = NULL;
-		g_autofree gchar *md5sum = NULL;
-		gboolean index_read;
 		GPtrArray *pkgs;
 		guint j;
 		gchar *tmp;
@@ -527,86 +614,10 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		/* create temporary index */
 		tmp_index = li_pkg_index_new ();
 
-		url_index_all   = g_build_filename (url, "indices", "all", "Index.gz", NULL);
-		url_asdata_all  = g_build_filename (url, "indices", "all", "Metadata.xml.gz", NULL);
-		url_index_arch  = g_build_filename (url, "indices", current_arch, "Index.gz", NULL);
-		url_asdata_arch = g_build_filename (url, "indices", current_arch, "Metadata.xml.gz", NULL);
 		url_signature   = g_build_filename (url, "indices", "Indices.gpg", NULL);
-
-		/* prepare cache dir and ensure it exists */
-		md5sum = g_compute_checksum_for_string (G_CHECKSUM_MD5, url, -1);
-
-		/* set cache directory */
-		dest = g_build_filename (LIMBA_CACHE_DIR, md5sum, NULL);
-		g_mkdir_with_parents (dest, 0755);
-
-		/* set AppStream target file */
-		tmp = g_build_filename (APPSTREAM_CACHE, "xmls", NULL);
-		g_mkdir_with_parents (tmp, 0755);
-		g_free (tmp);
-		tmp = g_strdup_printf ("limba_%s.xml.gz", md5sum);
-		dest_ascache = g_build_filename (APPSTREAM_CACHE, "xmls", tmp, NULL);
-		g_free (tmp);
-
-		dest_index_all = g_build_filename (dest, "Index-all.gz", NULL);
-		dest_index_arch = g_strdup_printf ("%s/Index-%s.gz", dest, current_arch);
-		dest_asdata_all = g_build_filename (dest, "Metadata-all.xml.gz", NULL);
-		dest_asdata_arch = g_strdup_printf ("%s/Metadata-%s.xml.gz", dest, current_arch);
-		dest_signature = g_build_filename (dest, "Indices.gpg", NULL);
+		dest_signature = g_build_filename (li_repo_entry_get_cache_dir (re), "Indices.gpg", NULL);
 
 		g_debug ("Updating cached data for repository: %s", url);
-
-		/* download indices */
-		li_pkg_cache_download_file_sync (cache, url_index_all, dest_index_all, NULL, &tmp_error);
-		if (tmp_error != NULL) {
-			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
-				/* we can ignore the error here, this repository is not for us */
-				g_debug ("Skipping arch 'all' for repository: %s", url);
-				g_error_free (tmp_error);
-				tmp_error = NULL;
-			} else {
-				g_propagate_error (error, tmp_error);
-				return;
-			}
-		}
-		li_pkg_cache_download_file_sync (cache, url_index_arch, dest_index_arch, NULL, &tmp_error);
-		if (tmp_error != NULL) {
-			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
-				/* we can ignore the error here, this repository is not for us */
-				g_debug ("Skipping arch '%s' for repository: %s", current_arch, url);
-				g_error_free (tmp_error);
-				tmp_error = NULL;
-			} else {
-				g_propagate_error (error, tmp_error);
-				return;
-			}
-		}
-
-		/* download AppStream metadata */
-		li_pkg_cache_download_file_sync (cache, url_asdata_all, dest_asdata_all, NULL, &tmp_error);
-		if (tmp_error != NULL) {
-			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
-				/* we can ignore the error here, no AppStream metadata for us */
-				g_debug ("No arch-indep AppStream metadata on repository: %s", url);
-				g_error_free (tmp_error);
-				tmp_error = NULL;
-			} else {
-				g_propagate_error (error, tmp_error);
-				return;
-			}
-		}
-		li_pkg_cache_download_file_sync (cache, url_asdata_arch, dest_asdata_arch, NULL, &tmp_error);
-		if (tmp_error != NULL) {
-			if (tmp_error->code == LI_PKG_CACHE_ERROR_REMOTE_NOT_FOUND) {
-				/* we can ignore the error here, no AppStream metadata for us */
-				g_debug ("No AppStream metadata for arch '%s' on repository: %s", current_arch, url);
-				g_error_free (tmp_error);
-				tmp_error = NULL;
-			} else {
-				g_propagate_error (error, tmp_error);
-				return;
-			}
-		}
 
 		/* download signature */
 		li_pkg_cache_download_file_sync (cache, url_signature, dest_signature, NULL, &tmp_error);
@@ -614,16 +625,6 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 			g_propagate_error (error, tmp_error);
 			return;
 		}
-
-		/* write repo hints file */
-		dest_repoconf = g_build_filename (dest, "repo", NULL);
-		g_file_set_contents (dest_repoconf, url, -1, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
-			return;
-		}
-
-		g_debug ("Updated data for repository: %s", url);
 
 		/* check signature */
 		tmp = NULL;
@@ -649,102 +650,46 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 			return;
 		}
 
-		/* load AppStream metadata */
-		asfile = g_file_new_for_path (dest_asdata_all);
-		if (g_file_query_exists (asfile, NULL)) {
-			if (!_li_pkg_cache_signature_hash_matches (hashlist, dest_asdata_all, "indices/all/Metadata.xml.gz")) {
-				g_set_error (error,
-						LI_PKG_CACHE_ERROR,
-						LI_PKG_CACHE_ERROR_VERIFICATION,
-						_("Siganture on '%s' is invalid."), url);
-				return;
-			}
-
-			as_metadata_parse_file (metad, asfile, &tmp_error);
-			if (tmp_error != NULL) {
-				g_propagate_prefixed_error (error, tmp_error, "Unable to load AppStream data for: %s", url);
-				return;
-			}
+		/* download indices */
+		li_pkg_cache_download_repodata (cache, re, current_arch, hashlist, tmp_index, metad, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+		li_pkg_cache_download_repodata (cache, re, "all", hashlist, tmp_index, metad, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
 		}
 
-		g_object_unref (asfile);
-		asfile = g_file_new_for_path (dest_asdata_arch);
-		if (g_file_query_exists (asfile, NULL)) {
-			tmp = g_strdup_printf ("indices/%s/Metadata.xml.gz", current_arch);
-			if (!_li_pkg_cache_signature_hash_matches (hashlist, dest_asdata_arch, tmp)) {
-				g_free (tmp);
-				g_set_error (error,
-						LI_PKG_CACHE_ERROR,
-						LI_PKG_CACHE_ERROR_VERIFICATION,
-						_("Siganture on '%s' is invalid."), url);
-				return;
-			}
-			g_free (tmp);
-
-			as_metadata_parse_file (metad, asfile, &tmp_error);
-			if (tmp_error != NULL) {
-				g_propagate_prefixed_error (error, tmp_error, "Unable to load AppStream data for: %s", url);
-				return;
-			}
+		/* write repo hints file */
+		dest_repoconf = g_build_filename (li_repo_entry_get_cache_dir (re), "repo", NULL);
+		g_file_set_contents (dest_repoconf, url, -1, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
 		}
 
-		/* load index */
-		idxfile = g_file_new_for_path (dest_index_all);
-		if (g_file_query_exists (idxfile, NULL)) {
-			/* validate */
-			if (!_li_pkg_cache_signature_hash_matches (hashlist, dest_index_all, "indices/all/Index.gz")) {
-				g_set_error (error,
-						LI_PKG_CACHE_ERROR,
-						LI_PKG_CACHE_ERROR_VERIFICATION,
-						_("Siganture on '%s' is invalid."), url);
-				return;
-			}
+		g_debug ("Updated data for repository: %s", url);
 
-			li_pkg_index_load_file (tmp_index, idxfile, &tmp_error);
-			if (tmp_error != NULL) {
-				g_propagate_prefixed_error (error, tmp_error, "Unable to load index for repository: %s", url);
-				return;
-			}
-			index_read = TRUE;
-		}
-
-		g_object_unref (idxfile);
-		idxfile = g_file_new_for_path (dest_index_arch);
-		if (g_file_query_exists (idxfile, NULL)) {
-			/* validate */
-			tmp = g_strdup_printf ("indices/%s/Index.gz", current_arch);
-			if (!_li_pkg_cache_signature_hash_matches (hashlist, dest_index_arch, tmp)) {
-				g_free (tmp);
-				g_set_error (error,
-						LI_PKG_CACHE_ERROR,
-						LI_PKG_CACHE_ERROR_VERIFICATION,
-						_("Siganture on '%s' is invalid."), url);
-				return;
-			}
-			g_free (tmp);
-
-			li_pkg_index_load_file (tmp_index, idxfile, &tmp_error);
-			if (tmp_error != NULL) {
-				g_propagate_prefixed_error (error, tmp_error, "Unable to load index for repository: %s", url);
-				return;
-			}
-			index_read = TRUE;
-		}
-
-		if (!index_read)
-			g_warning ("Repository '%s' does not seem to contain any index file!", url);
+		if (li_pkg_index_get_packages_count (tmp_index) == 0)
+			g_warning ("Repository '%s' does not seem to contain any packages!", url);
 
 		/* ensure we have a somewhat sane metadata origin */
 		if (as_metadata_get_origin (metad) == NULL)
-			as_metadata_set_origin (metad, md5sum);
+			as_metadata_set_origin (metad, li_repo_entry_get_id (re));
 
 		/* fetch icons */
-		tmp = g_build_filename (APPSTREAM_CACHE,
+		tmp = g_build_filename (APPSTREAM_CACHE_DIR,
 						"icons",
 						as_metadata_get_origin (metad),
 						NULL);
 		g_debug ("Icon cache target set: %s", tmp);
-		li_pkg_cache_update_icon_cache (cache, dest, url, tmp, &tmp_error);
+		li_pkg_cache_update_icon_cache (cache,
+						li_repo_entry_get_cache_dir (re),
+						li_repo_entry_get_url (re),
+						tmp,
+						&tmp_error);
 		g_free (tmp);
 		if (tmp_error != NULL) {
 			g_propagate_prefixed_error (error, tmp_error, "Unable to fetch AppStream icons:");
@@ -768,7 +713,9 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		}
 
 		/* save AppStream XML data */
-		as_metadata_save_distro_xml (metad, dest_ascache, &tmp_error);
+		as_metadata_save_distro_xml (metad,
+						li_repo_entry_get_appstream_fname (re),
+						&tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_prefixed_error (error, tmp_error, "Unable to save metadata.");
 			return;

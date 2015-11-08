@@ -26,12 +26,17 @@
 
 #include "config.h"
 #include "li-repo-entry.h"
+#include "li-utils-private.h"
 
 typedef struct _LiRepoEntryPrivate	LiRepoEntryPrivate;
 struct _LiRepoEntryPrivate
 {
 	LiRepoEntryKinds kinds;
 	gchar *url;
+
+	gchar *md5sum;
+	gchar *cache_dir;
+	gchar *as_fname;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiRepoEntry, li_repo_entry, G_TYPE_OBJECT)
@@ -53,6 +58,9 @@ li_repo_entry_finalize (GObject *object)
 	LiRepoEntryPrivate *priv = GET_PRIVATE (re);
 
 	g_free (priv->url);
+	g_free (priv->md5sum);
+	g_free (priv->cache_dir);
+	g_free (priv->as_fname);
 
 	G_OBJECT_CLASS (li_repo_entry_parent_class)->finalize (object);
 }
@@ -119,6 +127,55 @@ li_repo_entry_parse (LiRepoEntry *re, const gchar *repo_line)
 }
 
 /**
+ * li_repo_entry_get_index_urls_for_arch:
+ *
+ * Get array of indices to download for the given architecture.
+ */
+gchar**
+li_repo_entry_get_index_urls_for_arch (LiRepoEntry *re, const gchar *arch)
+{
+	g_autoptr(GPtrArray) urls = NULL;
+	LiRepoEntryPrivate *priv = GET_PRIVATE (re);
+
+	/* check if the source is disabled, in that case we have nothing to download */
+	if (li_repo_entry_has_kind (re, LI_REPO_ENTRY_KIND_NONE))
+		return NULL;
+
+	urls = g_ptr_array_new_with_free_func (g_free);
+
+	if (li_repo_entry_has_kind (re, LI_REPO_ENTRY_KIND_COMMON))
+		g_ptr_array_add (urls, g_build_filename (priv->url, "indices", arch, "Index.gz", NULL));
+
+	if (li_repo_entry_has_kind (re, LI_REPO_ENTRY_KIND_DEVEL))
+		g_ptr_array_add (urls, g_build_filename (priv->url, "indices", arch, "Index-Devel.gz", NULL));
+
+	if (li_repo_entry_has_kind (re, LI_REPO_ENTRY_KIND_SOURCE))
+		g_ptr_array_add (urls, g_build_filename (priv->url, "indices", arch, "Index-Sources.gz", NULL));
+
+	return li_ptr_array_to_strv (urls);
+}
+
+/**
+ * li_repo_entry_get_metadata_url_for_arch:
+ *
+ * Get AppStream metadata URL to download for the given architecture.
+ */
+gchar*
+li_repo_entry_get_metadata_url_for_arch (LiRepoEntry *re, const gchar *arch)
+{
+	LiRepoEntryPrivate *priv = GET_PRIVATE (re);
+
+	/* check if the source is disabled, in that case we have nothing to download */
+	if (li_repo_entry_has_kind (re, LI_REPO_ENTRY_KIND_NONE))
+		return NULL;
+
+	/* SOURCE or DEVEL packages do not posses own AppStream metadata, and instead are linked to
+	 * the existing metadata of their COMMON package, so we only have one URL here. */
+
+	return g_build_filename (priv->url, "indices", arch, "Metadata.xml.gz", NULL);
+}
+
+/**
  * li_repo_entry_get_kinds:
  */
 LiRepoEntryKinds
@@ -174,9 +231,66 @@ li_repo_entry_get_url (LiRepoEntry *re)
 void
 li_repo_entry_set_url (LiRepoEntry *re, const gchar *url)
 {
+	gchar *tmp;
 	LiRepoEntryPrivate *priv = GET_PRIVATE (re);
+
 	g_free (priv->url);
 	priv->url = g_strdup (url);
+
+	/* ensure we have a unique identifier for this URL to be used in paths */
+	/* FIXME: Take care of user adding more trailing slashes to the URL? */
+	g_free (priv->md5sum);
+	priv->md5sum = g_compute_checksum_for_string (G_CHECKSUM_MD5, priv->url, -1);
+
+	/* set cache directory */
+	g_free (priv->cache_dir);
+	priv->cache_dir = g_build_filename (LIMBA_CACHE_DIR, priv->md5sum, NULL);
+	g_mkdir_with_parents (priv->cache_dir, 0755);
+
+	/* set AppStream target file */
+	tmp = g_build_filename (APPSTREAM_CACHE_DIR, "xmls", NULL);
+	g_mkdir_with_parents (tmp, 0755);
+	g_free (tmp);
+	tmp = g_strdup_printf ("limba_%s.xml.gz", priv->md5sum);
+	priv->as_fname = g_build_filename (APPSTREAM_CACHE_DIR, "xmls", tmp, NULL);
+	g_free (tmp);
+}
+
+/**
+ * li_repo_entry_get_id:
+ *
+ * Returns: An unique identifier for this repository, to be used in filepaths.
+ * Currently, that is the MD5 checksum of its URL.
+ */
+const gchar*
+li_repo_entry_get_id (LiRepoEntry *re)
+{
+	LiRepoEntryPrivate *priv = GET_PRIVATE (re);
+	return priv->md5sum;
+}
+
+/**
+ * li_repo_entry_get_cache_dir:
+ *
+ * Returns: The private cache directory of this repository entry.
+ */
+const gchar*
+li_repo_entry_get_cache_dir (LiRepoEntry *re)
+{
+	LiRepoEntryPrivate *priv = GET_PRIVATE (re);
+	return priv->cache_dir;
+}
+
+/**
+ * li_repo_entry_get_appstream_fname:
+ *
+ * Returns: The AppStream distro XML filename for this repository.
+ */
+const gchar*
+li_repo_entry_get_appstream_fname (LiRepoEntry *re)
+{
+	LiRepoEntryPrivate *priv = GET_PRIVATE (re);
+	return priv->as_fname;
 }
 
 /**

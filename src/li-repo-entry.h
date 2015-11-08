@@ -57,6 +57,10 @@ struct _LiRepoEntryClass
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiRepoEntry, g_object_unref)
 
+/* default locations */
+#define LIMBA_CACHE_DIR "/var/cache/limba/"
+#define APPSTREAM_CACHE_DIR "/var/cache/app-info/"
+
 /**
  * LiRepoEntryKinds:
  * @LI_REPO_ENTRY_KIND_NONE:		Source entry has no kind (= it is disabled)
@@ -93,6 +97,15 @@ gboolean		li_repo_entry_has_kind (LiRepoEntry *re,
 const gchar		*li_repo_entry_get_url (LiRepoEntry *re);
 void			li_repo_entry_set_url (LiRepoEntry *re,
 						const gchar *url);
+
+const gchar		*li_repo_entry_get_id (LiRepoEntry *re);
+const gchar		*li_repo_entry_get_cache_dir (LiRepoEntry *re);
+const gchar		*li_repo_entry_get_appstream_fname (LiRepoEntry *re);
+
+gchar			**li_repo_entry_get_index_urls_for_arch (LiRepoEntry *re,
+								 const gchar *arch);
+gchar			*li_repo_entry_get_metadata_url_for_arch (LiRepoEntry *re,
+								  const gchar *arch);
 
 G_END_DECLS
 
