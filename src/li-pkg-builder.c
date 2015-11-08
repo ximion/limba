@@ -748,7 +748,7 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 	sign_files = g_ptr_array_new ();
 
 	/* check if we should embed a repository in the package structure */
-	if (kind == LI_PACKAGE_KIND_NORMAL) {
+	if (kind == LI_PACKAGE_KIND_COMMON) {
 		g_autofree gchar *repo_root = NULL;
 
 		repo_root = g_build_filename (payload_root, "..", "repo", NULL);
@@ -953,7 +953,7 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 
 	if (auto_sdkpkg) {
 		/* build package, automatically detect if we need a development package */
-		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_NORMAL, cpt, payload_root_rt, pkg_fname_rt, TRUE, &tmp_error);
+		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_COMMON, cpt, payload_root_rt, pkg_fname_rt, TRUE, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return FALSE;
@@ -968,7 +968,7 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 
 	} else {
 		/* build RT package */
-		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_NORMAL, cpt, payload_root_rt, pkg_fname_rt, FALSE, &tmp_error);
+		li_pkg_builder_build_package_with_details (builder, ctl, LI_PACKAGE_KIND_COMMON, cpt, payload_root_rt, pkg_fname_rt, FALSE, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return FALSE;

@@ -76,14 +76,14 @@ typedef enum  {
 /**
  * LiPackageKind:
  * @LI_PACKAGE_KIND_UNKNOWN:		Unknown package type
- * @LI_PACKAGE_KIND_NORMAL:		Standard Limba package
+ * @LI_PACKAGE_KIND_COMMON:		Standard Limba package
  * @LI_PACKAGE_KIND_DEVEL:		Development package (SDK)
  *
  * Type of the Limba package
  **/
 typedef enum  {
 	LI_PACKAGE_KIND_UNKNOWN,
-	LI_PACKAGE_KIND_NORMAL,
+	LI_PACKAGE_KIND_COMMON,
 	LI_PACKAGE_KIND_DEVEL,
 } LiPackageKind;
 

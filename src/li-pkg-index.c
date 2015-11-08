@@ -111,7 +111,7 @@ li_pkg_index_write_cdata_values (LiPkgIndex *pkidx, LiConfigData *cdata)
 
 		li_config_data_new_block (cdata);
 		li_config_data_set_value (cdata, "PkgName", li_pkg_info_get_name (pki));
-		if (li_pkg_info_get_kind (pki) != LI_PACKAGE_KIND_NORMAL)
+		if (li_pkg_info_get_kind (pki) != LI_PACKAGE_KIND_COMMON)
 			li_config_data_set_value (cdata, "Type", li_package_kind_to_string (li_pkg_info_get_kind (pki)));
 		li_config_data_set_value (cdata, "Name", li_pkg_info_get_appname (pki));
 		li_config_data_set_value (cdata, "Version", li_pkg_info_get_version (pki));

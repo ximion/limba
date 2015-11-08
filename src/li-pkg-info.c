@@ -160,7 +160,7 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 
 	/* write format header */
 	li_config_data_set_value (cdata, "Format-Version", priv->format_version);
-	if (priv->kind != LI_PACKAGE_KIND_NORMAL)
+	if (priv->kind != LI_PACKAGE_KIND_COMMON)
 		li_config_data_set_value (cdata, "Type", li_package_kind_to_string (priv->kind));
 	li_config_data_new_block (cdata);
 
@@ -238,7 +238,7 @@ li_pkg_info_init (LiPkgInfo *pki)
 	priv->format_version = g_strdup ("1.0");
 
 	/* for compatibility reasons, we assume the package to be normal by default */
-	priv->kind = LI_PACKAGE_KIND_NORMAL;
+	priv->kind = LI_PACKAGE_KIND_COMMON;
 }
 
 /**
@@ -839,8 +839,8 @@ li_pkg_info_new (void)
 const gchar*
 li_package_kind_to_string (LiPackageKind kind)
 {
-	if (kind == LI_PACKAGE_KIND_NORMAL)
-		return "normal";
+	if (kind == LI_PACKAGE_KIND_COMMON)
+		return "common";
 	if (kind == LI_PACKAGE_KIND_DEVEL)
 		return "devel";
 	return "unknown";
@@ -857,10 +857,10 @@ li_package_kind_to_string (LiPackageKind kind)
 LiPackageKind
 li_package_kind_from_string (const gchar *kind_str)
 {
-	if (g_strcmp0 (kind_str, "normal") == 0)
-		return LI_PACKAGE_KIND_NORMAL;
+	if (g_strcmp0 (kind_str, "common") == 0)
+		return LI_PACKAGE_KIND_COMMON;
 	if (g_strcmp0 (kind_str, "") == 0)
-		return LI_PACKAGE_KIND_NORMAL;
+		return LI_PACKAGE_KIND_COMMON;
 	if (g_strcmp0 (kind_str, "devel") == 0)
 		return LI_PACKAGE_KIND_DEVEL;
 	return LI_PACKAGE_KIND_UNKNOWN;

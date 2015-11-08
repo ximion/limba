@@ -43,11 +43,12 @@
 #include "li-pkg-index.h"
 #include "li-package.h"
 #include "li-package-private.h"
+#include "li-repo-entry.h"
 
 typedef struct _LiRepositoryPrivate	LiRepositoryPrivate;
 struct _LiRepositoryPrivate
 {
-	GHashTable *indices;
+	GHashTable *indices; /* of string -> GHashTable */
 	GHashTable *asmeta;
 	gchar *repo_path;
 
@@ -83,7 +84,7 @@ li_repository_init (LiRepository *repo)
 {
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
-	priv->indices = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	priv->indices = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, (GDestroyNotify) g_hash_table_unref);
 	priv->asmeta = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	priv->rconfig = li_config_data_new ();
 }
@@ -92,15 +93,25 @@ li_repository_init (LiRepository *repo)
  * li_repository_get_index:
  */
 static LiPkgIndex*
-li_repository_get_index (LiRepository *repo, const gchar *arch)
+li_repository_get_index (LiRepository *repo, LiRepoIndexKinds kind, const gchar *arch)
 {
 	LiPkgIndex *index;
+	GHashTable *index_tab;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
 
-	index = g_hash_table_lookup (priv->indices, arch);
+	index_tab = g_hash_table_lookup (priv->indices,
+					li_repo_index_kind_to_string (kind));
+	if (index_tab == NULL) {
+		index_tab = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+		g_hash_table_insert (priv->indices,
+					g_strdup (li_repo_index_kind_to_string (kind)),
+					index_tab);
+	}
+
+	index = g_hash_table_lookup (index_tab, arch);
 	if (index == NULL) {
 		index = li_pkg_index_new ();
-		g_hash_table_insert (priv->indices, g_strdup (arch), index);
+		g_hash_table_insert (index_tab, g_strdup (arch), index);
 	}
 
 	return index;
@@ -125,6 +136,41 @@ li_repository_get_asmeta (LiRepository *repo, const gchar *arch)
 	}
 
 	return metad;
+}
+
+/**
+ * li_repository_load_index:
+ */
+static void
+li_repository_load_index (LiRepository *repo, const gchar *path, LiRepoIndexKinds kind, const gchar *arch, GError **error)
+{
+	g_autofree gchar *fname = NULL;
+	g_autoptr(GFile) file = NULL;
+	GError *tmp_error = NULL;
+
+	if (kind == LI_REPO_INDEX_KIND_NONE)
+		return;
+
+	if (kind == LI_REPO_INDEX_KIND_COMMON)
+		fname = g_build_filename (path, "Index.gz", NULL);
+	else if (kind == LI_REPO_INDEX_KIND_DEVEL)
+		fname = g_build_filename (path, "Index-Devel.gz", NULL);
+	else if (kind == LI_REPO_INDEX_KIND_SOURCE)
+		fname = g_build_filename (path, "Index-Sources.gz", NULL);
+	else
+		g_critical ("Handling unknown repository index type: %i", (gint) kind);
+
+	file = g_file_new_for_path (fname);
+	if (g_file_query_exists (file, NULL)) {
+		LiPkgIndex *index;
+
+		index = li_repository_get_index (repo, kind, arch);
+		li_pkg_index_load_file (index, file, &tmp_error);
+	}
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
 }
 
 /**
@@ -171,23 +217,17 @@ li_repository_load_indices (LiRepository *repo, const gchar* dir, GError **error
 			/* our directory name is the architecture */
 			arch = g_path_get_basename (path);
 
-			/* load IPK package index */
-			fname = g_build_filename (path, "Index.gz", NULL);
-			file = g_file_new_for_path (fname);
-			if (g_file_query_exists (file, NULL)) {
-				LiPkgIndex *index;
-
-				index = li_pkg_index_new ();
-				li_pkg_index_load_file (index, file, &tmp_error);
-				if (tmp_error == NULL)
-					g_hash_table_insert (priv->indices, g_strdup (arch), index);
-			}
-			g_object_unref (file);
+			/* load IPK package indices  */
+			li_repository_load_index (repo, path, LI_REPO_INDEX_KIND_COMMON, arch, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				goto out;
 			}
-			g_free (fname);
+			li_repository_load_index (repo, path, LI_REPO_INDEX_KIND_DEVEL, arch, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				goto out;
+			}
 
 			/* load AppStream metadata (if present) */
 			fname = g_build_filename (path, "Metadata.xml.gz", NULL);
@@ -393,17 +433,18 @@ li_repository_sign (LiRepository *repo, const gchar *sigtext, GError **error)
 typedef struct {
 	LiRepository *repo;
 	GString *sigtext;
+	LiRepoIndexKinds ikind;
 
 	GError *error;
 } LiIndexSaveHelper;
 
 /**
- * li_repository_save_indices:
+ * li_repository_save_indices_helper:
  *
  * Helper function to save the package-index hashtable on disk
  */
 static void
-li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiIndexSaveHelper *helper)
+li_repository_save_indices_helper (gchar *arch, LiPkgIndex *index, LiIndexSaveHelper *helper)
 {
 	g_autofree gchar *fname = NULL;
 	g_autofree gchar *dir = NULL;
@@ -418,7 +459,15 @@ li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiIndexSaveHelper *h
 	dir = g_build_filename (priv->repo_path, "indices", arch, NULL);
 	g_mkdir_with_parents (dir, 0755);
 
-	fname = g_build_filename (dir, "Index.gz", NULL);
+	if (helper->ikind == LI_REPO_INDEX_KIND_COMMON)
+		fname = g_build_filename (dir, "Index.gz", NULL);
+	else if (helper->ikind == LI_REPO_INDEX_KIND_DEVEL)
+		fname = g_build_filename (dir, "Index-Devel.gz", NULL);
+	else if (helper->ikind == LI_REPO_INDEX_KIND_SOURCE)
+		fname = g_build_filename (dir, "Index-Sources.gz", NULL);
+	else
+		g_critical ("Handling unknown repository index type: %i", (gint) helper->ikind);
+
 	li_pkg_index_save_to_file (index, fname);
 
 	if (g_str_has_prefix (fname, priv->repo_path)) {
@@ -438,6 +487,39 @@ li_repository_save_indices (gchar *arch, LiPkgIndex *index, LiIndexSaveHelper *h
 	}
 
 	g_string_append_printf (helper->sigtext, "%s\t%s\n", checksum, internal_name);
+}
+
+/**
+ * li_repository_save_indices:
+ */
+static gboolean
+li_repository_save_indices (LiRepository *repo, GString *sigtext, LiRepoIndexKinds kind, GError **error)
+{
+	LiIndexSaveHelper helper;
+	GHashTable *index_tab;
+	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
+
+	index_tab = g_hash_table_lookup (priv->indices,
+					li_repo_index_kind_to_string (kind));
+
+	/* do we have indices of this kind to save? */
+	if (index_tab == NULL)
+		return TRUE;
+
+	helper.repo = repo;
+	helper.sigtext = sigtext;
+	helper.error = NULL;
+	helper.ikind = kind;
+
+	g_hash_table_foreach (index_tab,
+				(GHFunc) li_repository_save_indices_helper,
+				&helper);
+	if (helper.error != NULL) {
+		g_propagate_error (error, helper.error);
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
 /**
@@ -495,12 +577,9 @@ li_repository_save (LiRepository *repo, GError **error)
 {
 	gchar *dir;
 	GError *tmp_error = NULL;
-	LiIndexSaveHelper helper;
 	g_autoptr(GString) sigtext = NULL;
+	LiIndexSaveHelper helper;
 	LiRepositoryPrivate *priv = GET_PRIVATE (repo);
-
-	/* prepare variable to store checksums */
-	sigtext = g_string_new ("");
 
 	/* ensure the basic directory structure is present */
 	dir = g_build_filename (priv->repo_path, "indices", NULL);
@@ -519,20 +598,27 @@ li_repository_save (LiRepository *repo, GError **error)
 	g_mkdir_with_parents (dir, 0755);
 	g_free (dir);
 
-	/* save indices */
-	helper.repo = repo;
-	helper.sigtext = sigtext;
-	helper.error = NULL;
+	/* prepare variable to store checksums */
+	sigtext = g_string_new ("");
 
-	g_hash_table_foreach (priv->indices,
-				(GHFunc) li_repository_save_indices,
-				&helper);
-	if (helper.error != NULL) {
-		g_propagate_error (error, helper.error);
+	/* save indices */
+	li_repository_save_indices (repo, sigtext, LI_REPO_INDEX_KIND_COMMON, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+	li_repository_save_indices (repo, sigtext, LI_REPO_INDEX_KIND_DEVEL, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
 
 	/* save AppStream metadata */
+	helper.repo = repo;
+	helper.sigtext = sigtext;
+	helper.error = NULL;
+	helper.ikind = LI_REPO_INDEX_KIND_NONE;
+
 	g_hash_table_foreach (priv->asmeta,
 				(GHFunc) li_repository_save_asmeta,
 				&helper);
@@ -662,7 +748,10 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 	g_free (tmp);
 
 	/* add to indices */
-	index = li_repository_get_index (repo, pkgarch);
+	if (li_pkg_info_get_kind (pki) == LI_PACKAGE_KIND_DEVEL)
+		index = li_repository_get_index (repo, LI_REPO_INDEX_KIND_DEVEL, pkgarch);
+	else
+		index = li_repository_get_index (repo, LI_REPO_INDEX_KIND_COMMON, pkgarch);
 	li_pkg_index_add_package (index, pki);
 
 	/* don't add to AppStream index, development packages don't belong there */

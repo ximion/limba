@@ -62,23 +62,23 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiRepoEntry, g_object_unref)
 #define APPSTREAM_CACHE_DIR "/var/cache/app-info/"
 
 /**
- * LiRepoEntryKinds:
- * @LI_REPO_ENTRY_KIND_NONE:		Source entry has no kind (= it is disabled)
- * @LI_REPO_ENTRY_KIND_COMMON:		Download the "common" index
- * @LI_REPO_ENTRY_KIND_DEVEL:		Download the "devel" (SDK) index
- * @LI_REPO_ENTRY_KIND_SOURCE:		Download the "source" index
+ * LiRepoIndexKinds:
+ * @LI_REPO_INDEX_KIND_NONE:		Source entry has no kind (= it is disabled)
+ * @LI_REPO_INDEX_KIND_COMMON:		Download the "common" index
+ * @LI_REPO_INDEX_KIND_DEVEL:		Download the "devel" (SDK) index
+ * @LI_REPO_INDEX_KIND_SOURCE:		Download the "source" index
  *
  * Flags defining which index kinds this repository entry defines.
  **/
 typedef enum  {
-	LI_REPO_ENTRY_KIND_NONE = 0,
-	LI_REPO_ENTRY_KIND_COMMON = 1 << 0,
-	LI_REPO_ENTRY_KIND_DEVEL = 1 << 1,
-	LI_REPO_ENTRY_KIND_SOURCE = 1 << 2
-} LiRepoEntryKinds;
+	LI_REPO_INDEX_KIND_NONE = 0,
+	LI_REPO_INDEX_KIND_COMMON = 1 << 0,
+	LI_REPO_INDEX_KIND_DEVEL = 1 << 1,
+	LI_REPO_INDEX_KIND_SOURCE = 1 << 2
+} LiRepoIndexKinds;
 
-const gchar		*li_repo_entry_kind_to_string (LiRepoEntryKinds kind);
-LiRepoEntryKinds	li_repo_entry_kind_from_string (const gchar *kind_str);
+const gchar		*li_repo_index_kind_to_string (LiRepoIndexKinds kind);
+LiRepoIndexKinds	li_repo_index_kind_from_string (const gchar *kind_str);
 
 GType			li_repo_entry_get_type (void);
 LiRepoEntry		*li_repo_entry_new (void);
@@ -86,13 +86,13 @@ LiRepoEntry		*li_repo_entry_new (void);
 gboolean		li_repo_entry_parse (LiRepoEntry *re,
 						const gchar *repo_line);
 
-LiRepoEntryKinds	li_repo_entry_get_kinds (LiRepoEntry *re);
+LiRepoIndexKinds	li_repo_entry_get_kinds (LiRepoEntry *re);
 void			li_repo_entry_set_kinds (LiRepoEntry *re,
-						 LiRepoEntryKinds kinds);
+						 LiRepoIndexKinds kinds);
 void			li_repo_entry_add_kind (LiRepoEntry *re,
-						LiRepoEntryKinds kind);
+						LiRepoIndexKinds kind);
 gboolean		li_repo_entry_has_kind (LiRepoEntry *re,
-						LiRepoEntryKinds kind);
+						LiRepoIndexKinds kind);
 
 const gchar		*li_repo_entry_get_url (LiRepoEntry *re);
 void			li_repo_entry_set_url (LiRepoEntry *re,
