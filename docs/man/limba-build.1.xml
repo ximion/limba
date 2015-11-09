@@ -77,6 +77,20 @@
 			</listitem>
 		</varlistentry>
 
+		<varlistentry>
+			<term><option>run-shell <replaceable>DIRECTORY</replaceable></option></term>
+			<listitem>
+				<para>
+					Does exactly as the <option>run</option> command, but instead of running the commands necessary to build the
+					software, it opens a interactive shell in the build environment.
+				</para>
+				<para>
+					This feature is very useful for debugging the build environment itself. The pre-build and post-build commands are run
+					before and after opening the interactive shell, just as in a regular build.
+				</para>
+			</listitem>
+		</varlistentry>
+
 
 		<varlistentry>
 			<term><option>repo-init <replaceable>DIRECTORY</replaceable></option></term>
