@@ -53,10 +53,16 @@
 		<para>
 			The first parameter of <command>&package;</command> should be the <replaceable>BUNDLE:BINARY</replaceable>
 			combination, e.g. if you want to run the binary <filename>/bin/foo</filename> of the <literal>foobar-1.0</literal>
-			package, use <replaceable>foobar-1.0:/bin/foo</replaceable> as parameter.
+			package, use <replaceable>foobar/1.0:/bin/foo</replaceable> as parameter.
 		</para>
 		<para>
 			All following options are treated as belonging to the called binary.
+		</para>
+		<para>
+			For debugging purposes, it is possible to open an interactive shell in the environment of the application.
+			To do that, simply set "<literal>sh</literal>" as <replaceable>BINARY</replaceable>, for example you can use
+			<replaceable>foobar/1.0:sh</replaceable> to get a shell in the environment for binaries of the
+			<replaceable>foobar/1.0</replaceable> bundle.
 		</para>
 	</refsect1>
 
