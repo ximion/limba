@@ -291,7 +291,7 @@ main (gint argc, gchar *argv[])
 	struct utsname uts_data;
 	gchar *ma_lib_path = NULL;
 	gchar *tmp;
-	gchar **strv;
+	g_auto(GStrv) strv = NULL;
 	gchar **child_argv = NULL;
 	guint i;
 	GError *error = NULL;
@@ -320,10 +320,10 @@ main (gint argc, gchar *argv[])
 	if (li_compare_versions ("4.0", uts_data.release) > 0)
 		g_warning ("Running on Linux %s. Runapp needs at least Linux 4.0 to be sure all needed features are present.", uts_data.release);
 
+	/* get the bundle name */
 	swname = g_strdup (strv[0]);
-	executable = g_build_filename (LI_SW_ROOT_PREFIX, strv[1], NULL);
-	g_strfreev (strv);
 
+	/* create our environment */
 	ret = create_mount_namespace ();
 	if (ret > 0)
 		goto error;
@@ -335,7 +335,8 @@ main (gint argc, gchar *argv[])
 	/* Now we have everything we need CAP_SYS_ADMIN for, so drop that capability */
 	if (!drop_caps ()) {
 		g_printerr ("Unable to drop capabilities.\n");
-		return 3;
+		ret = 3;
+		goto error;
 	}
 
 	/* place this process in a new cgroup */
@@ -345,6 +346,15 @@ main (gint argc, gchar *argv[])
 		fprintf (stderr, "Could not add process to new scope. %s\n", error->message);
 		g_error_free (error);
 		goto error;
+	}
+
+	/* determine which command we should execute */
+	if (g_strcmp0 (strv[1], "sh") == 0) {
+		/* don't run an application, get a interactive shell instead */
+		executable = g_strdup ("/bin/sh");
+		chdir (LI_SW_ROOT_PREFIX);
+	} else {
+		executable = g_build_filename (LI_SW_ROOT_PREFIX, strv[1], NULL);
 	}
 
 	/* add generic library path */
