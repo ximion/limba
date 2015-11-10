@@ -81,6 +81,7 @@ find_package(GLIB 2.44 REQUIRED COMPONENTS "gio" "gobject" "gio-unix")
 pkg_check_modules(APPSTREAM REQUIRED appstream>=0.8.6)
 pkg_check_modules(UUID REQUIRED uuid>=2.0)
 pkg_check_modules (POLKIT REQUIRED polkit-gobject-1>=0.104)
+pkg_check_modules(LIBCAP REQUIRED libcap>=2.24)
 
 find_package(GI REQUIRED)
 find_package(LibArchive REQUIRED)
