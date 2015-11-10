@@ -1,3 +1,42 @@
+Version 0.5.3
+~~~~~~~~~~~~~~
+Released: 2015-11-10
+
+Notes:
+ * This release contains some pretty invasive changes. It also
+   marks the point where Limba is pretty much feature-complete,
+   so expect a lot of polishing during the next releases, and
+   please intensively test this release.
+ * If you are using Linux 4.2 and try to use limba-build, you might
+   run into this kernel regression: https://lkml.org/lkml/2015/10/7/289
+   We can't work around this in Limba, so consider patching/updating
+   your kernel.
+
+Features:
+ * Build development IPK packages
+ * Enforce a naming scheme for SDK package IDs
+ * Correctly define dependencies of SDK packages
+ * Make bundle IDs follow an "id/version" scheme, instead of "id-version"
+ * runapp: Drop unneeded capabilities as early as possible
+ * Treat development packages just like any other pkg
+ * Allow disabling automatic signature validation at install-time
+ * Implicitly trust packages we downloaded from a trusted repo
+ * Add bundle type information to the main index
+ * Simplify OverlayFS mounting, this also works around a kernel regression
+ * Allow sources.list to define which index kinds to download
+ * Compile with C11
+ * Make the cache download SDK and source metadata
+ * repo: Create separate index for SDK bundles
+ * bcli: Build new bundles using the SDK bundles
+ * bcli: Document the run-shell command
+ * runapp: Make it easier to get a shell in the app environment
+ * docs: Update runapp manpage
+
+Bugfixes:
+ * Write just one DSC file per build
+ * repo: Don't add SDK packages to AppStream metadata
+ * Fix building of AppStream icon tarball
+
 Version 0.5.2
 ~~~~~~~~~~~~~~
 Released: 2015-10-14
