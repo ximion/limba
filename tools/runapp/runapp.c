@@ -1,7 +1,7 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
  * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
- * Copyright (C)      2012 Alexander Larsson <alexl@redhat.com>
+ * Copyright (C) 2012-2015 Alexander Larsson <alexl@redhat.com>
  *
  * Licensed under the GNU General Public License Version 2
  *
@@ -32,7 +32,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <linux/unistd.h>
 #include <linux/version.h>
+#include <sys/stat.h>
 #include <sys/utsname.h>
 #include <sys/capability.h>
 #include <sys/prctl.h>
@@ -40,6 +42,28 @@
 #include <gio/gio.h>
 
 #define REQUIRED_CAPS (CAP_TO_MASK(CAP_SYS_ADMIN))
+
+typedef enum {
+  BIND_READONLY = (1<<0),
+  BIND_PRIVATE = (1<<1),
+  BIND_DEVICES = (1<<2),
+} bind_option_t;
+
+/**
+ * pivot_root:
+ *
+ * Change the root filesystem.
+ */
+static int
+pivot_root (const char * new_root, const char * put_old)
+{
+#ifdef __NR_pivot_root
+  return syscall(__NR_pivot_root, new_root, put_old);
+#else
+  errno = ENOSYS;
+  return -1;
+#endif
+}
 
 /**
  * Ensure we have just the capabilities we need
@@ -76,6 +100,12 @@ acquire_caps (void)
 		return FALSE;
 	}
 
+	/* Never gain any more privs during exec */
+	if (prctl (PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0) {
+		g_printerr ("prctl(PR_SET_NO_NEW_CAPS) failed");
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
@@ -105,72 +135,198 @@ drop_caps (void)
 }
 
 /**
- * create_mount_namespace:
+ * bind_mount:
  */
 static int
-create_mount_namespace (void)
+bind_mount (const gchar *src, const gchar *dest, bind_option_t options)
 {
-	int mount_count;
+	gboolean readonly = (options & BIND_READONLY) != 0;
+	gboolean private = (options & BIND_PRIVATE) != 0;
+
+	if (mount (src, dest, NULL, MS_MGC_VAL | MS_BIND | (readonly?MS_RDONLY:0), NULL) != 0)
+		return 1;
+
+	if (private) {
+		if (mount ("none", dest, NULL, MS_REC | MS_PRIVATE, NULL) != 0)
+			return 2;
+	}
+
+	return 0;
+}
+
+/**
+ * mkdir_and_bindmount:
+ *
+ * Create directory and place a bindmount or symlink (depending on the situation).
+ */
+static int
+mkdir_and_bindmount (const gchar *root, const gchar *target, gboolean writable)
+{
+	struct stat buf;
 	int res;
+	g_autofree gchar *dir = NULL;
 
+	if (!g_file_test (target, G_FILE_TEST_EXISTS))
+		return 0;
+
+	dir = g_build_filename (root, target, NULL);
+
+	lstat (target, &buf);
+	if ((buf.st_mode & S_IFMT) == S_IFLNK) {
+		/* we have a symbolic link */
+
+		if (symlink (dir, target) != 0) {
+			g_printerr ("Symlink failed (%s).\n", target);
+			return 1;
+		}
+	} else {
+		/* we have a regular file */
+		if (g_mkdir_with_parents (dir, 0755) != 0) {
+			g_printerr ("Unable to create %s.\n", target);
+			return 1;
+		}
+
+		res = bind_mount (target, dir, BIND_PRIVATE | (writable?0:BIND_READONLY));
+		if (res != 0) {
+			g_printerr ("Bindmount failed (%i).\n", res);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * mount_app_bundle:
+ * @pkgid: A software identifier ("name/version")
+ */
+static int
+mount_app_bundle (const gchar *pkgid)
+{
+	int res = 0;
+	int mount_count;
+	gchar *main_data_path = NULL;
+	gchar *fname = NULL;
+	GFile *file;
+	const gchar *runtime_uuid;
+	gchar *tmp;
+	GString *lowerdirs = NULL;
+	LiPkgInfo *pki = NULL;
+	uid_t uid;
+	g_autofree gchar *newroot = NULL;
+	g_autofree gchar *approot_dir = NULL;
+	GError *error = NULL;
+
+	/* perform some preparation before we can mount the app */
 	g_debug ("creating new namespace");
-
 	res = unshare (CLONE_NEWNS);
 	if (res != 0) {
-		g_print ("Failed to create new namespace: %s\n", strerror(errno));
+		g_printerr ("Failed to create new namespace: %s\n", strerror(errno));
+		return 1;
+	}
+
+	/* Mark everything as slave, so that we still
+	 * receive mounts from the real root, but don't
+	 * propagate mounts to the real root. */
+	if (mount (NULL, "/", NULL, MS_SLAVE | MS_REC, NULL) < 0) {
+		g_printerr ("Failed to make / slave.\n");
+		return 1;
+	}
+
+	uid = getuid ();
+	newroot = g_strdup_printf ("/run/user/%d/.limba-root", uid);
+	if (g_mkdir_with_parents (newroot, 0755) != 0) {
+		g_printerr ("Failed to create root tmpfs.\n");
+		return 1;
+	}
+
+	/* Create a tmpfs which we will use as / in the namespace */
+	if (mount ("", newroot, "tmpfs", MS_NODEV | MS_NOEXEC | MS_NOSUID, NULL) != 0)
+		g_printerr ("Failed to mount tmpfs.\n");
+
+	/* build & bindmount the root filesystem */
+	if (mkdir_and_bindmount (newroot, "/bin", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/cdrom", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/dev", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/etc", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/home", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/lib", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/lib64", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/media", TRUE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/mnt", TRUE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/opt", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/proc", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/run", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/srv", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/sys", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/usr", FALSE) != 0)
+		return 2;
+	if (mkdir_and_bindmount (newroot, "/var", TRUE) != 0)
+		return 2;
+
+	fname = g_build_filename (newroot, "tmp", NULL);
+	if (g_mkdir_with_parents (fname, 0755) != 0) {
+		g_free (fname);
+		g_printerr ("Unable to create root /tmp dir.\n");
+		return 1;
+	}
+	g_free (fname);
+
+	fname = g_build_filename (newroot, ".oldroot", NULL);
+	if (g_mkdir_with_parents (fname, 0755) != 0) {
+		g_free (fname);
+		g_printerr ("Unable to create root /.oldroot dir.\n");
+		return 1;
+	}
+	g_free (fname);
+
+	/* the place where we will mount the application data to */
+	approot_dir = g_build_filename (newroot, "app", NULL);
+	if (g_mkdir_with_parents (approot_dir, 0755) != 0) {
+		g_printerr ("Unable to create /app dir.\n");
 		return 1;
 	}
 
 	g_debug ("mount (private)");
 	mount_count = 0;
-	res = mount (LI_SW_ROOT_PREFIX, LI_SW_ROOT_PREFIX,
+	res = mount (approot_dir, approot_dir,
 				 NULL, MS_PRIVATE, NULL);
 	if (res != 0 && errno == EINVAL) {
 		/* Maybe if failed because there is no mount
 		 * to be made private at that point, lets
 		 * add a bind mount there. */
 		g_debug (("mount (bind)\n"));
-		res = mount (LI_SW_ROOT_PREFIX, LI_SW_ROOT_PREFIX,
+		res = mount (approot_dir, approot_dir,
 					 NULL, MS_BIND, NULL);
 		/* And try again */
 		if (res == 0) {
 			mount_count++; /* Bind mount succeeded */
 			g_debug ("mount (private)");
-			res = mount (LI_SW_ROOT_PREFIX, LI_SW_ROOT_PREFIX,
+			res = mount (approot_dir, approot_dir,
 						 NULL, MS_PRIVATE, NULL);
 		}
 	}
 
 	if (res != 0) {
 		g_error ("Failed to make prefix namespace private");
-		goto error_out;
+		res = 1;
+		goto out;
 	}
 
-	return 0;
-
-error_out:
-	while (mount_count-- > 0)
-		umount (LI_SW_ROOT_PREFIX);
-	return 1;
-}
-
-/**
- * mount_overlay:
- * @pkgid: A software identifier (name-version)
- */
-static int
-mount_overlay (const gchar *pkgid)
-{
-	int res = 0;
-	gchar *main_data_path = NULL;
-	gchar *fname = NULL;
-	gchar *wdir = NULL;
-	GFile *file;
-	const gchar *runtime_uuid;
-	gchar *tmp;
-	GError *error = NULL;
-	GString *lowerdirs = NULL;
-	LiPkgInfo *pki = NULL;
 
 	/* check if the software exists */
 	main_data_path = g_build_filename (LI_SOFTWARE_ROOT, pkgid, "data", NULL);
@@ -232,15 +388,37 @@ mount_overlay (const gchar *pkgid)
 	/* safeguard againt the case where only one path is set for lowerdir.
 	 * OFS doesn't like that, so we always set the root path as source too.
 	 * This also terminates the lowerdir parameter. */
-	g_string_append_printf (lowerdirs, "%s", LI_SW_ROOT_PREFIX);
+	g_string_append_printf (lowerdirs, "%s", approot_dir);
 
 	tmp = g_strdup_printf ("lowerdir=%s", lowerdirs->str);
-	res = mount ("overlay", LI_SW_ROOT_PREFIX,
+	res = mount ("overlay", approot_dir,
 				 "overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
 	g_free (tmp);
 	if (res != 0) {
 		fprintf (stderr, "Unable to mount directory. %s\n", strerror (errno));
 		res = 1;
+		goto out;
+	}
+
+	/* now move into the application's private environment */
+	chdir (newroot);
+	if (pivot_root (newroot, ".oldroot") != 0) {
+		g_printerr ("pivot_root failed: %s\n", strerror(errno));
+		res = 2;
+		goto out;
+	}
+	chdir ("/");
+
+	/* The old root better be rprivate or we will send unmount events to the parent namespace */
+	if (mount (".oldroot", ".oldroot", NULL, MS_REC | MS_PRIVATE, NULL) != 0) {
+		g_printerr ("Failed to make old root rprivate: %s\n", strerror(errno));
+		res = 2;
+		goto out;
+	}
+
+	if (umount2 (".oldroot", MNT_DETACH)) {
+		g_printerr ("unmount oldroot failed: %s\n", strerror(errno));
+		res = 2;
 		goto out;
 	}
 
@@ -251,10 +429,14 @@ out:
 		g_free (main_data_path);
 	if (pki != NULL)
 		g_object_unref (pki);
-	if (wdir != NULL)
-		g_free (wdir);
 	if (error != NULL)
 		g_error_free (error);
+
+	if (res != 0) {
+		/* we have an error */
+		while (mount_count-- > 0)
+			umount (approot_dir);
+	}
 
 	return res;
 }
@@ -324,11 +506,7 @@ main (gint argc, gchar *argv[])
 	swname = g_strdup (strv[0]);
 
 	/* create our environment */
-	ret = create_mount_namespace ();
-	if (ret > 0)
-		goto error;
-
-	ret = mount_overlay (swname);
+	ret = mount_app_bundle (swname);
 	if (ret > 0)
 		goto error;
 

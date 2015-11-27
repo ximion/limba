@@ -47,7 +47,7 @@ test_compile_foobar ()
 	if (g_file_test ("Makefile", G_FILE_TEST_EXISTS))
 		system ("make distclean");
 
-	ret = system ("./autogen.sh --prefix=/opt/bundle");
+	ret = system ("./autogen.sh --prefix=/app");
 	g_assert (ret == 0);
 
 	ret = system ("make");

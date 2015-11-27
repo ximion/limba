@@ -118,7 +118,7 @@ message(STATUS "Found ${OS_NAME} ${KERNEL_RELEASE}")
 set (GETTEXT_PACKAGE "limba")
 set (VERSION "${LIMBA_VERSION}")
 set (BUILDDIR "${CMAKE_BINARY_DIR}")
-set (SOFTWARE_ROOT_PREFIX "/opt/bundle")
+set (SOFTWARE_ROOT_PREFIX "/app")
 set (SOFTWARE_INSTALL_ROOT "/opt/software")
 configure_file(config.h.in ${CMAKE_BINARY_DIR}/config.h)
 

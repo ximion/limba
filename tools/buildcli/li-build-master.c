@@ -396,7 +396,7 @@ li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir)
 	/* The payload of Limba bundles follows a strict directory layout, with directories
 	 * like bin/, share/, include/, lib/, etc. being at the toplevel.
 	 * This means we can simply mount all payload over /usr here, and bindmount
-	 * /opt/bundle to /usr to make things work at build-time.
+	 * /app to /usr to make things work at build-time.
 	 */
 	mount_target = g_build_filename (chroot_dir, "usr", NULL);
 
