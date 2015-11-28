@@ -41,6 +41,7 @@
 
 #include "li-utils.h"
 #include "li-utils-private.h"
+#include "li-run.h"
 #include "li-pkg-info.h"
 #include "li-package-graph.h"
 #include "li-manager.h"
@@ -418,7 +419,7 @@ li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir)
 		goto out;
 	}
 
-	/* bind-mount /opt/software to /usr, so binaries compiled with that prefix can find their data  */
+	/* bind-mount /app to /usr, so binaries compiled with that prefix can find their data  */
 	tmp = g_build_filename (chroot_dir, LI_SW_ROOT_PREFIX, NULL);
 	res = mount (mount_target, tmp,
 				 NULL, MS_BIND, NULL);
@@ -472,6 +473,15 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 
 	/* create our build directory and volatile files directory */
 	tmp = g_build_filename (volatile_data_dir, "build", NULL);
+	res = g_mkdir_with_parents (tmp, 0755);
+	g_free (tmp);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* create the /app directory, in case binaries look for stuff there */
+	tmp = g_build_filename (volatile_data_dir, "app", NULL);
 	res = g_mkdir_with_parents (tmp, 0755);
 	g_free (tmp);
 	if (res != 0) {
