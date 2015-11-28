@@ -401,8 +401,8 @@ li_pkg_builder_sign_data (LiPkgBuilder *builder, const gchar *data, gpgme_sig_mo
 		g_set_error (error,
 			LI_BUILDER_ERROR,
 			LI_BUILDER_ERROR_SIGN,
-			_("Signing of package failed: %s"),
-			gpgme_strsource (err));
+			_("Signing of package failed (init): %s"),
+			gpgme_strerror (err));
 		gpgme_release (ctx);
 		return NULL;
 	}
@@ -418,8 +418,8 @@ li_pkg_builder_sign_data (LiPkgBuilder *builder, const gchar *data, gpgme_sig_mo
 			g_set_error (error,
 				LI_BUILDER_ERROR,
 				LI_BUILDER_ERROR_SIGN,
-				_("Signing of package failed: %s"),
-				gpgme_strsource (err));
+				_("Signing of package failed (get-key): %s"),
+				gpgme_strerror (err));
 			gpgme_release (ctx);
 			return NULL;
 		}
@@ -429,8 +429,8 @@ li_pkg_builder_sign_data (LiPkgBuilder *builder, const gchar *data, gpgme_sig_mo
 			g_set_error (error,
 				LI_BUILDER_ERROR,
 				LI_BUILDER_ERROR_SIGN,
-				_("Signing of package failed: %s"),
-				gpgme_strsource (err));
+				_("Signing of package failed (signers-add): %s"),
+				gpgme_strerror (err));
 			gpgme_release (ctx);
 			return NULL;
 		}
@@ -444,7 +444,7 @@ li_pkg_builder_sign_data (LiPkgBuilder *builder, const gchar *data, gpgme_sig_mo
 			LI_BUILDER_ERROR,
 			LI_BUILDER_ERROR_SIGN,
 			_("Signing of package failed: %s"),
-			gpgme_strsource (err));
+			gpgme_strerror (err));
 		gpgme_data_release (din);
 		gpgme_release (ctx);
 		return NULL;
@@ -456,7 +456,7 @@ li_pkg_builder_sign_data (LiPkgBuilder *builder, const gchar *data, gpgme_sig_mo
 			LI_BUILDER_ERROR,
 			LI_BUILDER_ERROR_SIGN,
 			_("Signing of package failed: %s"),
-			gpgme_strsource (err));
+			gpgme_strerror (err));
 		gpgme_data_release (din);
 		gpgme_release (ctx);
 		return NULL;
@@ -474,8 +474,8 @@ li_pkg_builder_sign_data (LiPkgBuilder *builder, const gchar *data, gpgme_sig_mo
 		g_set_error (error,
 			LI_BUILDER_ERROR,
 			LI_BUILDER_ERROR_SIGN,
-			_("Signing of package failed: %s"),
-			gpgme_strsource (err));
+			_("Signing of package failed (sign): %s"),
+			gpgme_strerror (err));
 		return NULL;
 	}
 
