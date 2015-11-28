@@ -28,6 +28,7 @@ set(LIBLIMBA_SRC
 	li-repo-entry.c
 	li-pkg-cache.c
 	li-update-item.c
+	li-run.c
 )
 
 set(LIBLIMBA_PUBLIC_HEADERS
@@ -48,6 +49,7 @@ set(LIBLIMBA_PUBLIC_HEADERS
 
 set(LIBLIMBA_PRIVATE_HEADERS
 	li-utils-private.h
+	li-run.h
 	li-package-private.h
 	li-config-data.h
 	li-exporter.h
