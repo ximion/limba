@@ -272,8 +272,6 @@ li_run_env_setup (void)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, "/proc", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/run", FALSE) != 0)
-		return NULL;
 	if (mkdir_and_bindmount (newroot, "/srv", FALSE) != 0)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, "/sys", FALSE) != 0)
@@ -281,6 +279,16 @@ li_run_env_setup (void)
 	if (mkdir_and_bindmount (newroot, "/usr", FALSE) != 0)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, "/var", TRUE) != 0)
+		return NULL;
+
+	/* prepare /run - give access to session data and DBus system bus */
+	fname = g_strdup_printf ("/run/user/%d/", uid);
+	if (mkdir_and_bindmount (newroot, fname, TRUE) != 0) {
+		g_free (fname);
+		return NULL;
+	}
+	g_free (fname);
+	if (mkdir_and_bindmount (newroot, "/run/dbus", TRUE) != 0)
 		return NULL;
 
 	fname = g_build_filename (newroot, "tmp", NULL);
