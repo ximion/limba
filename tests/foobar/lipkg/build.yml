@@ -5,7 +5,7 @@ before_script:
   - find $BUILDROOT/lipkg/ -name "*.ipk*" -exec rm {} \;
 
 script:
-  - ./autogen.sh --prefix=/opt/bundle
+  - ./autogen.sh --prefix=/app
   - make -j2
   - make install DESTDIR=$BUILDROOT/lipkg/target/
   # remove cruft

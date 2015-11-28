@@ -710,7 +710,7 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 		tmp = g_build_filename (payload_root, "include", NULL);
 		if (!g_file_test (tmp, G_FILE_TEST_IS_DIR)) {
 			g_free (tmp);
-			tmp = g_build_filename (payload_root, "opt", "bundle", "include", NULL);
+			tmp = g_build_filename (payload_root, "app", "include", NULL);
 			if (!g_file_test (tmp, G_FILE_TEST_IS_DIR)) {
 				/* no headers? No automatically built SDK package! */
 				return TRUE;

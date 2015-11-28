@@ -32,12 +32,12 @@ Now you can create the metadata necessary to build a Limba package. Just run::
 This will create a “lipkg” directory, containing a “control” file and a “metainfo.xml” file, which can be a symlink to the
 AppStream metadata, or be new metadata.
 
-Now, configure your application with ``/opt/bundle`` as install prefix.
+Now, configure your application with ``/app`` as install prefix.
 
 .. hint::
 
-   For CMake, use ``-DCMAKE_INSTALL_PREFIX=/opt/bundle``, an Automake-based build-system
-   needs ``–prefix=/opt/bundle`` passed to configure/autogen.sh.
+   For CMake, use ``-DCMAKE_INSTALL_PREFIX=/app``, an Automake-based build-system
+   needs ``–prefix=/app`` passed to configure/autogen.sh.
 
 Then install the software to the ``lipkg/inst_target`` directory.
 
