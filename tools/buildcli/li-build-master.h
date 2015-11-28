@@ -22,6 +22,7 @@
 #define __LI_BUILD_MASTER_H
 
 #include <glib-object.h>
+#include <sys/types.h>
 
 #define LI_TYPE_BUILD_MASTER			(li_build_master_get_type())
 #define LI_BUILD_MASTER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_BUILD_MASTER, LiBuildMaster))
@@ -83,6 +84,11 @@ gint			li_build_master_run (LiBuildMaster *bmaster,
 						GError **error);
 gint			li_build_master_get_shell (LiBuildMaster *bmaster,
 							GError **error);
+
+void			li_build_master_set_build_user (LiBuildMaster *bmaster,
+							uid_t uid);
+void			li_build_master_set_build_group (LiBuildMaster *bmaster,
+							gid_t gid);
 
 G_END_DECLS
 

@@ -29,6 +29,7 @@ gboolean	li_run_acquire_caps (void);
 gboolean	li_run_drop_caps (void);
 
 gchar		*li_run_env_setup (void);
+gchar		*li_run_env_setup_with_root (const gchar *root_fs);
 gboolean	li_run_env_enter (const gchar *newroot);
 
 G_END_DECLS

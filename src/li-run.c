@@ -166,33 +166,35 @@ bind_mount (const gchar *src, const gchar *dest, bind_option_t options)
  * Create directory and place a bindmount or symlink (depending on the situation).
  */
 static int
-mkdir_and_bindmount (const gchar *root, const gchar *target, gboolean writable)
+mkdir_and_bindmount (const gchar *newroot, const gchar *oldroot, const gchar *target, gboolean writable)
 {
 	struct stat buf;
 	int res;
+	g_autofree gchar *target_abs = NULL;
 	g_autofree gchar *dir = NULL;
 
-	if (!g_file_test (target, G_FILE_TEST_EXISTS))
+	target_abs = g_build_filename (oldroot, target, NULL);
+	if (!g_file_test (target_abs, G_FILE_TEST_EXISTS))
 		return 0;
 
-	dir = g_build_filename (root, target, NULL);
+	dir = g_build_filename (newroot, target_abs, NULL);
 
-	lstat (target, &buf);
+	lstat (target_abs, &buf);
 	if ((buf.st_mode & S_IFMT) == S_IFLNK) {
 		/* we have a symbolic link */
 
-		if (symlink (dir, target) != 0) {
-			g_printerr ("Symlink failed (%s).\n", target);
+		if (symlink (dir, target_abs) != 0) {
+			g_printerr ("Symlink failed (%s).\n", target_abs);
 			return 1;
 		}
 	} else {
 		/* we have a regular file */
 		if (g_mkdir_with_parents (dir, 0755) != 0) {
-			g_printerr ("Unable to create %s.\n", target);
+			g_printerr ("Unable to create %s.\n", target_abs);
 			return 1;
 		}
 
-		res = bind_mount (target, dir, BIND_PRIVATE | (writable?0:BIND_READONLY));
+		res = bind_mount (target_abs, dir, BIND_PRIVATE | (writable?0:BIND_READONLY));
 		if (res != 0) {
 			g_printerr ("Bindmount failed (%i).\n", res);
 			return 1;
@@ -203,15 +205,16 @@ mkdir_and_bindmount (const gchar *root, const gchar *target, gboolean writable)
 }
 
 /**
- * li_run_env_setup:
+ * li_run_env_setup_with_root:
  *
- * Setup a new environment to run the application in.
+ * Setup a new environment to run the application in,
+ * using a specific root filesystem.
  * This function prints errors to stderr at time.
  *
  * Returns: A path to the new root filesystem, or %NULL on error.
  */
 gchar*
-li_run_env_setup (void)
+li_run_env_setup_with_root (const gchar *root_fs)
 {
 	int res = 0;
 	gchar *fname = NULL;
@@ -231,7 +234,7 @@ li_run_env_setup (void)
 	/* Mark everything as slave, so that we still
 	 * receive mounts from the real root, but don't
 	 * propagate mounts to the real root. */
-	if (mount (NULL, "/", NULL, MS_SLAVE | MS_REC, NULL) < 0) {
+	if (mount (NULL, root_fs, NULL, MS_SLAVE | MS_REC, NULL) < 0) {
 		g_printerr ("Failed to make / slave.\n");
 		return NULL;
 	}
@@ -250,45 +253,45 @@ li_run_env_setup (void)
 	}
 
 	/* build & bindmount the root filesystem */
-	if (mkdir_and_bindmount (newroot, "/bin", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/bin", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/cdrom", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/cdrom", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/dev", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/dev", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/etc", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/etc", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/home", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/home", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/lib", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/lib", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/lib64", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/lib64", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/media", TRUE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/media", TRUE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/mnt", TRUE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/mnt", TRUE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/opt", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/opt", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/proc", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/proc", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/srv", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/srv", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/sys", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/sys", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/usr", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/usr", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/var", TRUE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/var", TRUE) != 0)
 		return NULL;
 
 	/* prepare /run - give access to session data and DBus system bus */
 	fname = g_strdup_printf ("/run/user/%d/", uid);
-	if (mkdir_and_bindmount (newroot, fname, TRUE) != 0) {
+	if (mkdir_and_bindmount (newroot, root_fs, fname, TRUE) != 0) {
 		g_free (fname);
 		return NULL;
 	}
 	g_free (fname);
-	if (mkdir_and_bindmount (newroot, "/run/dbus", TRUE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/run/dbus", TRUE) != 0)
 		return NULL;
 
 	fname = g_build_filename (newroot, "tmp", NULL);
@@ -347,6 +350,20 @@ error_out:
 		umount (approot_dir);
 
 	return NULL;
+}
+
+/**
+ * li_run_env_setup:
+ *
+ * Setup a new environment to run the application in.
+ * This function prints errors to stderr at time.
+ *
+ * Returns: A path to the new root filesystem, or %NULL on error.
+ */
+gchar*
+li_run_env_setup (void)
+{
+	return li_run_env_setup_with_root ("/");
 }
 
 /**

@@ -33,6 +33,8 @@ static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
 static gchar* optn_chroot = FALSE;
+static gint optn_build_uid = 0;
+static gint optn_build_gid = 0;
 
 /**
  * bcli_repo_init:
@@ -164,6 +166,8 @@ bcli_execute_build (const gchar *srcdir, gboolean shell_session)
 		chroot_name = NULL;
 
 	bmaster = li_build_master_new ();
+	li_build_master_set_build_user (bmaster, optn_build_uid);
+	li_build_master_set_build_group (bmaster, optn_build_gid);
 
 	li_build_master_init_build (bmaster,
 				sdir,
@@ -239,6 +243,8 @@ main (int argc, char *argv[])
 		{ "verbose", 0, 0, G_OPTION_ARG_NONE, &optn_verbose_mode, _("Show extra debugging information"), NULL },
 		{ "no-fancy", 0, 0, G_OPTION_ARG_NONE, &optn_no_fancy, _("Don't show \"fancy\" output"), NULL },
 		{ "chroot", 0, 0, G_OPTION_ARG_STRING, &optn_chroot, _("Build in a chroot environment"), NULL },
+		{ "user", 0, 0, G_OPTION_ARG_INT, &optn_build_uid, _("UID of the user running the build."), NULL },
+		{ "group", 0, 0, G_OPTION_ARG_INT, &optn_build_gid, _("GID of the group running the build."), NULL },
 		{ NULL }
 	};
 
