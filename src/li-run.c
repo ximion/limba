@@ -300,6 +300,11 @@ li_run_env_setup_with_root (const gchar *root_fs)
 		g_printerr ("Unable to create root /tmp dir.\n");
 		return NULL;
 	}
+	if (chmod (fname, 01777) != 0) {
+		g_free (fname);
+		g_printerr ("Unable to set permissions on /tmp dir.\n");
+		return NULL;
+	}
 	g_free (fname);
 
 	fname = g_build_filename (newroot, ".oldroot", NULL);
