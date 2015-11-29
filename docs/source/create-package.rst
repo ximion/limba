@@ -27,7 +27,7 @@ Basics
 Now you can create the metadata necessary to build a Limba package. Just run::
 
   cd /path/to/my/project
-  lipkgen make-template
+  limba-build make-template
 
 This will create a “lipkg” directory, containing a “control” file and a “metainfo.xml” file, which can be a symlink to the
 AppStream metadata, or be new metadata.
@@ -39,7 +39,7 @@ Now, configure your application with ``/app`` as install prefix.
    For CMake, use ``-DCMAKE_INSTALL_PREFIX=/app``, an Automake-based build-system
    needs ``–prefix=/app`` passed to configure/autogen.sh.
 
-Then install the software to the ``lipkg/inst_target`` directory.
+Then install the software to the ``lipkg/target`` directory.
 
 Handling dependencies
 ---------------------
@@ -58,7 +58,7 @@ The resulting control-file might look like this:
 
   Format-Version: 1.0
 
-  Requires: Qt5Core (>= 5.3), Qt5DBus (>= 5.3), libpng12
+  Requires: Qt5Core (>= 5.4), Qt5DBus (== 5.4), libpng12
 
 If the specified dependencies are in the ``lipkg/repo/`` subdirectory, these packages will get installed automatically, if your application package is installed.
 Otherwise, Limba depends on the user to install these packages manually – there is no interaction with the distribution’s package-manager.
@@ -67,11 +67,19 @@ Otherwise, Limba depends on the user to install these packages manually – ther
 Building the package
 ====================
 
-In order to build your package, make sure the content in ``inst_target/`` is up to date, then run::
+In order to build your package, make sure the content in ``target/`` is up to date, then run::
 
   lipkgen build lipkg/
 
 This will build your package and output it in the ``lipkg/`` directory.
+
+.. hint::
+
+   For files installed into ``target/``, Limba will automatically split them into a SDK and a runtime package.
+   The SDK package is what you install in case you want to build against the software, the runtime package is
+   what user want to install to run it.
+   In case you want to influence which content goes into which package, install the runtime data into a ``target.rt/``
+   directory, and the SDK components into ``target.sdk/``. Limba will then do the right thing.
 
 
 Testing the package
@@ -79,7 +87,7 @@ Testing the package
 
 You can now test your package, Just run::
 
-  sudo limba install package.ipk
+  sudo limba install bundle.ipk
 
 Your software should install successfully.
 If you provided a .desktop file in ``share/applications``, you should find your application in your desktop’s application-menu.
@@ -89,4 +97,4 @@ Alternatively, you can use the ``runapp`` command, which lets you run any binary
 
 Example::
 
-  runapp ${component_id}-${version}:/bin/binary-name
+  runapp ${component_id}/${version}:/bin/binary-name

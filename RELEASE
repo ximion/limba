@@ -27,6 +27,8 @@ git push
 
 4. run './release.sh --version=0.5.4 --git-tag=LIMBA_0_5_4 --sign'
 
+5. Make & upload documentation: make documentation && scp -r ../docs/html/* annarchy.freedesktop.org:~/public_html/limba/docs
+
 5. Upload tarball: scp -r *.tar.xz* annarchy.freedesktop.org:~/public_html/releases/limba
 
 6. Do post release version bump in CMakeLists.txt, RELEASE

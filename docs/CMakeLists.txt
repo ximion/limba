@@ -23,8 +23,38 @@ if(DOCUMENTATION)
 				-d ${CMAKE_CURRENT_SOURCE_DIR}/html/doctrees
 				${CMAKE_CURRENT_SOURCE_DIR}/source
 				${CMAKE_CURRENT_SOURCE_DIR}/html
-		DEPENDS "source/conf.py"
+		DEPENDS "source/conf.py" doc-limba
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		VERBATIM
 	)
+	add_custom_command(
+		TARGET documentation POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/api/html" "${CMAKE_CURRENT_SOURCE_DIR}/html/api"
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	)
+	set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CMAKE_CURRENT_SOURCE_DIR}/html)
+
+	#########################
+	# API documentation
+
+	find_package(GtkDoc)
+	if(NOT GTKDOC_FOUND)
+		message(FATAL_ERROR "gtkdoc was not found, API documentation can not be built.")
+	endif()
+	include(UseGtkDoc)
+
+	gtk_doc_add_module(limba ${CMAKE_SOURCE_DIR}/src
+		IGNOREHEADERS li-utils-private.h li-daemon-job.h li-package-private.h li-run.h
+		SUFFIXES h c
+		LDFLAGS
+			-L${CMAKE_BINARY_DIR}/src
+			-llimba
+		LDPATH
+			"${CMAKE_BINARY_DIR}/src"
+		OUTPUT_DIR
+			"${CMAKE_CURRENT_SOURCE_DIR}/api"
+		DEPENDS limba)
+
+	set_directory_properties (PROPERTIES CLEAN_NO_CUSTOM ${CMAKE_CURRENT_SOURCE_DIR}/api)
+ 	set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_CURRENT_SOURCE_DIR}/api/html;${CMAKE_CURRENT_SOURCE_DIR}/api/xml;${CMAKE_CURRENT_SOURCE_DIR}/api/tmpl")
 endif()

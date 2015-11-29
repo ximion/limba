@@ -1,4 +1,4 @@
-Welcome to Limba's documentation!
+Welcome to the Limba documentation!
 =================================
 
 Contents:
@@ -6,7 +6,10 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   obtain-limba
    create-package
+
+   api
 
 
 
