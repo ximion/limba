@@ -29,11 +29,11 @@ git push
 
 5. Make & upload documentation: make documentation && scp -r ../docs/html/* annarchy.freedesktop.org:~/public_html/limba/docs
 
-5. Upload tarball: scp -r *.tar.xz* annarchy.freedesktop.org:~/public_html/releases/limba
+6. Upload tarball: scp -r *.tar.xz* annarchy.freedesktop.org:~/public_html/releases/limba
 
-6. Do post release version bump in CMakeLists.txt, RELEASE
+7. Do post release version bump in CMakeLists.txt, RELEASE
 
-7. Commit trivial changes:
+8. Commit trivial changes:
 
 git commit -a -m "trivial: post release version bump"
 git push
