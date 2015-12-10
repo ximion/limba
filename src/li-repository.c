@@ -761,11 +761,15 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 		cpt = li_package_get_appstream_cpt (pkg);
 		/* set an icon name */
 		if (g_file_test (icon_dir, G_FILE_TEST_EXISTS)) {
+			g_autoptr(AsIcon) icon = NULL;
 			tmp = g_strdup_printf ("%s-%s.png",
 						li_pkg_info_get_name (pki),
 						li_pkg_info_get_version (pki));
 			/* TODO: Determine which sizes we exported, and set that information correctly */
-			as_component_add_icon (cpt, AS_ICON_KIND_CACHED, 0, 0, tmp);
+			icon = as_icon_new ();
+			as_icon_set_kind (icon, AS_ICON_KIND_CACHED);
+			as_icon_set_name (icon, tmp);
+			as_component_add_icon (cpt, icon);
 			g_free (tmp);
 		}
 
