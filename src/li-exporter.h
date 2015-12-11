@@ -28,22 +28,10 @@
 #include <glib-object.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_EXPORTER		(li_exporter_get_type())
-#define LI_EXPORTER(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_EXPORTER, LiExporter))
-#define LI_EXPORTER_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_EXPORTER, LiExporterClass))
-#define LI_IS_EXPORTER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_EXPORTER))
-#define LI_IS_EXPORTER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_EXPORTER))
-#define LI_EXPORTER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_EXPORTER, LiExporterClass))
-
 G_BEGIN_DECLS
 
-typedef struct _LiExporter		LiExporter;
-typedef struct _LiExporterClass	LiExporterClass;
-
-struct _LiExporter
-{
-	GObject			parent;
-};
+#define LI_TYPE_EXPORTER (li_exporter_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiExporter, li_exporter, LI, EXPORTER, GObject)
 
 struct _LiExporterClass
 {
@@ -59,10 +47,7 @@ struct _LiExporterClass
 	void (*_as_reserved8)	(void);
 };
 
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiExporter, g_object_unref)
-
-GType			li_exporter_get_type	(void);
-LiExporter		*li_exporter_new	(void);
+LiExporter		*li_exporter_new (void);
 
 gboolean		li_exporter_process_file (LiExporter *exp,
 							const gchar *filename,

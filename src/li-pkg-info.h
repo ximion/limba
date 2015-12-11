@@ -28,14 +28,24 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 
-#define LI_TYPE_PKG_INFO		(li_pkg_info_get_type())
-#define LI_PKG_INFO(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_INFO, LiPkgInfo))
-#define LI_PKG_INFO_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_INFO, LiPkgInfoClass))
-#define LI_IS_PKG_INFO(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_INFO))
-#define LI_IS_PKG_INFO_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PKG_INFO))
-#define LI_PKG_INFO_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PKG_INFO, LiPkgInfoClass))
-
 G_BEGIN_DECLS
+
+#define LI_TYPE_PKG_INFO (li_pkg_info_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiPkgInfo, li_pkg_info, LI, PKG_INFO, GObject)
+
+struct _LiPkgInfoClass
+{
+	GObjectClass	parent_class;
+	/*< private >*/
+	void (*_as_reserved1)	(void);
+	void (*_as_reserved2)	(void);
+	void (*_as_reserved3)	(void);
+	void (*_as_reserved4)	(void);
+	void (*_as_reserved5)	(void);
+	void (*_as_reserved6)	(void);
+	void (*_as_reserved7)	(void);
+	void (*_as_reserved8)	(void);
+};
 
 /**
  * LiVersionFlags:
@@ -90,31 +100,7 @@ typedef enum  {
 const gchar	*li_package_kind_to_string (LiPackageKind kind);
 LiPackageKind	li_package_kind_from_string (const gchar *kind_str);
 
-typedef struct _LiPkgInfo	LiPkgInfo;
-typedef struct _LiPkgInfoClass	LiPkgInfoClass;
 
-struct _LiPkgInfo
-{
-	GObject		parent;
-};
-
-struct _LiPkgInfoClass
-{
-	GObjectClass	parent_class;
-	/*< private >*/
-	void (*_as_reserved1)	(void);
-	void (*_as_reserved2)	(void);
-	void (*_as_reserved3)	(void);
-	void (*_as_reserved4)	(void);
-	void (*_as_reserved5)	(void);
-	void (*_as_reserved6)	(void);
-	void (*_as_reserved7)	(void);
-	void (*_as_reserved8)	(void);
-};
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPkgInfo, g_object_unref)
-
-GType		li_pkg_info_get_type	(void);
 LiPkgInfo	*li_pkg_info_new	(void);
 
 void		li_pkg_info_load_file (LiPkgInfo *pki,

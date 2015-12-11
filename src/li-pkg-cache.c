@@ -60,6 +60,7 @@ struct _LiPkgCachePrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPkgCache, li_pkg_cache, G_TYPE_OBJECT)
+#define GET_PRIVATE(o) (li_pkg_cache_get_instance_private (o))
 
 enum {
 	SIGNAL_STATE_CHANGED,
@@ -68,8 +69,6 @@ enum {
 };
 
 static guint signals[SIGNAL_LAST] = { 0 };
-
-#define GET_PRIVATE(o) (li_pkg_cache_get_instance_private (o))
 
 typedef struct {
 	LiPkgCache *cache;

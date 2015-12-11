@@ -56,7 +56,6 @@ struct _LiRepositoryPrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiRepository, li_repository, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_repository_get_instance_private (o))
 
 /**

@@ -28,14 +28,24 @@
 #include <glib-object.h>
 #include "li-runtime.h"
 
-#define LI_TYPE_MANAGER			(li_manager_get_type())
-#define LI_MANAGER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_MANAGER, LiManager))
-#define LI_MANAGER_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_MANAGER, LiManagerClass))
-#define LI_IS_MANAGER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_MANAGER))
-#define LI_IS_MANAGER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_MANAGER))
-#define LI_MANAGER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_MANAGER, LiManagerClass))
-
 G_BEGIN_DECLS
+
+#define LI_TYPE_MANAGER (li_manager_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiManager, li_manager, LI, MANAGER, GObject)
+
+struct _LiManagerClass
+{
+	GObjectClass		parent_class;
+	/*< private >*/
+	void (*_as_reserved1)	(void);
+	void (*_as_reserved2)	(void);
+	void (*_as_reserved3)	(void);
+	void (*_as_reserved4)	(void);
+	void (*_as_reserved5)	(void);
+	void (*_as_reserved6)	(void);
+	void (*_as_reserved7)	(void);
+	void (*_as_reserved8)	(void);
+};
 
 /**
  * LiManagerError:
@@ -58,32 +68,7 @@ typedef enum {
 #define	LI_MANAGER_ERROR li_manager_error_quark ()
 GQuark li_manager_error_quark (void);
 
-typedef struct _LiManager		LiManager;
-typedef struct _LiManagerClass	LiManagerClass;
-
-struct _LiManager
-{
-	GObject			parent;
-};
-
-struct _LiManagerClass
-{
-	GObjectClass		parent_class;
-	/*< private >*/
-	void (*_as_reserved1)	(void);
-	void (*_as_reserved2)	(void);
-	void (*_as_reserved3)	(void);
-	void (*_as_reserved4)	(void);
-	void (*_as_reserved5)	(void);
-	void (*_as_reserved6)	(void);
-	void (*_as_reserved7)	(void);
-	void (*_as_reserved8)	(void);
-};
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiManager, g_object_unref)
-
-GType			li_manager_get_type	(void);
-LiManager		*li_manager_new		(void);
+LiManager		*li_manager_new (void);
 
 GList			*li_manager_get_software_list (LiManager *mgr,
 								GError **error);

@@ -75,7 +75,6 @@ struct _LiPackagePrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPackage, li_package, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_package_get_instance_private (o))
 
 enum {

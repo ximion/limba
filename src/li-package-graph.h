@@ -30,22 +30,10 @@
 #include "li-pkg-info.h"
 #include "li-package.h"
 
-#define LI_TYPE_PACKAGE_GRAPH			(li_package_graph_get_type())
-#define LI_PACKAGE_GRAPH(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PACKAGE_GRAPH, LiPackageGraph))
-#define LI_PACKAGE_GRAPH_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PACKAGE_GRAPH, LiPackageGraphClass))
-#define LI_IS_PACKAGE_GRAPH(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PACKAGE_GRAPH))
-#define LI_IS_PACKAGE_GRAPH_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PACKAGE_GRAPH))
-#define LI_PACKAGE_GRAPH_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PACKAGE_GRAPH, LiPackageGraphClass))
-
 G_BEGIN_DECLS
 
-typedef struct _LiPackageGraph		LiPackageGraph;
-typedef struct _LiPackageGraphClass	LiPackageGraphClass;
-
-struct _LiPackageGraph
-{
-	GObject			parent;
-};
+#define LI_TYPE_PACKAGE_GRAPH (li_package_graph_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiPackageGraph, li_package_graph, LI, PACKAGE_GRAPH, GObject)
 
 struct _LiPackageGraphClass
 {
@@ -59,9 +47,6 @@ struct _LiPackageGraphClass
 	void (*_as_reserved6)	(void);
 };
 
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPackageGraph, g_object_unref)
-
-GType			li_package_graph_get_type (void);
 LiPackageGraph		*li_package_graph_new (void);
 
 void			li_package_graph_initialize (LiPackageGraph *pg,

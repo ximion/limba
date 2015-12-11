@@ -38,7 +38,6 @@ struct _LiConfigDataPrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiConfigData, li_config_data, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_config_data_get_instance_private (o))
 
 /**

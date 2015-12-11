@@ -41,7 +41,6 @@ struct _LiExporterPrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiExporter, li_exporter, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_exporter_get_instance_private (o))
 
 /**

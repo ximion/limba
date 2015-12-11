@@ -29,22 +29,10 @@
 #include <gio/gio.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_UPDATE_ITEM		(li_update_item_get_type())
-#define LI_UPDATE_ITEM(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_UPDATE_ITEM, LiUpdateItem))
-#define LI_UPDATE_ITEM_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_UPDATE_ITEM, LiUpdateItemClass))
-#define LI_IS_UPDATE_ITEM(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_UPDATE_ITEM))
-#define LI_IS_UPDATE_ITEM_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_UPDATE_ITEM))
-#define LI_UPDATE_ITEM_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_UPDATE_ITEM, LiUpdateItemClass))
-
 G_BEGIN_DECLS
 
-typedef struct _LiUpdateItem		LiUpdateItem;
-typedef struct _LiUpdateItemClass	LiUpdateItemClass;
-
-struct _LiUpdateItem
-{
-	GObject			parent;
-};
+#define LI_TYPE_UPDATE_ITEM (li_update_item_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiUpdateItem, li_update_item, LI, UPDATE_ITEM, GObject)
 
 struct _LiUpdateItemClass
 {
@@ -58,9 +46,6 @@ struct _LiUpdateItemClass
 	void (*_as_reserved6)	(void);
 };
 
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiUpdateItem, g_object_unref)
-
-GType			li_update_item_get_type (void);
 LiUpdateItem		*li_update_item_new (void);
 LiUpdateItem		*li_update_item_new_with_packages (LiPkgInfo *ipki,
 								LiPkgInfo *apki);

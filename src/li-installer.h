@@ -28,14 +28,24 @@
 #include <glib-object.h>
 #include "li-package.h"
 
-#define LI_TYPE_INSTALLER		(li_installer_get_type())
-#define LI_INSTALLER(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_INSTALLER, LiInstaller))
-#define LI_INSTALLER_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_INSTALLER, LiInstallerClass))
-#define LI_IS_INSTALLER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_INSTALLER))
-#define LI_IS_INSTALLER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_INSTALLER))
-#define LI_INSTALLER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_INSTALLER, LiInstallerClass))
-
 G_BEGIN_DECLS
+
+#define LI_TYPE_INSTALLER (li_installer_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiInstaller, li_installer, LI, INSTALLER, GObject)
+
+struct _LiInstallerClass
+{
+	GObjectClass		parent_class;
+	/*< private >*/
+	void (*_as_reserved1)	(void);
+	void (*_as_reserved2)	(void);
+	void (*_as_reserved3)	(void);
+	void (*_as_reserved4)	(void);
+	void (*_as_reserved5)	(void);
+	void (*_as_reserved6)	(void);
+	void (*_as_reserved7)	(void);
+	void (*_as_reserved8)	(void);
+};
 
 /**
  * LiInstallerError:
@@ -56,33 +66,8 @@ typedef enum {
 } LiInstallerError;
 
 #define	LI_INSTALLER_ERROR li_installer_error_quark ()
-GQuark li_installer_error_quark (void);
+GQuark			li_installer_error_quark (void);
 
-typedef struct _LiInstaller		LiInstaller;
-typedef struct _LiInstallerClass	LiInstallerClass;
-
-struct _LiInstaller
-{
-	GObject			parent;
-};
-
-struct _LiInstallerClass
-{
-	GObjectClass		parent_class;
-	/*< private >*/
-	void (*_as_reserved1)	(void);
-	void (*_as_reserved2)	(void);
-	void (*_as_reserved3)	(void);
-	void (*_as_reserved4)	(void);
-	void (*_as_reserved5)	(void);
-	void (*_as_reserved6)	(void);
-	void (*_as_reserved7)	(void);
-	void (*_as_reserved8)	(void);
-};
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiInstaller, g_object_unref)
-
-GType			li_installer_get_type (void);
 LiInstaller		*li_installer_new (void);
 
 gboolean		li_installer_open_file (LiInstaller *inst,

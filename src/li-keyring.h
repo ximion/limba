@@ -28,14 +28,24 @@
 #include <glib-object.h>
 #include "li-package.h"
 
-#define LI_TYPE_KEYRING			(li_keyring_get_type())
-#define LI_KEYRING(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_KEYRING, LiKeyring))
-#define LI_KEYRING_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_KEYRING, LiKeyringClass))
-#define LI_IS_KEYRING(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_KEYRING))
-#define LI_IS_KEYRING_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_KEYRING))
-#define LI_KEYRING_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_KEYRING, LiKeyringClass))
-
 G_BEGIN_DECLS
+
+#define LI_TYPE_KEYRING (li_keyring_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiKeyring, li_keyring, LI, KEYRING, GObject)
+
+struct _LiKeyringClass
+{
+	GObjectClass		parent_class;
+	/*< private >*/
+	void (*_as_reserved1)	(void);
+	void (*_as_reserved2)	(void);
+	void (*_as_reserved3)	(void);
+	void (*_as_reserved4)	(void);
+	void (*_as_reserved5)	(void);
+	void (*_as_reserved6)	(void);
+	void (*_as_reserved7)	(void);
+	void (*_as_reserved8)	(void);
+};
 
 /**
  * LiKeyringKind:
@@ -78,31 +88,6 @@ typedef enum {
 #define	LI_KEYRING_ERROR li_keyring_error_quark ()
 GQuark li_keyring_error_quark (void);
 
-typedef struct _LiKeyring	LiKeyring;
-typedef struct _LiKeyringClass	LiKeyringClass;
-
-struct _LiKeyring
-{
-	GObject		parent;
-};
-
-struct _LiKeyringClass
-{
-	GObjectClass		parent_class;
-	/*< private >*/
-	void (*_as_reserved1)	(void);
-	void (*_as_reserved2)	(void);
-	void (*_as_reserved3)	(void);
-	void (*_as_reserved4)	(void);
-	void (*_as_reserved5)	(void);
-	void (*_as_reserved6)	(void);
-	void (*_as_reserved7)	(void);
-	void (*_as_reserved8)	(void);
-};
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiKeyring, g_object_unref)
-
-GType			li_keyring_get_type (void);
 LiKeyring		*li_keyring_new (void);
 
 gboolean		li_keyring_import_key (LiKeyring *kr,
@@ -115,7 +100,7 @@ gchar			*li_keyring_verify_clear_signature (LiKeyring *kr,
 							gchar **out_fpr,
 							GError **error);
 
-LiTrustLevel	li_keyring_process_signature (LiKeyring *kr,
+LiTrustLevel		li_keyring_process_signature (LiKeyring *kr,
 					const gchar *sigtext,
 					gchar **out_data,
 					gchar **out_fpr,

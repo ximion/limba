@@ -40,7 +40,6 @@ struct _LiRepoEntryPrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiRepoEntry, li_repo_entry, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_repo_entry_get_instance_private (o))
 
 typedef struct {

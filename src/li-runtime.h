@@ -28,22 +28,10 @@
 #include <glib-object.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_RUNTIME			(li_runtime_get_type())
-#define LI_RUNTIME(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_RUNTIME, LiRuntime))
-#define LI_RUNTIME_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_RUNTIME, LiRuntimeClass))
-#define LI_IS_RUNTIME(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_RUNTIME))
-#define LI_IS_RUNTIME_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_RUNTIME))
-#define LI_RUNTIME_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_RUNTIME, LiRuntimeClass))
-
 G_BEGIN_DECLS
 
-typedef struct _LiRuntime		LiRuntime;
-typedef struct _LiRuntimeClass	LiRuntimeClass;
-
-struct _LiRuntime
-{
-	GObject			parent;
-};
+#define LI_TYPE_RUNTIME (li_runtime_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiRuntime, li_runtime, LI, RUNTIME, GObject)
 
 struct _LiRuntimeClass
 {
@@ -59,9 +47,6 @@ struct _LiRuntimeClass
 	void (*_as_reserved8)	(void);
 };
 
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiRuntime, g_object_unref)
-
-GType			li_runtime_get_type (void);
 LiRuntime		*li_runtime_new (void);
 
 gboolean		li_runtime_load_from_file (LiRuntime *rt,

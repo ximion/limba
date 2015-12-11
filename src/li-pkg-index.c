@@ -36,7 +36,6 @@ struct _LiPkgIndexPrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPkgIndex, li_pkg_index, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_pkg_index_get_instance_private (o))
 
 /**

@@ -47,7 +47,6 @@ struct _LiRuntimePrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiRuntime, li_runtime, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_runtime_get_instance_private (o))
 
 /**

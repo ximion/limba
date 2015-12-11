@@ -28,21 +28,29 @@
 #include <glib-object.h>
 #include "li-package.h"
 
-#define LI_TYPE_REPOSITORY			(li_repository_get_type())
-#define LI_REPOSITORY(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_REPOSITORY, LiRepository))
-#define LI_REPOSITORY_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_REPOSITORY, LiRepositoryClass))
-#define LI_IS_REPOSITORY(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_REPOSITORY))
-#define LI_IS_REPOSITORY_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_REPOSITORY))
-#define LI_REPOSITORY_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_REPOSITORY, LiRepositoryClass))
-
 G_BEGIN_DECLS
+
+#define LI_TYPE_REPOSITORY (li_repository_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiRepository, li_repository, LI, REPOSITORY, GObject)
+
+struct _LiRepositoryClass
+{
+	GObjectClass		parent_class;
+	/*< private >*/
+	void (*_as_reserved1)	(void);
+	void (*_as_reserved2)	(void);
+	void (*_as_reserved3)	(void);
+	void (*_as_reserved4)	(void);
+	void (*_as_reserved5)	(void);
+	void (*_as_reserved6)	(void);
+};
 
 /**
  * LiRepositoryError:
  * @LI_REPOSITORY_ERROR_FAILED:			Generic failure
  * @LI_REPOSITORY_ERROR_NO_REPO:		The directory is no Limba repository
  * @LI_REPOSITORY_ERROR_PKG_EXISTS:		Package was already in the repository and can not be added again.
- * @LI_REPOSITORY_ERROR_EMBEDDED_COPY:	The package contains embedded other packages, which is not allowed.
+ * @LI_REPOSITORY_ERROR_EMBEDDED_COPY:		The package contains embedded other packages, which is not allowed.
  * @LI_REPOSITORY_ERROR_SIGN:			Signing of repository failed.
  *
  * The error type.
@@ -60,29 +68,7 @@ typedef enum {
 #define	LI_REPOSITORY_ERROR li_repository_error_quark ()
 GQuark li_repository_error_quark (void);
 
-typedef struct _LiRepository		LiRepository;
-typedef struct _LiRepositoryClass	LiRepositoryClass;
 
-struct _LiRepository
-{
-	GObject			parent;
-};
-
-struct _LiRepositoryClass
-{
-	GObjectClass		parent_class;
-	/*< private >*/
-	void (*_as_reserved1)	(void);
-	void (*_as_reserved2)	(void);
-	void (*_as_reserved3)	(void);
-	void (*_as_reserved4)	(void);
-	void (*_as_reserved5)	(void);
-	void (*_as_reserved6)	(void);
-};
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiRepository, g_object_unref)
-
-GType			li_repository_get_type (void);
 LiRepository		*li_repository_new (void);
 
 gboolean		li_repository_open (LiRepository *repo,

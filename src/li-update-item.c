@@ -37,7 +37,6 @@ struct _LiUpdateItemPrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiUpdateItem, li_update_item, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_update_item_get_instance_private (o))
 
 /**

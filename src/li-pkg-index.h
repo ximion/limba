@@ -29,22 +29,10 @@
 #include <gio/gio.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_PKG_INDEX		(li_pkg_index_get_type())
-#define LI_PKG_INDEX(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_INDEX, LiPkgIndex))
-#define LI_PKG_INDEX_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_INDEX, LiPkgIndexClass))
-#define LI_IS_PKG_INDEX(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_INDEX))
-#define LI_IS_PKG_INDEX_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PKG_INDEX))
-#define LI_PKG_INDEX_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PKG_INDEX, LiPkgIndexClass))
-
 G_BEGIN_DECLS
 
-typedef struct _LiPkgIndex		LiPkgIndex;
-typedef struct _LiPkgIndexClass	LiPkgIndexClass;
-
-struct _LiPkgIndex
-{
-	GObject			parent;
-};
+#define LI_TYPE_PKG_INDEX (li_pkg_index_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiPkgIndex, li_pkg_index, LI, PKG_INDEX, GObject)
 
 struct _LiPkgIndexClass
 {
@@ -60,9 +48,6 @@ struct _LiPkgIndexClass
 	void (*_as_reserved8)	(void);
 };
 
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPkgIndex, g_object_unref)
-
-GType			li_pkg_index_get_type (void);
 LiPkgIndex		*li_pkg_index_new (void);
 
 void			li_pkg_index_load_file (LiPkgIndex *pkidx,

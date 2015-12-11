@@ -29,15 +29,30 @@
 #include "li-pkg-info.h"
 #include "li-pkg-cache.h"
 
-#define LI_TYPE_PACKAGE			(li_package_get_type())
-#define LI_PACKAGE(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PACKAGE, LiPackage))
-#define LI_PACKAGE_CLASS(cls)		(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PACKAGE, LiPackageClass))
-#define LI_IS_PACKAGE(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PACKAGE))
-#define LI_IS_PACKAGE_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PACKAGE))
-#define LI_PACKAGE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PACKAGE, LiPackageClass))
-
 G_BEGIN_DECLS
 
+#define LI_TYPE_PACKAGE (li_package_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiPackage, li_package, LI, PACKAGE, GObject)
+
+struct _LiPackageClass
+{
+	GObjectClass		parent_class;
+	/*< private >*/
+	void (*_as_reserved1)	(void);
+	void (*_as_reserved2)	(void);
+	void (*_as_reserved3)	(void);
+	void (*_as_reserved4)	(void);
+	void (*_as_reserved5)	(void);
+	void (*_as_reserved6)	(void);
+	void (*_as_reserved7)	(void);
+	void (*_as_reserved8)	(void);
+};
+
+/**
+ * LI_IPK_MAGIC:
+ *
+ * Magic number for IPK packages.
+ */
 #define LI_IPK_MAGIC "limba1\t\034"
 
 /**
@@ -118,31 +133,7 @@ typedef enum {
 
 const gchar	*li_package_stage_to_string (LiPackageStage stage);
 
-typedef struct _LiPackage		LiPackage;
-typedef struct _LiPackageClass	LiPackageClass;
 
-struct _LiPackage
-{
-	GObject			parent;
-};
-
-struct _LiPackageClass
-{
-	GObjectClass		parent_class;
-	/*< private >*/
-	void (*_as_reserved1)	(void);
-	void (*_as_reserved2)	(void);
-	void (*_as_reserved3)	(void);
-	void (*_as_reserved4)	(void);
-	void (*_as_reserved5)	(void);
-	void (*_as_reserved6)	(void);
-	void (*_as_reserved7)	(void);
-	void (*_as_reserved8)	(void);
-};
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPackage, g_object_unref)
-
-GType			li_package_get_type (void);
 LiPackage		*li_package_new (void);
 
 gboolean		li_package_open_file (LiPackage *pkg,

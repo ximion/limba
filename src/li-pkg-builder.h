@@ -27,14 +27,22 @@
 
 #include <glib-object.h>
 
-#define LI_TYPE_PKG_BUILDER		(li_pkg_builder_get_type())
-#define LI_PKG_BUILDER(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_BUILDER, LiPkgBuilder))
-#define LI_PKG_BUILDER_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_BUILDER, LiPkgBuilderClass))
-#define LI_IS_PKG_BUILDER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_BUILDER))
-#define LI_IS_PKG_BUILDER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PKG_BUILDER))
-#define LI_PKG_BUILDER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PKG_BUILDER, LiPkgBuilderClass))
-
 G_BEGIN_DECLS
+
+#define LI_TYPE_PKG_BUILDER (li_pkg_builder_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiPkgBuilder, li_pkg_builder, LI, PKG_BUILDER, GObject)
+
+struct _LiPkgBuilderClass
+{
+	GObjectClass		parent_class;
+	/*< private >*/
+	void (*_as_reserved1)	(void);
+	void (*_as_reserved2)	(void);
+	void (*_as_reserved3)	(void);
+	void (*_as_reserved4)	(void);
+	void (*_as_reserved5)	(void);
+	void (*_as_reserved6)	(void);
+};
 
 /**
  * LiBuilderError:
@@ -57,27 +65,6 @@ typedef enum {
 #define	LI_BUILDER_ERROR li_builder_error_quark ()
 GQuark li_builder_error_quark (void);
 
-typedef struct _LiPkgBuilder		LiPkgBuilder;
-typedef struct _LiPkgBuilderClass	LiPkgBuilderClass;
-
-struct _LiPkgBuilder
-{
-	GObject			parent;
-};
-
-struct _LiPkgBuilderClass
-{
-	GObjectClass		parent_class;
-	/*< private >*/
-	void (*_as_reserved1)	(void);
-	void (*_as_reserved2)	(void);
-	void (*_as_reserved3)	(void);
-	void (*_as_reserved4)	(void);
-	void (*_as_reserved5)	(void);
-	void (*_as_reserved6)	(void);
-};
-
-GType			li_pkg_builder_get_type (void);
 LiPkgBuilder		*li_pkg_builder_new (void);
 
 gboolean		li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder,

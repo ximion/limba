@@ -28,14 +28,22 @@
 #include <glib-object.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_PKG_CACHE		(li_pkg_cache_get_type())
-#define LI_PKG_CACHE(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_PKG_CACHE, LiPkgCache))
-#define LI_PKG_CACHE_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_PKG_CACHE, LiPkgCacheClass))
-#define LI_IS_PKG_CACHE(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_PKG_CACHE))
-#define LI_IS_PKG_CACHE_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_PKG_CACHE))
-#define LI_PKG_CACHE_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_PKG_CACHE, LiPkgCacheClass))
-
 G_BEGIN_DECLS
+
+#define LI_TYPE_PKG_CACHE (li_pkg_cache_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiPkgCache, li_pkg_cache, LI, PKG_CACHE, GObject)
+
+struct _LiPkgCacheClass
+{
+	GObjectClass		parent_class;
+	/*< private >*/
+	void (*_as_reserved1)	(void);
+	void (*_as_reserved2)	(void);
+	void (*_as_reserved3)	(void);
+	void (*_as_reserved4)	(void);
+	void (*_as_reserved5)	(void);
+	void (*_as_reserved6)	(void);
+};
 
 /**
  * LiPkgCacheError:
@@ -64,29 +72,6 @@ typedef enum {
 #define	LI_PKG_CACHE_ERROR li_pkg_cache_error_quark ()
 GQuark li_pkg_cache_error_quark (void);
 
-typedef struct _LiPkgCache	LiPkgCache;
-typedef struct _LiPkgCacheClass	LiPkgCacheClass;
-
-struct _LiPkgCache
-{
-	GObject			parent;
-};
-
-struct _LiPkgCacheClass
-{
-	GObjectClass		parent_class;
-	/*< private >*/
-	void (*_as_reserved1)	(void);
-	void (*_as_reserved2)	(void);
-	void (*_as_reserved3)	(void);
-	void (*_as_reserved4)	(void);
-	void (*_as_reserved5)	(void);
-	void (*_as_reserved6)	(void);
-};
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiPkgCache, g_object_unref)
-
-GType			li_pkg_cache_get_type (void);
 LiPkgCache		*li_pkg_cache_new (void);
 
 void			li_pkg_cache_open (LiPkgCache *cache,

@@ -28,22 +28,10 @@
 #include <glib-object.h>
 #include "li-pkg-info.h"
 
-#define LI_TYPE_REPO_ENTRY		(li_repo_entry_get_type())
-#define LI_REPO_ENTRY(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_REPO_ENTRY, LiRepoEntry))
-#define LI_REPO_ENTRY_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_REPO_ENTRY, LiRepoEntryClass))
-#define LI_IS_REPO_ENTRY(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_REPO_ENTRY))
-#define LI_IS_REPO_ENTRY_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_REPO_ENTRY))
-#define LI_REPO_ENTRY_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_REPO_ENTRY, LiRepoEntryClass))
-
 G_BEGIN_DECLS
 
-typedef struct _LiRepoEntry		LiRepoEntry;
-typedef struct _LiRepoEntryClass	LiRepoEntryClass;
-
-struct _LiRepoEntry
-{
-	GObject			parent;
-};
+#define LI_TYPE_REPO_ENTRY (li_repo_entry_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiRepoEntry, li_repo_entry, LI, REPO_ENTRY, GObject)
 
 struct _LiRepoEntryClass
 {
@@ -54,8 +42,6 @@ struct _LiRepoEntryClass
 	void (*_as_reserved3)	(void);
 	void (*_as_reserved4)	(void);
 };
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiRepoEntry, g_object_unref)
 
 /* default locations */
 #define LIMBA_CACHE_DIR "/var/cache/limba/"
@@ -80,7 +66,7 @@ typedef enum  {
 const gchar		*li_repo_index_kind_to_string (LiRepoIndexKinds kind);
 LiRepoIndexKinds	li_repo_index_kind_from_string (const gchar *kind_str);
 
-GType			li_repo_entry_get_type (void);
+
 LiRepoEntry		*li_repo_entry_new (void);
 
 gboolean		li_repo_entry_parse (LiRepoEntry *re,

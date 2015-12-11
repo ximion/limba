@@ -48,7 +48,6 @@ struct _LiKeyringPrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiKeyring, li_keyring, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_keyring_get_instance_private (o))
 
 #define LI_GPG_PROTOCOL GPGME_PROTOCOL_OpenPGP

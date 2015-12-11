@@ -56,7 +56,6 @@ struct _LiManagerPrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiManager, li_manager, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_manager_get_instance_private (o))
 
 enum {

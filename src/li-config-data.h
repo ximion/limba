@@ -28,22 +28,10 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 
-#define LI_TYPE_CONFIG_DATA		(li_config_data_get_type())
-#define LI_CONFIG_DATA(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_CONFIG_DATA, LiConfigData))
-#define LI_CONFIG_DATA_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_CONFIG_DATA, LiConfigDataClass))
-#define LI_IS_CONFIG_DATA(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_CONFIG_DATA))
-#define LI_IS_CONFIG_DATA_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_CONFIG_DATA))
-#define LI_CONFIG_DATA_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_CONFIG_DATA, LiConfigDataClass))
-
 G_BEGIN_DECLS
 
-typedef struct _LiConfigData		LiConfigData;
-typedef struct _LiConfigDataClass	LiConfigDataClass;
-
-struct _LiConfigData
-{
-	GObject			parent;
-};
+#define LI_TYPE_CONFIG_DATA (li_config_data_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiConfigData, li_config_data, LI, CONFIG_DATA, GObject)
 
 struct _LiConfigDataClass
 {
@@ -59,10 +47,7 @@ struct _LiConfigDataClass
 	void (*_as_reserved8)	(void);
 };
 
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (LiConfigData, g_object_unref)
-
-GType			li_config_data_get_type	(void);
-LiConfigData		*li_config_data_new	(void);
+LiConfigData		*li_config_data_new (void);
 
 void			li_config_data_load_file (LiConfigData *cdata,
 							GFile *file,

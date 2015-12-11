@@ -50,7 +50,6 @@ struct _LiPackageGraphPrivate
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPackageGraph, li_package_graph, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_package_graph_get_instance_private (o))
 
 enum {
