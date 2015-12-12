@@ -1,3 +1,22 @@
+Version 0.5.4
+~~~~~~~~~~~~~~
+Released: 2015-12-12
+
+Features:
+ * Use /app as default prefix and make Limba env more like xdg-app
+ * Split out primitives to create a runtime environment
+ * Allow apps access to user session data and the DBus system bus
+ * Make build environment more like runtime environment
+ * Support the latest AppStream release
+ * Use new GLib macros
+
+Bugfixes:
+ * Check for libcap
+ * bcli: Make build process work again
+ * Fix some quirks in signing error reporting
+ * We want a writable /tmp in runtime environments
+ * Make building documentation work and fix existing docs
+
 Version 0.5.3
 ~~~~~~~~~~~~~~
 Released: 2015-11-10
