@@ -117,7 +117,7 @@ mount_app_bundle (const gchar *pkgid)
 	/* append main data path */
 	g_string_append_printf (lowerdirs, "%s:", main_data_path);
 
-	/* safeguard againt the case where only one path is set for lowerdir.
+	/* safeguard against the case where only one path is set for lowerdir.
 	 * OFS doesn't like that, so we always set the root path as source too.
 	 * This also terminates the lowerdir parameter. */
 	g_string_append_printf (lowerdirs, "%s", approot_dir);
