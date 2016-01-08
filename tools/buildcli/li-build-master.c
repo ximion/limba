@@ -391,7 +391,9 @@ li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir)
 	for (i = 0; priv->dep_data_paths[i] != NULL; i++) {
 		const gchar *dep_data_path = priv->dep_data_paths[i];
 
-		g_string_append_printf (lowerdirs, ":%s", dep_data_path);
+		tmp = g_strdup_printf("%s:", dep_data_path);
+		g_string_prepend (lowerdirs, tmp);
+		g_free (tmp);
 	}
 
 	tmp = g_strdup_printf ("lowerdir=%s", lowerdirs->str);
