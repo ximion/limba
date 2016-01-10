@@ -216,6 +216,7 @@ li_pkg_info_finalize (GObject *object)
 	g_free (priv->runtime_uuid);
 	g_free (priv->format_version);
 	g_free (priv->repo_location);
+	g_free (priv->hash_sha256);
 	g_free (priv->abi_break_versions);
 
 	G_OBJECT_CLASS (li_pkg_info_parent_class)->finalize (object);

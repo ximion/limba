@@ -96,7 +96,7 @@ void
 li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 {
 	GError *tmp_error = NULL;
-	GFileInfo *info = NULL;
+	g_autoptr(GFileInfo) info = NULL;
 	const gchar *content_type = NULL;
 	LiConfigDataPrivate *priv = GET_PRIVATE (cdata);
 
@@ -389,6 +389,7 @@ li_config_data_set_value (LiConfigData *cdata, const gchar *field, const gchar *
 	field_str = g_strdup_printf ("%s:", field);
 	field_data = g_strdup_printf ("%s: %s", field, tmp);
 	g_free (tmp);
+	g_strfreev (value_lines);
 
 	if (start_pos == g_list_last (priv->content)) {
 		/* handle new block starts immediately */

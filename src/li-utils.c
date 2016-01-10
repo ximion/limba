@@ -126,7 +126,7 @@ li_delete_dir_recursive (const gchar* dirname)
 	if (error != NULL)
 		goto out;
 	while (info != NULL) {
-		gchar *path;
+		g_autofree gchar *path = NULL;
 		path = g_build_filename (dirname, g_file_info_get_name (info), NULL);
 		if (g_file_test (path, G_FILE_TEST_IS_DIR)) {
 			li_delete_dir_recursive (path);
