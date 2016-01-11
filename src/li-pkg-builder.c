@@ -164,26 +164,56 @@ li_pkg_builder_write_payload (const gchar *input_dir, const gchar *out_fname, Li
 			}
 		}
 
-		stat(fname, &st);
-		entry = archive_entry_new ();
-		archive_entry_set_pathname (entry, ar_fname);
-
-		archive_entry_copy_stat (entry, &st);
-		archive_write_header (a, entry);
-
-		fd = open (fname, O_RDONLY);
-		if (fd < 0) {
-			g_warning ("Could not open file '%s' for reading. Skipping it.", fname);
-			archive_entry_free (entry);
+		if (lstat (fname, &st) != 0) {
+			g_warning ("Could not stat file '%s'. Skipping it.", fname);
 			continue;
 		}
+		entry = archive_entry_new ();
+		archive_entry_set_pathname (entry, ar_fname);
+		archive_entry_copy_stat (entry, &st);
 
-		len = read (fd, buff, sizeof (buff));
-		while (len > 0) {
-			archive_write_data (a, buff, len);
-			len = read(fd, buff, sizeof (buff));
+		/* handle symbolic links */
+		if (S_ISLNK (st.st_mode)) {
+			g_autofree gchar *linktarget = NULL;
+			ssize_t r;
+
+			linktarget = malloc (st.st_size + 1);
+			r = readlink (fname, linktarget, st.st_size + 1);
+			if (r < 0) {
+				g_warning ("Could not follow symlink '%s', readlink failed. Skipping it.", fname);
+				archive_entry_free (entry);
+				continue;
+			}
+			if (r > st.st_size) {
+				g_warning ("Could not follow symlink '%s', buffer too small. Skipping it.", fname);
+				archive_entry_free (entry);
+				continue;
+			}
+			linktarget[st.st_size] = '\0';
+
+			archive_entry_set_symlink (entry, linktarget);
 		}
-		close (fd);
+
+		/* write file header in tarball */
+		archive_write_header (a, entry);
+
+		/* add data, in case we have a regular file */
+		if (S_ISREG (st.st_mode)) {
+			fd = open (fname, O_RDONLY);
+			if (fd < 0) {
+				g_warning ("Could not open file '%s' for reading. Skipping it.", fname);
+				archive_entry_free (entry);
+				continue;
+			}
+
+			len = read (fd, buff, sizeof (buff));
+			while (len > 0) {
+				archive_write_data (a, buff, len);
+				len = read(fd, buff, sizeof (buff));
+			}
+			close (fd);
+		}
+
 		archive_entry_free (entry);
 	}
 
