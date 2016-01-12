@@ -218,7 +218,6 @@ li_package_extract_entry_to (LiPackage *pkg, struct archive* ar, struct archive_
 {
 	g_autofree gchar *fname = NULL;
 	const gchar *cstr;
-	const gchar *link_target;
 	gchar *str;
 	gboolean ret;
 	gint res;
@@ -234,7 +233,7 @@ li_package_extract_entry_to (LiPackage *pkg, struct archive* ar, struct archive_
 
 	filetype = archive_entry_filetype (e);
 	if (filetype == S_IFDIR) {
-		/* we don't extract directories */
+		/* we don't extract directories explicitly */
 		return TRUE;
 	}
 
@@ -252,16 +251,19 @@ li_package_extract_entry_to (LiPackage *pkg, struct archive* ar, struct archive_
 	}
 
 	/* check if we are dealing with a symlink */
-	link_target = archive_entry_symlink (e);
-	if ((filetype == S_IFLNK) && (link_target != NULL)) {
-		res = symlink (link_target, fname);
-	} else {
-		link_target = archive_entry_hardlink (e);
-		if (link_target != NULL) {
-			res = symlink (link_target, fname);
+	if (filetype == S_IFLNK) {
+		const gchar *link_target = NULL;
+		link_target = archive_entry_symlink (e);
+
+		if (link_target == NULL) {
+			g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_EXTRACT,
+				_("Unable to read symlink destination for file: %s"), fname);
+			return FALSE;
 		}
-	}
-	if (link_target != NULL) {
+
+		res = symlink (link_target, fname);
 		if (res != 0) {
 			g_set_error (error,
 				LI_PACKAGE_ERROR,
@@ -274,8 +276,8 @@ li_package_extract_entry_to (LiPackage *pkg, struct archive* ar, struct archive_
 	}
 
 	if (filetype != S_IFREG) {
-		/* do we really have to extract every type of file?
-		 * Symlinks and regular files should be enough for now */
+		/* Extracting symlinks and regular files should be enough for now,
+		 * to prevent issues by creating (unwanted?) special files. */
 		g_debug ("Skipped extraction of file '%s': No regular file.",
 				 archive_entry_pathname (e));
 		return TRUE;
