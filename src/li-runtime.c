@@ -401,6 +401,8 @@ li_runtime_remove (LiRuntime *rt)
 	if (priv->fname == NULL)
 		return FALSE;
 
+	g_debug ("Removing runtime: %s", priv->uuid);
+
 	if (g_unlink (priv->fname) == 0) {
 		g_free (priv->fname);
 		priv->fname = NULL;

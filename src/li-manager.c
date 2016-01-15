@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -903,15 +903,22 @@ out:
  * li_manager_cleanup:
  *
  * Remove unnecessary software.
+ * Limba automatically determines whether software is still needed.
+ * Only software which has been explicitly installed is kept, anything
+ * else will be automatically cleaned as soon as nothing needs it anymore.
+ * The cleanup routine will remove faded bundles, so it is recommended to
+ * runt it when to Limba-installed app is still in use.
+ * By default, cleanup happens when the system is shutting down.
  */
 gboolean
 li_manager_cleanup (LiManager *mgr, GError **error)
 {
 	g_autoptr(GHashTable) sws = NULL;
-	g_autoptr(GHashTable) rts = NULL;
+	g_autoptr(GHashTable) remove_rts = NULL;
+	g_autoptr(GPtrArray) active_rts = NULL;
 	g_autoptr(GList) sw_list = NULL;
 	g_autoptr(GList) list = NULL;
-	GPtrArray *rt_array;
+	GPtrArray *all_rts_array;
 	guint i;
 	GList *l;
 	GError *tmp_error = NULL;
@@ -924,9 +931,6 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 		g_propagate_error (error, tmp_error);
 		goto out;
 	}
-
-	rts = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
-	sws = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
 	/* load software list */
 	sws = li_manager_get_installed_software (mgr, &tmp_error);
@@ -957,52 +961,88 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 		/* installed software might have changed */
 		li_manager_reset_cached_data (mgr);
 
-		g_list_free (sw_list);
 		g_hash_table_unref (sws);
 		sws = li_manager_get_installed_software (mgr, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return FALSE;
 		}
-
+		g_list_free (sw_list);
 		sw_list = g_hash_table_get_values (sws);
 	}
 
-	/* remove every software from the list which is member of a runtime */
-	rt_array = li_manager_get_installed_runtimes (mgr);
-	for (i = 0; i < rt_array->len; i++) {
+	/* load runtime list */
+	all_rts_array = li_manager_get_installed_runtimes (mgr);
+	remove_rts = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+
+	/* create a map of all runtimes we have */
+	for (i = 0; i < all_rts_array->len; i++) {
+		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (all_rts_array, i));
+		g_hash_table_insert (remove_rts,
+					g_strdup (li_runtime_get_uuid (rt)),
+					rt);
+	}
+
+	/* remove every software from the kill-list which was installed manually,
+	 * and drop runtimes from the kill-list which are in use */
+	for (l = sw_list; l != NULL; l = l->next) {
+		const gchar *rt_uuid = NULL;
+		LiPkgInfo *pki = LI_PKG_INFO (l->data);
+
+		rt_uuid = li_pkg_info_get_runtime_dependency (pki);
+		if (rt_uuid != NULL) {
+			/* remove this runtime from the kill-list, it is in use */
+			g_hash_table_remove (remove_rts, rt_uuid);
+		}
+
+		if (!li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_AUTOMATIC)) {
+			/* manual package */
+			g_debug ("Manual: %s", li_pkg_info_get_id (pki));
+			g_hash_table_remove (sws, li_pkg_info_get_id (pki));
+			continue;
+		}
+	}
+
+	/* drop unused runtimes now and create list of still valid runtimes */
+	active_rts = g_ptr_array_new_with_free_func (g_object_unref);
+	for (i = 0; i < all_rts_array->len; i++) {
+		const gchar *rt_uuid = NULL;
+		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (all_rts_array, i));
+
+		rt_uuid = li_runtime_get_uuid (rt);
+		if (g_hash_table_contains (remove_rts, rt_uuid)) {
+			/* runtime is in the kill-list, drop it */
+			li_runtime_remove (rt);
+		} else {
+			g_ptr_array_add (active_rts, g_object_ref (rt));
+		}
+	}
+
+	/* remove every software from the kill-list which is member of a runtime */
+	for (i = 0; i < active_rts->len; i++) {
 		gchar **rt_members;
 		guint len;
 		guint j;
-		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (rt_array, i));
+		LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (active_rts, i));
 
 		rt_members = (gchar**) g_hash_table_get_keys_as_array (li_runtime_get_members (rt), &len);
 		for (j = 0; j < len; j++) {
+			g_debug ("Inuse: %s", rt_members[j]);
 			g_hash_table_remove (sws, rt_members[j]);
 		}
 		g_free (rt_members);
-
-		g_hash_table_insert (rts,
-					g_strdup (li_runtime_get_uuid (rt)),
-					g_object_ref (rt));
 	}
 
-	/* remove every software from the kill-list which references a valid runtime */
 	list = g_hash_table_get_values (sws);
 	for (l = list; l != NULL; l = l->next) {
 		LiPkgInfo *pki = LI_PKG_INFO (l->data);
-
-		if (g_hash_table_lookup (rts, li_pkg_info_get_runtime_dependency (pki)) != NULL) {
-			g_hash_table_remove (sws, li_pkg_info_get_id (pki));
-		}
-	}
-	g_list_free (list);
-
-	list = g_hash_table_get_values (sws);
-	for (l = list; l != NULL; l = l->next) {
-		li_manager_remove_software (mgr, li_pkg_info_get_id (LI_PKG_INFO (l->data)), error);
-		if (error != NULL)
+		li_manager_remove_software (mgr,
+					    li_pkg_info_get_id (pki),
+					    &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
 			goto out;
+		}
 	}
 
 	/* cleanup tmp dir */
