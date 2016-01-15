@@ -505,19 +505,20 @@ li_manager_remove_exported_files (GFile *file, GError **error)
 	g_object_unref (ir);
 
 	while (TRUE) {
-		gchar **parts;
+		g_auto(GStrv) parts = NULL;
 		line = g_data_input_stream_read_line (dis, NULL, NULL, NULL);
 		if (line == NULL) {
 			break;
 		}
 
 		parts = g_strsplit (line, "\t", 2);
-		if (parts[1] == NULL) {
-			g_strfreev (parts);
+		if (parts[1] == NULL)
 			continue;
-		}
 
 		if (g_str_has_prefix (parts[1], "/")) {
+			/* don't fail if file is already gone */
+			if (!g_file_test (parts[1], G_FILE_TEST_EXISTS))
+				continue;
 			/* delete file */
 			res = g_remove (parts[1]);
 			if (res != 0) {
@@ -525,11 +526,9 @@ li_manager_remove_exported_files (GFile *file, GError **error)
 					LI_MANAGER_ERROR,
 					LI_MANAGER_ERROR_REMOVE_FAILED,
 					_("Could not delete file '%s'"), parts[1]);
-				g_strfreev (parts);
 				goto out;
 			}
 		}
-		g_strfreev (parts);
 	}
 
 out:
