@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2012-2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2012-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -35,15 +35,15 @@ test_remove_software ()
 
 	mgr = li_manager_new ();
 
-	li_manager_remove_software (mgr, "libfoo-1.0", &error);
+	li_manager_remove_software (mgr, "libfoo/1.0", &error);
 	g_assert_error (error, LI_MANAGER_ERROR, LI_MANAGER_ERROR_DEPENDENCY);
 	g_error_free (error);
 	error = NULL;
 
-	li_manager_remove_software (mgr, "foobar-1.0", &error);
+	li_manager_remove_software (mgr, "foobar/1.0", &error);
 	g_assert_no_error (error);
 
-	li_manager_remove_software (mgr, "libfoo-1.0", &error);
+	li_manager_remove_software (mgr, "libfoo/1.0", &error);
 	g_assert_no_error (error);
 
 	g_object_unref (mgr);
@@ -106,7 +106,7 @@ test_installer_embeddedpkg ()
 void
 test_manager ()
 {
-	GList *pkgs;
+	g_autoptr(GPtrArray) pkgs = NULL;
 	GError *error = NULL;
 	LiManager *mgr;
 
@@ -114,9 +114,7 @@ test_manager ()
 
 	pkgs = li_manager_get_software_list (mgr, &error);
 	g_assert_no_error (error);
-	g_assert (pkgs != NULL);
-
-	g_list_free (pkgs);
+	g_assert (pkgs->len > 0);
 
 	g_object_unref (mgr);
 }
@@ -179,7 +177,7 @@ test_install_from_repo ()
 
 	/* test an installation which fetches stuff from a remote location */
 	inst = li_installer_new ();
-	li_installer_open_remote (inst, "foobar-1.0", &error);
+	li_installer_open_remote (inst, "foobar/1.0", &error);
 	g_assert_no_error (error);
 
 	li_installer_install (inst, &error);
@@ -196,7 +194,7 @@ test_pkg_cache_setup ()
 
 	/* write sample repository file */
 	g_mkdir_with_parents ("/etc/limba/", 0755);
-	g_file_set_contents ("/etc/limba/sources.list", "# Limba Unit Tests\n\n# Test Repo\nhttp://people.freedesktop.org/~mak/stuff/limba-repo/\n", -1, &error);
+	g_file_set_contents ("/etc/limba/sources.list", "# Limba Unit Tests\n\n# Test Repo\ncommon,devel http://people.freedesktop.org/~mak/stuff/limba-repo/\n", -1, &error);
 	g_assert_no_error (error);
 
 	/* we need to trust the sample repository key */
