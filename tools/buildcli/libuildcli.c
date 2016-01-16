@@ -287,6 +287,9 @@ main (int argc, char *argv[])
 		goto out;
 	}
 
+	/* users umask shouldn't interfere with us creating new files */
+	li_reset_umask ();
+
 	command = argv[1];
 	if (argc > 2)
 		value1 = argv[2];

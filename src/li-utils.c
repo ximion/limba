@@ -31,9 +31,11 @@
 #include <appstream.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/utsname.h>
 #include <errno.h>
 #include "li-systemd-dbus.h"
+
 
 /**
  * SECTION:li-utils
@@ -419,17 +421,6 @@ li_get_uuid_string ()
 }
 
 /**
- * li_get_install_root:
- *
- * A hack to support unit-tests running as non-root.
- */
-const gchar*
-li_get_software_root ()
-{
-	return LI_SOFTWARE_ROOT;
-}
-
-/**
  * li_get_current_arch_h:
  *
  * Get the current architecture in a human-friendly form
@@ -493,6 +484,18 @@ li_set_verbose_mode (gboolean verbose)
 {
 	/* TODO: Replace this hack with a logging handler */
 	g_setenv ("G_MESSAGES_DEBUG", "all", TRUE);
+}
+
+/**
+ * li_reset_umask:
+ *
+ * Reset umask potentially set by the user, so we can
+ * create files with the correct permissions.
+ */
+void
+li_reset_umask (void)
+{
+	umask (0002);
 }
 
 /**

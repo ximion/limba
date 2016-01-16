@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2009-2015 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2009-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -26,7 +26,6 @@
 
 G_BEGIN_DECLS
 
-const gchar		*li_get_software_root (void);
 void			li_set_verbose_mode (gboolean verbose);
 
 gchar			*li_get_current_arch_h (void);
@@ -37,6 +36,8 @@ gint			li_compare_versions (const gchar* a,
 
 LiPkgInfo		*li_parse_dependency_string (const gchar *depstr);
 GPtrArray		*li_parse_dependencies_string (const gchar *depstr);
+
+void			li_reset_umask (void);
 
 G_END_DECLS
 
