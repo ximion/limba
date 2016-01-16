@@ -118,17 +118,14 @@ li_build_master_init (LiBuildMaster *bmaster)
  * li_build_master_check_dependencies:
  */
 static void
-li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, GNode *root, GError **error)
+li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, LiPkgInfo *pki, gboolean use_builddeps, GError **error)
 {
 	g_autoptr(GPtrArray) all_pkgs = NULL;
 	GError *tmp_error = NULL;
-	LiPkgInfo *pki;
 	g_autoptr(GPtrArray) deps = NULL;
 	guint i;
 
-	pki = LI_PKG_INFO (root->data);
-
-	if (G_NODE_IS_ROOT (root)) {
+	if (use_builddeps) {
 		/* we need to take the build-deps from the package we want to build... */
 		deps = li_parse_dependencies_string (li_pkg_info_get_build_dependencies (pki));
 	} else {
@@ -171,13 +168,11 @@ li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, GNode *r
 					_("Could not find bundle '%s' which is necessary to build this software."),
 					li_pkg_info_get_name (dep));
 		} else if (li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_INSTALLED)) {
-			GNode *node;
-
 			/* dependency is already installed, add it as satisfied */
-			node = li_package_graph_add_package (pg, root, ipki, dep);
+			li_package_graph_add_package (pg, pki, ipki, dep);
 
 			/* we need a full dependency tree */
-			li_build_master_check_dependencies (pg, mgr, node, &tmp_error);
+			li_build_master_check_dependencies (pg, mgr, ipki, FALSE, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				return;
@@ -204,7 +199,6 @@ li_build_master_resolve_builddeps (LiBuildMaster *bmaster, LiPkgInfo *pki, GErro
 	g_autoptr(GHashTable) depdirs = NULL;
 	g_autoptr(LiManager) mgr = NULL;
 	guint i;
-	GNode *root;
 	GError *tmp_error = NULL;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
@@ -217,17 +211,16 @@ li_build_master_resolve_builddeps (LiBuildMaster *bmaster, LiPkgInfo *pki, GErro
 		return;
 	}
 
-	li_package_graph_set_root (pg, pki);
-	root = li_package_graph_get_root (pg);
 	mgr = li_manager_new ();
+	li_package_graph_add_package (pg, NULL, pki, NULL);
 
-	li_build_master_check_dependencies (pg, mgr, root, &tmp_error);
+	li_build_master_check_dependencies (pg, mgr, pki, TRUE, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		return;
 	}
 
-	full_deps = li_package_graph_branch_to_array (root);
+	full_deps = li_package_graph_branch_to_array (pg, pki, TRUE);
 	if (full_deps == NULL) {
 		g_warning ("Building package with no build-dependencies defined.");
 		return;

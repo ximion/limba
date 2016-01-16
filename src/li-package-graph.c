@@ -40,7 +40,7 @@
 typedef struct _LiPackageGraphPrivate	LiPackageGraphPrivate;
 struct _LiPackageGraphPrivate
 {
-	GNode *root_pkg;
+	GPtrArray *alist;
 	GHashTable *nindex;
 	GHashTable *install_todo;
 
@@ -61,8 +61,6 @@ enum {
 
 static guint signals[SIGNAL_LAST] = { 0 };
 
-static void li_package_graph_teardown (GNode *root);
-
 /**
  * li_package_graph_finalize:
  **/
@@ -72,7 +70,7 @@ li_package_graph_finalize (GObject *object)
 	LiPackageGraph *pg = LI_PACKAGE_GRAPH (object);
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	li_package_graph_teardown (priv->root_pkg);
+	g_ptr_array_unref (priv->alist);
 	g_hash_table_unref (priv->nindex);
 	g_hash_table_unref (priv->install_todo);
 	g_hash_table_unref (priv->foundations);
@@ -88,7 +86,7 @@ li_package_graph_init (LiPackageGraph *pg)
 {
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	priv->root_pkg = g_node_new (NULL);
+	priv->alist = g_ptr_array_new_with_free_func ((GDestroyNotify) g_ptr_array_unref);
 	priv->nindex = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 	priv->install_todo = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	priv->foundations = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
@@ -205,60 +203,44 @@ li_package_graph_package_stage_changed_cb (LiPackage *pkg, LiPackageStage stage,
 }
 
 /**
- * _li_package_graph_free_node:
- */
-static gboolean
-_li_package_graph_free_node (GNode *node, gpointer data)
-{
-	if (node->data != NULL)
-		g_object_unref (node->data);
-
-	return FALSE;
-}
-
-/**
- * li_package_graph_teardown:
- */
-static void
-li_package_graph_teardown (GNode *root)
-{
-	g_node_traverse (root,
-			 G_IN_ORDER,
-			 G_TRAVERSE_ALL,
-			 -1,
-			 _li_package_graph_free_node,
-			 NULL);
-	g_node_destroy (root);
-}
-
-/**
  * li_package_graph_add_package:
  * @pki: The information about an installed package
  * @satisfied_dep: The dependency this package satisfies, or %NULL
  *
- * Returns: A reference to the new node
+ * Returns: A reference to the new row of the
  */
-GNode*
-li_package_graph_add_package (LiPackageGraph *pg, GNode *parent, LiPkgInfo *pki, LiPkgInfo *satisfied_dep)
+GPtrArray*
+li_package_graph_add_package (LiPackageGraph *pg, LiPkgInfo *parent, LiPkgInfo *pki, LiPkgInfo *satisfied_dep)
 {
-	GNode *node;
+	GPtrArray *row;
+	GPtrArray *parent_row;
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	node = g_hash_table_lookup (priv->nindex, li_pkg_info_get_id (pki));
-	if (node == NULL) {
-		node = g_node_new (g_object_ref (pki));
+	row = g_hash_table_lookup (priv->nindex, li_pkg_info_get_id (pki));
+	if (row == NULL) {
+		row = g_ptr_array_new_with_free_func (g_object_unref);
+		g_ptr_array_add (row, g_object_ref (pki));
+		g_ptr_array_add (priv->alist, row);
 		g_hash_table_insert (priv->nindex,
 					g_strdup (li_pkg_info_get_id (pki)),
-					g_object_ref (pki));
+					row);
 		g_debug ("Added: %s/%s", li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
 	}
-	g_node_append (parent, node);
+
+	if (parent != NULL) {
+		parent_row = g_hash_table_lookup (priv->nindex, li_pkg_info_get_id (parent));
+		if (parent_row == NULL) {
+			g_warning ("Tried to add %s to invalid parent.", li_pkg_info_get_id (pki));
+		} else {
+			g_ptr_array_add (parent_row, g_object_ref (pki));
+		}
+	}
 
 	if (satisfied_dep != NULL)
 		li_pkg_info_set_version_relation (pki,
 						  li_pkg_info_get_version_relation (satisfied_dep));
 
-	return node;
+	return row;
 }
 
 /**
@@ -268,14 +250,14 @@ li_package_graph_add_package (LiPackageGraph *pg, GNode *parent, LiPkgInfo *pki,
  *
  * Returns: A reference to the new node
  */
-GNode*
-li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, LiPackage *pkg, LiPkgInfo *satisfied_dep)
+GPtrArray*
+li_package_graph_add_package_install_todo (LiPackageGraph *pg, LiPkgInfo *parent, LiPackage *pkg, LiPkgInfo *satisfied_dep)
 {
-	GNode *node;
+	GPtrArray *row;
 	gboolean ret;
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	node = li_package_graph_add_package (pg,
+	row = li_package_graph_add_package (pg,
 					     parent,
 					     li_package_get_info (pkg),
 					     satisfied_dep);
@@ -297,7 +279,32 @@ li_package_graph_add_package_install_todo (LiPackageGraph *pg, GNode *parent, Li
 
 	priv->max_progress = g_hash_table_size (priv->install_todo)*100;
 
-	return node;
+	return row;
+}
+
+/**
+ * li_package_graph_pkg_is_required:
+ *
+ * Check if the given package has other packages depending on it.
+ */
+gboolean
+li_package_graph_pkg_is_required (LiPackageGraph *pg, LiPkgInfo *pki)
+{
+	guint i;
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+
+	for (i = 0; i < priv->alist->len; i++) {
+		guint j;
+		GPtrArray *row = (GPtrArray*) g_ptr_array_index (priv->alist, i);
+
+		for (j = 0; j < row->len; j++) {
+			LiPkgInfo *pki2 = LI_PKG_INFO (g_ptr_array_index (row, j));
+			if (pki == pki2)
+				return TRUE;
+		}
+	}
+
+	return FALSE;
 }
 
 /**
@@ -333,103 +340,89 @@ li_package_graph_mark_installed (LiPackageGraph *pg, LiPkgInfo *pki)
 }
 
 /**
- * _li_package_graph_add_pki_to_array:
- */
-static gboolean
-_li_package_graph_add_pki_to_array (GNode *node, gpointer data)
-{
-	GPtrArray *array = (GPtrArray*) data;
-	g_ptr_array_add (array, node->data);
-
-	return FALSE;
-}
-
-/**
  * li_package_graph_branch_to_array:
  *
  * Get an array of #LiPkgInfo objects this node depends on.
  */
 GPtrArray*
-li_package_graph_branch_to_array (GNode *root)
+li_package_graph_branch_to_array (LiPackageGraph *pg, LiPkgInfo *root, gboolean include_root)
 {
+	guint i;
+	GPtrArray *arow;
 	GPtrArray *array;
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	if (root->children == NULL)
+	arow = g_hash_table_lookup (priv->nindex, li_pkg_info_get_id (root));
+	if (arow == NULL)
 		return NULL;
 
 	array = g_ptr_array_new ();
-	g_node_traverse (root,
-			 G_PRE_ORDER,
-			 G_TRAVERSE_ALL,
-			 -1,
-			 _li_package_graph_add_pki_to_array,
-			 array);
-
-	/* remove the root node value from the array */
-	if (array->len > 0)
-		g_ptr_array_remove_index (array, 0);
-
-	/* return null in case the array is empty */
-	if (array->len == 0) {
-		g_ptr_array_unref (array);
-		return NULL;
+	/* if the row only contains itself, the pkg doesn't depend on anything */
+	if (!include_root) {
+		if (arow->len <= 1)
+			return array;
 	}
+
+	for (i = 0; i < arow->len; i++) {
+		g_ptr_array_add (array,
+				 g_ptr_array_index (arow, i));
+	}
+
+	if (!include_root)
+		g_ptr_array_remove (array, root);
 
 	return array;
 }
 
 /**
+ * li_package_graph_node_get_any_parent_manual:
+ *
+ * Check if a node has children containing packages which were installed
+ * manually.
+ */
+gboolean
+li_package_graph_node_get_any_parent_manual (LiPackageGraph *pg, LiPkgInfo *root)
+{
+	guint i;
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+
+	for (i = 0; i < priv->alist->len; i++) {
+		guint j;
+		LiPkgInfo *row_pki;
+		GPtrArray *row =  (GPtrArray*) g_ptr_array_index (priv->alist, i);
+
+		row_pki = LI_PKG_INFO (g_ptr_array_index (row, 0));
+		for (j = 1; j < row->len; j++) {
+			LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (row, j));
+			if (pki == root) {
+				if (!li_pkg_info_has_flag (row_pki, LI_PACKAGE_FLAG_AUTOMATIC)) {
+					return TRUE;
+				}
+				break;
+			}
+		}
+	}
+
+	return FALSE;
+}
+
+/**
  * li_package_graph_reset:
  *
- * Remove all nodes from the tree, except for the root node.
+ * Remove all nodes from the graph, except for the root node.
  */
 void
 li_package_graph_reset (LiPackageGraph *pg)
 {
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	GNode *child = priv->root_pkg->children;
-	if (child == NULL)
-		return;
+	g_ptr_array_unref (priv->alist);
+	g_hash_table_unref (priv->nindex);
+	g_hash_table_unref (priv->install_todo);
 
-	while (child->next != NULL)
-		li_package_graph_teardown (child->next);
-}
-
-/**
- * li_package_graph_set_root:
- */
-void
-li_package_graph_set_root (LiPackageGraph *pg, LiPkgInfo *data)
-{
-	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
-	li_package_graph_teardown (priv->root_pkg);
-	priv->root_pkg = g_node_new (g_object_ref (data));
-}
-
-/**
- * li_package_graph_set_root_install_todo:
- */
-void
-li_package_graph_set_root_install_todo (LiPackageGraph *pg, LiPackage *pkg)
-{
-	gboolean ret;
-	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
-
-	li_package_graph_set_root (pg, li_package_get_info (pkg));
-	ret = g_hash_table_insert (priv->install_todo,
-					g_strdup (li_package_get_id (pkg)),
-					g_object_ref (pkg));
-
-	if (ret) {
-		/* connect signals */
-		g_signal_connect (pkg, "progress",
-				  G_CALLBACK (li_package_graph_package_progress_cb), pg);
-		g_signal_connect (pkg, "stage-changed",
-				  G_CALLBACK (li_package_graph_package_stage_changed_cb), pg);
-	}
-
-	priv->max_progress = g_hash_table_size (priv->install_todo)*100;
+	priv->alist = g_ptr_array_new_with_free_func ((GDestroyNotify) g_ptr_array_unref);
+	priv->nindex = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	priv->install_todo = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 }
 
 /**
@@ -442,16 +435,6 @@ li_package_graph_get_install_todo_count (LiPackageGraph *pg)
 {
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 	return g_hash_table_size (priv->install_todo);
-}
-
-/**
- * li_package_graph_get_root:
- */
-GNode*
-li_package_graph_get_root (LiPackageGraph *pg)
-{
-	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
-	return priv->root_pkg;
 }
 
 /**
@@ -566,65 +549,49 @@ LiPackageGraph*
 li_package_graph_new_from_pkiarray (GPtrArray *pkiarray, GError **error)
 {
 	guint i;
-	GList *l;
 	g_autoptr(GList) list = NULL;
-	GNode *root = NULL;
-	gboolean has_root_nodes = FALSE;
 	LiPackageGraph *pg;
 	LiPackageGraphPrivate *priv;
 
 	pg = li_package_graph_new ();
 	priv = GET_PRIVATE (pg);
 
-	/* build index of all nodes */
+	/* check if there is something to do */
+	if (pkiarray->len == 0)
+		return pg;
+
+	/* build index of all nodes and add unconected nodes to the adjacency list */
 	for (i = 0; i < pkiarray->len; i++) {
 		LiPkgInfo *pki;
-		GNode *node;
+		GPtrArray *row;
 		pki = LI_PKG_INFO (g_ptr_array_index (pkiarray, i));
 
-		node = g_node_new (g_object_ref (pki));
+		row = g_ptr_array_new_with_free_func (g_object_unref);
+		g_ptr_array_add (row, g_object_ref (pki));
+		g_ptr_array_add (priv->alist, row);
 		g_hash_table_insert (priv->nindex,
 					g_strdup (li_pkg_info_get_id (pki)),
-					node);
+					row);
 	}
 
 	/* connect the dots */
 	for (i = 0; i < pkiarray->len; i++) {
 		LiPkgInfo *pki;
-		GNode *node;
+		guint j;
 		g_autoptr(GPtrArray) deps = NULL;
 		pki = LI_PKG_INFO (g_ptr_array_index (pkiarray, i));
 
-		node = g_hash_table_lookup (priv->nindex, li_pkg_info_get_id (pki));
-
 		deps = li_parse_dependencies_string (li_pkg_info_get_dependencies (pki));
-		for (i = 0; i < deps->len; i++) {
+		if (deps == NULL)
+			continue;
+		for (j = 0; j < deps->len; j++) {
 			LiPkgInfo *ppki = NULL;
-			LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, i));
+			LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, j));
 
 
 			ppki = li_find_satisfying_pkg (pkiarray, dep);
-			li_package_graph_add_package (pg, node, ppki, dep);
-		}
-	}
-
-	root = li_package_graph_get_root (pg);
-	list = g_hash_table_get_values (priv->nindex);
-	for (l = list; l != NULL; l = l->next) {
-		GNode *node = l->data;
-		if (G_NODE_IS_ROOT (node)) {
-			/* connect this node to the actual root node */
-			g_node_append (root, node);
-			has_root_nodes = TRUE;
-		}
-	}
-
-	if (!has_root_nodes) {
-		g_warning ("Created dependency graph without any root node - cycles everywhere! This is either insane packaging or a bug in Limba.");
-		/* we have no other choice now than to make everything an initial node, to we can continue operation */
-		for (l = list; l != NULL; l = l->next) {
-			GNode *node = l->data;
-			g_node_append (root, node);
+			if (ppki != NULL)
+				li_package_graph_add_package (pg, pki, ppki, dep);
 		}
 	}
 

@@ -36,6 +36,7 @@
 #include "li-keyring.h"
 #include "li-installer.h"
 #include "li-update-item.h"
+#include "li-package-graph.h"
 
 #include "li-dbus-interface.h"
 
@@ -928,6 +929,8 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 	g_autoptr(GPtrArray) active_rts = NULL;
 	g_autoptr(GList) sw_list = NULL;
 	g_autoptr(GList) list = NULL;
+	g_autoptr(LiPackageGraph) pg = NULL;
+	g_autoptr(GPtrArray) removal_candidates = NULL;
 	GPtrArray *all_rts_array;
 	guint i;
 	GList *l;
@@ -979,6 +982,20 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 		}
 		g_list_free (sw_list);
 		sw_list = g_hash_table_get_values (sws);
+	}
+
+	/* convert removal GList into GPtrArray */
+	removal_candidates = g_ptr_array_new ();
+	for (l = sw_list; l != NULL; l = l->next) {
+		LiPkgInfo *pki = LI_PKG_INFO (l->data);
+		g_ptr_array_add (removal_candidates, pki);
+	}
+
+	/* create a dependency graph of the remaining packages, we will need it later */
+	pg = li_package_graph_new_from_pkiarray (removal_candidates, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
 	}
 
 	/* load runtime list */
@@ -1044,10 +1061,19 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 	}
 
 	list = g_hash_table_get_values (sws);
-	for (l = list; l != NULL; l = l->next) {
+	for (l = list; l != NULL; l= l->next) {
+		const gchar *pkid;
+
 		LiPkgInfo *pki = LI_PKG_INFO (l->data);
+		pkid = li_pkg_info_get_id (pki);
+
+		if (li_package_graph_node_get_any_parent_manual (pg, pki)) {
+			g_debug ("Skip: %s (dependency of non-auto)", pkid);
+			continue;
+		}
+
 		li_manager_remove_software (mgr,
-					    li_pkg_info_get_id (pki),
+					    pkid,
 					    &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);

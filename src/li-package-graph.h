@@ -48,27 +48,27 @@ struct _LiPackageGraphClass
 };
 
 LiPackageGraph		*li_package_graph_new (void);
+LiPackageGraph		*li_package_graph_new_from_pkiarray (GPtrArray *pkiarray,
+								GError **error);
 
 void			li_package_graph_initialize (LiPackageGraph *pg,
 							GError **error);
 
-GNode			*li_package_graph_get_root (LiPackageGraph *pg);
-void			li_package_graph_set_root (LiPackageGraph *pg,
-							LiPkgInfo *data);
-void			li_package_graph_set_root_install_todo (LiPackageGraph *pg,
-									LiPackage *pkg);
-
 void			li_package_graph_reset (LiPackageGraph *pg);
 
-GPtrArray		*li_package_graph_branch_to_array (GNode *root);
+GPtrArray		*li_package_graph_branch_to_array (LiPackageGraph *pg,
+								LiPkgInfo *root,
+								gboolean include_root);
+gboolean		li_package_graph_node_get_any_parent_manual (LiPackageGraph *pg,
+									LiPkgInfo *root);
 
-GNode			*li_package_graph_add_package (LiPackageGraph *pg,
-							GNode *parent,
+GPtrArray		*li_package_graph_add_package (LiPackageGraph *pg,
+							LiPkgInfo *parent,
 							LiPkgInfo *pki,
 							LiPkgInfo *satisfied_dep);
 
-GNode			*li_package_graph_add_package_install_todo (LiPackageGraph *pg,
-									GNode *parent,
+GPtrArray		*li_package_graph_add_package_install_todo (LiPackageGraph *pg,
+									LiPkgInfo *parent,
 									LiPackage *pkg,
 									LiPkgInfo *satisfied_dep);
 
