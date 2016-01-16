@@ -1,13 +1,13 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR Matthias Klumpp
-# This file is distributed under the same license as the PACKAGE package.
+# This file is distributed under the same license as the limba package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2015-09-02 23:52+0200\n"
+        "POT-Creation-Date: 2016-01-16 19:04+0100\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,24 @@ msgstr  "Project-Id-Version: limba\n"
         "Content-Transfer-Encoding: 8bit\n"
 
 msgid   "Software package"
+msgstr  ""
+
+msgid   "Install a local package file"
+msgstr  ""
+
+msgid   "Authentication is required to install a local package"
+msgstr  ""
+
+msgid   "Install a Limba package"
+msgstr  ""
+
+msgid   "Authentication is required to install software"
+msgstr  ""
+
+msgid   "Remove package"
+msgstr  ""
+
+msgid   "Authentication is required to remove software"
 msgstr  ""
 
 #, c-format
@@ -29,10 +47,6 @@ msgstr  ""
 
 #, c-format
 msgid   "Could not find dependency: %s"
-msgstr  ""
-
-#, c-format
-msgid   "Could not find system component: '%s'. Please install it manually."
 msgstr  ""
 
 #, c-format
@@ -105,7 +119,15 @@ msgid   "Could not remove software directory."
 msgstr  ""
 
 #, c-format
+msgid   "Could not find system component: '%s'. Please install it manually."
+msgstr  ""
+
+#, c-format
 msgid   "Could not override file '%s'. The file already exists!"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to read symlink destination for file: %s"
 msgstr  ""
 
 #, c-format
@@ -250,14 +272,30 @@ msgid   "Could not open metadata-file '%s' for reading."
 msgstr  ""
 
 #, c-format
+msgid   "Signing of package failed (init): %s"
+msgstr  ""
+
+#, c-format
+msgid   "Signing of package failed (get-key): %s"
+msgstr  ""
+
+#, c-format
+msgid   "Signing of package failed (signers-add): %s"
+msgstr  ""
+
+#, c-format
 msgid   "Signing of package failed: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Signing of package failed (sign): %s"
 msgstr  ""
 
 #, c-format
 msgid   "Unable to calculate checksum for: %s"
 msgstr  ""
 
-msgid   "Packages signed."
+msgid   "Package signed."
 msgstr  ""
 
 #, c-format
@@ -276,15 +314,11 @@ msgid   "Could not find control file for the archive!"
 msgstr  ""
 
 #, c-format
-msgid   "Could not find payload data in the 'target' subdirectory."
+msgid   "Could not build package: AppStream metadata is missing."
 msgstr  ""
 
 #, c-format
-msgid   "Could not find AppStream metadata for the new package!"
-msgstr  ""
-
-#, c-format
-msgid   "Could not generate package filename: AppStream metadata is missing."
+msgid   "Could not find payload data in the 'target' or 'rt.target' subdirectory."
 msgstr  ""
 
 #, c-format
@@ -304,11 +338,11 @@ msgid   "Could not open icon tarball! Error: %s"
 msgstr  ""
 
 #, c-format
-msgid   "Repository '%s' (signed with key '%s') is untrusted."
+msgid   "Siganture on '%s' is invalid."
 msgstr  ""
 
 #, c-format
-msgid   "Siganture on '%s' is invalid."
+msgid   "Repository '%s' (signed with key '%s') is untrusted."
 msgstr  ""
 
 #, c-format
@@ -336,16 +370,71 @@ msgid   "Runtime '%s' is not valid. Could not find control file."
 msgstr  ""
 
 #, c-format
-msgid   "Could not create directory structure for runtime. %s"
+msgid   "Could not create runtime cache directory. %s"
 msgstr  ""
 
 msgid   "Could not find a 'build.yml' file!"
+msgstr  ""
+
+msgid   "Could not find an IPK control file!"
+msgstr  ""
+
+#, c-format
+msgid   "Could not find bundle '%s' which is necessary to build this software."
+msgstr  ""
+
+#, c-format
+msgid   "Bundle '%s' needs to be installed in order to build this software."
 msgstr  ""
 
 msgid   "Could not find commands to build this application!"
 msgstr  ""
 
 msgid   "Build command failed with non-zero exit status."
+msgstr  ""
+
+#, c-format
+msgid   "Do you have an AppStream XML file for your software? [y/N]"
+msgstr  ""
+
+msgid   "Please specify a path to the AppStream XML data:"
+msgstr  ""
+
+msgid   "No path given. Exiting."
+msgstr  ""
+
+msgid   "Your software needs a unique name.\n"
+        "In case of a GUI application, this is its .desktop filename.\n"
+        "Unique software name:"
+msgstr  ""
+
+msgid   "Define a software name (human readable):"
+msgstr  ""
+
+msgid   "Define a software version:"
+msgstr  ""
+
+msgid   "Write a short summary (one sentence) about your software:"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to write AppStream data. %s"
+msgstr  ""
+
+#, c-format
+msgid   "Unable to write 'control' file. %s"
+msgstr  ""
+
+#, c-format
+msgid   "Created project template in '%s'.\n"
+        "\n"
+        "Please edit the files in that directory, e.g. add a long description to your\n"
+        "application and specify its run-time dependencies.\n"
+        "When you are done with this, build your software with --prefix=%s\n"
+        "and install it into the 'target' subdirectory of your 'lipkg' directory.\n"
+        "Then run 'lipkgen build lipkg/' to create your package. \n"
+        "If you want to embed dependencies, place their IPK packages in the 'repo/'\n"
+        "subdirectory of 'lipkg/'"
 msgstr  ""
 
 #, c-format
@@ -393,6 +482,9 @@ msgstr  ""
 msgid   "Add a package to the repository"
 msgstr  ""
 
+msgid   "Create sources for a new package."
+msgstr  ""
+
 msgid   "Show the program version"
 msgstr  ""
 
@@ -403,6 +495,12 @@ msgid   "Don't show \"fancy\" output"
 msgstr  ""
 
 msgid   "Build in a chroot environment"
+msgstr  ""
+
+msgid   "UID of the user running the build."
+msgstr  ""
+
+msgid   "GID of the group running the build."
 msgstr  ""
 
 #, c-format
@@ -494,50 +592,6 @@ msgstr  ""
 msgid   "You need to specify a directory with build-metadata."
 msgstr  ""
 
-#, c-format
-msgid   "Do you have an AppStream XML file for your software? [y/N]"
-msgstr  ""
-
-msgid   "Please specify a path to the AppStream XML data:"
-msgstr  ""
-
-msgid   "No path given. Exiting."
-msgstr  ""
-
-msgid   "Your software needs a unique name.\n"
-        "In case of a GUI application, this is its .desktop filename.\n"
-        "Unique software name:"
-msgstr  ""
-
-msgid   "Define a software name (human readable):"
-msgstr  ""
-
-msgid   "Define a software version:"
-msgstr  ""
-
-msgid   "Write a short summary (one sentence) about your software:"
-msgstr  ""
-
-#, c-format
-msgid   "Unable to write AppStream data. %s"
-msgstr  ""
-
-#, c-format
-msgid   "Unable to write 'control' file. %s"
-msgstr  ""
-
-#, c-format
-msgid   "Created project template in '%s'.\n"
-        "\n"
-        "Please edit the files in that directory, e.g. add a long description to your\n"
-        "application and specify its run-time dependencies.\n"
-        "When you are done with this, build your software with --prefix=%s\n"
-        "and install it into the 'target' subdirectory of your 'lipkg' directory.\n"
-        "Then run 'lipkgen build lipkg/' to create your package. \n"
-        "If you want to embed dependencies, place their IPK packages in the 'repo/'\n"
-        "subdirectory of 'lipkg/'"
-msgstr  ""
-
 msgid   "No package file given for extraction."
 msgstr  ""
 
@@ -554,9 +608,6 @@ msgid   "Limba package builder"
 msgstr  ""
 
 msgid   "Create a new package using data found in DIRECTORY."
-msgstr  ""
-
-msgid   "Create sources for a new package."
 msgstr  ""
 
 msgid   "Unpack the Limba package to a directory."

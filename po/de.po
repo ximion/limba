@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Limba\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-09-02 23:52+0200\n"
+"POT-Creation-Date: 2016-01-16 19:01+0100\n"
 "PO-Revision-Date: 2015-06-26 13:38+0000\n"
 "Last-Translator: Matthias K. <matthias@tenstral.net>\n"
 "Language-Team: German (http://www.transifex.com/matk/limba/language/de/)\n"
@@ -34,6 +34,15 @@ msgstr ""
 msgid "Add a package to the repository"
 msgstr ""
 
+msgid "Authentication is required to install a local package"
+msgstr ""
+
+msgid "Authentication is required to install software"
+msgstr ""
+
+msgid "Authentication is required to remove software"
+msgstr ""
+
 msgid "Build command failed with non-zero exit status."
 msgstr ""
 
@@ -41,6 +50,10 @@ msgid "Build in a chroot environment"
 msgstr ""
 
 msgid "Build the software following its build recipe"
+msgstr ""
+
+#, c-format
+msgid "Bundle '%s' needs to be installed in order to build this software."
 msgstr ""
 
 #, c-format
@@ -63,11 +76,15 @@ msgid "Completed %s"
 msgstr ""
 
 #, c-format
+msgid "Could not build package: AppStream metadata is missing."
+msgstr ""
+
+#, c-format
 msgid "Could not create directory structure '%s'. %s"
 msgstr ""
 
 #, c-format
-msgid "Could not create directory structure for runtime. %s"
+msgid "Could not create runtime cache directory. %s"
 msgstr ""
 
 #, c-format
@@ -86,11 +103,14 @@ msgstr ""
 msgid "Could not determine package version."
 msgstr ""
 
-#, c-format
-msgid "Could not find AppStream metadata for the new package!"
+msgid "Could not find a 'build.yml' file!"
 msgstr ""
 
-msgid "Could not find a 'build.yml' file!"
+msgid "Could not find an IPK control file!"
+msgstr ""
+
+#, c-format
+msgid "Could not find bundle '%s' which is necessary to build this software."
 msgstr ""
 
 msgid "Could not find commands to build this application!"
@@ -113,7 +133,8 @@ msgid "Could not find package: %s"
 msgstr ""
 
 #, c-format
-msgid "Could not find payload data in the 'target' subdirectory."
+msgid ""
+"Could not find payload data in the 'target' or 'rt.target' subdirectory."
 msgstr ""
 
 #, c-format
@@ -126,10 +147,6 @@ msgstr ""
 
 #, c-format
 msgid "Could not find system component: '%s'. Please install it manually."
-msgstr ""
-
-#, c-format
-msgid "Could not generate package filename: AppStream metadata is missing."
 msgstr ""
 
 #, c-format
@@ -264,6 +281,9 @@ msgstr ""
 msgid "Finished"
 msgstr ""
 
+msgid "GID of the group running the build."
+msgstr ""
+
 #, c-format
 msgid "Importing of key failed: %s"
 msgstr ""
@@ -274,6 +294,12 @@ msgid ""
 msgstr ""
 
 msgid "Initialize a new repository in DIRECTORY."
+msgstr ""
+
+msgid "Install a Limba package"
+msgstr ""
+
+msgid "Install a local package file"
 msgstr ""
 
 msgid "Install a local software package"
@@ -361,7 +387,7 @@ msgstr ""
 msgid "Package file '%s' was not found."
 msgstr ""
 
-msgid "Packages signed."
+msgid "Package signed."
 msgstr ""
 
 msgid "Please specify a path to the AppStream XML data:"
@@ -374,6 +400,9 @@ msgid "Refresh the cache of available packages"
 msgstr ""
 
 msgid "Remove an installed software package"
+msgstr ""
+
+msgid "Remove package"
 msgstr ""
 
 #, c-format
@@ -412,6 +441,22 @@ msgstr ""
 
 #, c-format
 msgid "Signature validation failed: %s"
+msgstr ""
+
+#, c-format
+msgid "Signing of package failed (get-key): %s"
+msgstr ""
+
+#, c-format
+msgid "Signing of package failed (init): %s"
+msgstr ""
+
+#, c-format
+msgid "Signing of package failed (sign): %s"
+msgstr ""
+
+#, c-format
+msgid "Signing of package failed (signers-add): %s"
 msgstr ""
 
 #, c-format
@@ -470,6 +515,9 @@ msgstr ""
 msgid "This package has a broken signature."
 msgstr ""
 
+msgid "UID of the user running the build."
+msgstr ""
+
 #, c-format
 msgid "Unable to calculate checksum for: %s"
 msgstr ""
@@ -503,6 +551,10 @@ msgstr ""
 
 #, c-format
 msgid "Unable to open package. %s"
+msgstr ""
+
+#, c-format
+msgid "Unable to read symlink destination for file: %s"
 msgstr ""
 
 #, c-format

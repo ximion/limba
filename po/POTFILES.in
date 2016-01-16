@@ -6,6 +6,7 @@
 src/li-config-data.c
 src/li-installer.c
 src/li-package.c
+src/li-package-graph.c
 src/li-pkg-index.c
 src/li-runtime.c
 src/li-exporter.c
@@ -22,6 +23,8 @@ tools/cli/limbacli.c
 tools/buildcli/libuildcli.c
 tools/buildcli/li-build-conf.c
 tools/buildcli/li-build-master.c
+tools/buildcli/li-build-templates.c
 tools/lipkgen/lipkgen.c
-# Mimetype
+# Other
 data/mime/x-ipk.xml.in
+data/policy/org.freedesktop.limba.policy.in
