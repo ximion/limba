@@ -549,7 +549,6 @@ LiPackageGraph*
 li_package_graph_new_from_pkiarray (GPtrArray *pkiarray, GError **error)
 {
 	guint i;
-	g_autoptr(GList) list = NULL;
 	LiPackageGraph *pg;
 	LiPackageGraphPrivate *priv;
 
@@ -560,7 +559,7 @@ li_package_graph_new_from_pkiarray (GPtrArray *pkiarray, GError **error)
 	if (pkiarray->len == 0)
 		return pg;
 
-	/* build index of all nodes and add unconected nodes to the adjacency list */
+	/* build index of all nodes and add nodes (without any edges) to the adjacency list */
 	for (i = 0; i < pkiarray->len; i++) {
 		LiPkgInfo *pki;
 		GPtrArray *row;
