@@ -224,7 +224,6 @@ li_test_enter_chroot ()
 	test_env_mkdir ("/var/lib");
 	test_env_mkdir ("/var/cache");
 	test_env_mkdir ("/opt/software");
-	test_env_mkdir ("/app");
 
 	/* create installer locations */
 	test_env_mkdir ("/usr/local/bin");

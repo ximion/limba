@@ -528,7 +528,7 @@ li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_d
 	if (error_ucheck != NULL) {
 		/* do we implicitly trust that key? */
 		sdata = li_keyring_verify_clear_signature (kr,
-					LI_KEYRING_KIND_USER,
+					LI_KEYRING_KIND_AUTOMATIC,
 					sigtext,
 					&fpr,
 					&tmp_error);

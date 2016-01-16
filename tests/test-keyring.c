@@ -27,27 +27,27 @@
 static gchar *datadir = NULL;
 
 const gchar *sig_signature = "-----BEGIN PGP MESSAGE-----\n"
-"Version: GnuPG v2\n\n"
-"owEBbAOT/JANAwACAUlMil+/TezrAcvAe2IAVJNGxmNlNjg0NjQ2MTBhYWYxYTFk\n"
-"MmNhNDQxZDY5Y2YwYzUzYzE0YzIxZjU5OGE4MjEzM2U2OTUyMmVkMDhiMmU5ZmEJ\n"
-"cmVwby9pbmRleAoxM2NkZmM3ZjA2ZjNhYjdlZjdiY2ZlOTJiYmRiODFjNWQ2Mzhh\n"
-"ZDg1YjJjNzA0M2UzZGJmNzczNzViM2ZlM2RkCWNvbnRyb2wKYzM0ZDRlYjNmN2Vm\n"
-"NjM0Mzk5OGU3N2EzMmYwZmI4NWE3ODIwMTIyOTA4NjE5MGRkZGFmMDBlNGEwYWIx\n"
-"NzczMQltZXRhaW5mby54bWwKM2Y5ZTkxMDI5NGU2NmI5OGM1ZTJiYjdiMDJmZjI3\n"
-"NTUwZTE4Nzg3M2I2YzhhZGJjOTk4YmJmOWY1ZjUxN2Q4ZAltYWluLWRhdGEudGFy\n"
-"Lnh6CokCHAQAAQIABgUCVJNGxgAKCRBJTIpfv03s6+xmD/0TgAdrxSuAaovBvghM\n"
-"VKlPgVSH2c7M7wO6PcLTHhUgAfll75kIIbdNT4CDhjkL3jMK5T4orxGBRWxp9rTH\n"
-"FkoorWPiJ2OHggRfAXdYmkIqSQlDGdjq2a3U5NCXxa6JqFR65qpNFKBhfgPq89N2\n"
-"ZwV3BtO3b5hGs1bgLmTgyUQ4MdNvrVrv1mT9UijVk620Vom2Z0oKV33SKhvHi8Ju\n"
-"jjWI9wdv4zI7DSsFsATLz5XyJn/BfB+h49sEEEpBeFye7I0vJDZqm3MTsJBEnUhc\n"
-"tTNfaHVK0IuYKzZaO75tp/xJWr7OIUT9PnPOiwaRwx5tWxHBKa/fcD1tJjoSBCfp\n"
-"/UT3MkAuo1gbZUafJrbdqlR2KxOwEVMWKEqkeQhW2RVDQ55TBbbbF6A0pQV/hoj9\n"
-"7b7ybmgE0Cm5VTPSkMDG8NaygtBij0NjuN2DPyQNfKgwR4PSTChQfmcrlvKh673G\n"
-"NwgHk9m5HS1wjW+mKa1IiZP9O0UIvJOp2o6zmvE4k3kkxXN7DWzaGzd3pRRgGYxn\n"
-"69uyfl8FE62HaVJA4fLX1H7ZPnteh47e73H/5YTjKqKcN3cJGaaxmmg2rtyaq79J\n"
-"OR5HF5Zkh3ogx1mrQZnETeskOJoAWpSIxr/YbQ+OxRwwUYKLMTk3GfIC/nDZbgdj\n"
-"FMvyzfF5CkHUZRvHP2jkyt0tBw==\n"
-"=Acpp\n"
+"Version: GnuPG v1\n\n"
+"owEBbwOQ/JANAwACAdcrhfn5D9YPAa0BPmIDbXNnVpqARGNlNjg0NjQ2MTBhYWYx\n"
+"YTFkMmNhNDQxZDY5Y2YwYzUzYzE0YzIxZjU5OGE4MjEzM2U2OTUyMmVkMDhiMmU5\n"
+"ZmEJcmVwby9pbmRleAoxM2NkZmM3ZjA2ZjNhYjdlZjdiY2ZlOTJiYmRiODFjNWQ2\n"
+"MzhhZDg1YjJjNzA0M2UzZGJmNzczNzViM2ZlM2RkCWNvbnRyb2wKYzM0ZDRlYjNm\n"
+"N2VmNjM0Mzk5OGU3N2EzMmYwZmI4NWE3ODIwMTIyOTA4NjE5MGRkZGFmMDBlNGEw\n"
+"YWIxNzczMQltZXRhaW5mby54bWwKM2Y5ZTkxMDI5NGU2NmI5OGM1ZTJiYjdiMDJm\n"
+"ZjI3NTUwZTE4Nzg3M2I2YzhhZGJjOTk4YmJmOWY1ZjUxN2Q4ZAltYWluLWRhdGEu\n"
+"dGFyLnh6CokCHAQAAQIABgUCVpqARAAKCRDXK4X5+Q/WD1P5D/4nQGiQ+gDBTKag\n"
+"zJMEQcfVeOvxWlK8BP3IHOVPkHEMGhSA8XJgWaqKf/2UvJcdUtXIZ5U8VANOeKi8\n"
+"hqrdT/wm672bL0GWj5tG6ht6VXSHGjgGpfxHRNPeGdIfvJX5ve7uKpgurRk/Lw+Y\n"
+"tX9GXVqGRFoTvPFF2g703NaRx4xesGGU5Qs4Z/XHtHpZc4g4eHr/X/mDVmLlDUsu\n"
+"wKl0pP/B8p9EvrlfQ5bveyHg9FnRnxvr4gVIik2lShvKr8EyIXxWJ5PFwNizA045\n"
+"gMmlHaorTNHNSIbg5nN5Qwv7/HpqWEJSLVjMcY4iGfjuHNdmQepdSJUZFa6s7w5u\n"
+"YpTSD+8auxH90g3eWjD3KGDdBKyf/xV9GavNibLPq7A3hZzuy0PMTDl8hKcYnvHi\n"
+"oY4RslXuLe6V6e/CAi8ynFPuS3jVdpBlBlYhtRlHSPxJtFbtECvXecH6rEGIlztd\n"
+"C4cCM1iqAxNsGCk0Pz5dcmZOBuclYhYhtZ9v6QodpT57rid7/1FxdJhjK8+URTFJ\n"
+"TRvrkho9Iktl2jKlcUlOmD1KPwejmfcaeoG2CHqia5dtfbzuefFpqGNik45QFnVa\n"
+"Il6Q/9khsQXdckdvc4FA9XHvoxiA2JzACGw90lox3cn3DT0UEiB2vpZ71wZyjaWc\n"
+"NyN/NMqC2bW52VW8A720R4Xeza8b8g==\n"
+"=7mBL\n"
 "-----END PGP MESSAGE-----\n";
 
 const gchar *sig_message = "ce68464610aaf1a1d2ca441d69cf0c53c14c21f598a82133e69522ed08b2e9fa\trepo/index\n"
@@ -69,9 +69,9 @@ test_keyring () {
 	level = li_keyring_process_signature (kr, sig_signature, &tmp, &fpr, &error);
 	g_assert_no_error (error);
 	g_assert_cmpstr (sig_message, ==, tmp);
-	g_assert_cmpstr (fpr, ==, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB");
+	g_assert_cmpstr (fpr, ==, "D1E764E137B61E688EF3B249D72B85F9F90FD60F");
 	g_free (tmp);
-	g_assert (level == LI_TRUST_LEVEL_LOW);
+	g_assert (level == LI_TRUST_LEVEL_MEDIUM);
 
 	/* import that key to the high-trust database */
 	li_keyring_import_key (kr, fpr, LI_KEYRING_KIND_USER, &error);
@@ -105,11 +105,11 @@ main (int argc, char **argv)
 
 	/* set fake GPG home */
 	tmp = g_build_filename (argv[1], "gpg", NULL);
-	cmd = g_strdup_printf ("cp -r '%s' /tmp", tmp);
-	system (cmd); /* meh for call to system() - but okay for the testsuite */
+	g_mkdir_with_parents ("/var/lib/limba/keyrings", 0755);
+	cmd = g_strdup_printf ("cp -r '%s' /var/lib/limba/keyrings/automatic", tmp);
+	g_assert (system (cmd) == 0); /* meh for call to system() - but okay for the testsuite */
 	g_free (tmp);
 	g_free (cmd);
-	g_setenv ("GNUPGHOME", "/tmp/gpg", 1);
 
 	li_set_verbose_mode (TRUE);
 	g_test_init (&argc, &argv, NULL);
