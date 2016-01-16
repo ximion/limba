@@ -34,6 +34,8 @@ static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
 static gboolean optn_no_fail = FALSE;
 
+static guint current_progress = 0;
+
 /**
  * lipa_check_su:
  */
@@ -109,6 +111,7 @@ li_installer_progress_cb (LiInstaller *inst, guint percentage, const gchar *id, 
 	if (id != NULL)
 		return;
 
+	current_progress = percentage;
 	li_draw_progress_bar (_("Progress"), percentage);
 }
 
@@ -125,13 +128,13 @@ li_installer_stage_changed_cb (LiInstaller *inst, LiPackageStage stage, const gc
 	switch (stage) {
 		case LI_PACKAGE_STAGE_DOWNLOADING:
 			li_write_progress_step (_("Downloading %s"), id);
-			return;
+			break;
 		case LI_PACKAGE_STAGE_VERIFYING:
 			li_write_progress_step (_("Verifying %s"), id);
-			return;
+			break;
 		case LI_PACKAGE_STAGE_INSTALLING:
 			li_write_progress_step (_("Installing %s"), id);
-			return;
+			break;
 		case LI_PACKAGE_STAGE_FINISHED:
 			li_write_progress_step (_("Completed %s"), id);
 			return;
@@ -139,7 +142,8 @@ li_installer_stage_changed_cb (LiInstaller *inst, LiPackageStage stage, const gc
 			return;
 	}
 
-
+	/* redraw the progress bar immediately */
+	li_installer_progress_cb (inst, current_progress, NULL, user_data);
 }
 
 /**
@@ -160,9 +164,10 @@ lipa_install_package (const gchar *pkgid)
 
 	inst = li_installer_new ();
 	g_signal_connect (inst, "progress",
-						G_CALLBACK (li_installer_progress_cb), NULL);
+				G_CALLBACK (li_installer_progress_cb), NULL);
 	g_signal_connect (inst, "stage-changed",
-						G_CALLBACK (li_installer_stage_changed_cb), NULL);
+				G_CALLBACK (li_installer_stage_changed_cb), NULL);
+	current_progress = 0;
 
 	li_installer_open_remote (inst, pkgid, &error);
 	if (error != NULL) {
@@ -210,7 +215,10 @@ lipa_install_local_package (const gchar *fname)
 
 	inst = li_installer_new ();
 	g_signal_connect (inst, "progress",
-						G_CALLBACK (li_installer_progress_cb), NULL);
+				G_CALLBACK (li_installer_progress_cb), NULL);
+	g_signal_connect (inst, "stage-changed",
+				G_CALLBACK (li_installer_stage_changed_cb), NULL);
+	current_progress = 0;
 
 	li_installer_open_file (inst, fname, &error);
 	if (error != NULL) {
@@ -362,7 +370,7 @@ lipa_list_updates (void)
 
 	updates = li_manager_get_update_list (mgr, &error);
 	if (error != NULL) {
-		li_print_stderr ("An error occured while fetching the software-list: %s", error->message);
+		li_print_stderr ("An error occured while fetching the software-list: %s",error->message);
 		exit_code = 2;
 		goto out;
 	}
