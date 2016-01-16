@@ -150,7 +150,7 @@ li_package_emit_progress (LiPackage *pkg)
 	guint percentage;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
-	percentage = round (100 / (double) priv->max_progress * priv->progress);
+	percentage = round ((100 / (double) priv->max_progress) * priv->progress);
 	g_signal_emit (pkg, signals[SIGNAL_PROGRESS], 0,
 					percentage);
 }
@@ -185,7 +185,7 @@ li_package_cache_progress_cb (LiPkgCache *cache, guint cache_percentage, const g
 	if (g_strcmp0 (priv->id, id) != 0)
 		return;
 
-	percentage = round (100 / (double) priv->max_progress * (priv->progress+cache_percentage));
+	percentage = round ((100 / (double) priv->max_progress) * (priv->progress+cache_percentage));
 
 	g_signal_emit (pkg, signals[SIGNAL_PROGRESS], 0,
 					percentage);
@@ -627,7 +627,7 @@ li_package_open_remote (LiPackage *pkg, LiPkgCache *cache, const gchar *pkid, GE
 
 	/* connect cache signals */
 	g_signal_connect (priv->cache, "progress",
-						G_CALLBACK (li_package_cache_progress_cb), pkg);
+				G_CALLBACK (li_package_cache_progress_cb), pkg);
 
 	priv->max_progress += 100;
 
@@ -920,10 +920,13 @@ li_package_download (LiPackage *pkg, GError **error)
 	li_package_emit_stage_change (pkg, LI_PACKAGE_STAGE_DOWNLOADING);
 
 	priv->max_progress += 100;
-	pkg_fname = li_pkg_cache_fetch_remote (priv->cache, li_pkg_info_get_id (priv->info), &tmp_error);
+	pkg_fname = li_pkg_cache_fetch_remote (priv->cache,
+					       li_pkg_info_get_id (priv->info),
+					       &tmp_error);
 	if (tmp_error != NULL) {
-		g_propagate_prefixed_error (error, tmp_error,
-								_("Unable to download package:"));
+		g_propagate_prefixed_error (error,
+					    tmp_error,
+					    _("Unable to download package:"));
 		return FALSE;
 	}
 
@@ -932,7 +935,6 @@ li_package_download (LiPackage *pkg, GError **error)
 		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
-
 	/* FIXME: Opening the file incremented our max_progress, so we decrease it again to get a 50/50 split between
 	 * download and installation. This is a bit ugly, and will have to be fixed when we emit progress for the installation
 	 * itself as well. */

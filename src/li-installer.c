@@ -332,7 +332,6 @@ li_installer_install_node (LiInstaller *inst, LiPkgInfo *node, GError **error)
 
 		/* already installed nodes are not really interesting here */
 		info = LI_PKG_INFO (g_ptr_array_index (full_deps, i));
-		g_debug ("-> %s", li_pkg_info_get_id (info));
 		pkg = li_package_graph_get_install_candidate (priv->pg, info);
 		if (pkg == NULL) {
 			g_debug ("Skipping '%s': Already installed.", li_pkg_info_get_id (info));

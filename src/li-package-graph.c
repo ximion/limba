@@ -180,7 +180,7 @@ li_package_graph_package_progress_cb (LiPackage *pkg, guint percentage, LiPackag
 	guint main_percentage;
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	main_percentage = round (100 / (double) priv->max_progress * (priv->progress+percentage));
+	main_percentage = round ((100 / (double) priv->max_progress) * (priv->progress+percentage));
 
 	/* emit individual progress */
 	g_signal_emit (pg, signals[SIGNAL_PROGRESS], 0,
@@ -224,7 +224,7 @@ li_package_graph_add_package (LiPackageGraph *pg, LiPkgInfo *parent, LiPkgInfo *
 		g_hash_table_insert (priv->nindex,
 					g_strdup (li_pkg_info_get_id (pki)),
 					row);
-		g_debug ("Added: %s/%s", li_pkg_info_get_name (pki), li_pkg_info_get_version (pki));
+		g_debug ("Added: %s", li_pkg_info_get_id (pki));
 	}
 
 	if (parent != NULL) {
@@ -234,6 +234,7 @@ li_package_graph_add_package (LiPackageGraph *pg, LiPkgInfo *parent, LiPkgInfo *
 		} else {
 			g_ptr_array_add (parent_row, g_object_ref (pki));
 		}
+		/* g_debug ("Set parent '%s' for '%s'", li_pkg_info_get_id (parent), li_pkg_info_get_id (pki)); */
 	}
 
 	if (satisfied_dep != NULL)
@@ -318,7 +319,6 @@ li_package_graph_get_install_candidate (LiPackageGraph *pg, LiPkgInfo *pki)
 
 	pkg = g_hash_table_lookup (priv->install_todo,
 					li_pkg_info_get_id (pki));
-
 	if (pkg != NULL)
 		li_pkg_info_set_version_relation (li_package_get_info (pkg),
 						  li_pkg_info_get_version_relation (pki));
@@ -340,6 +340,34 @@ li_package_graph_mark_installed (LiPackageGraph *pg, LiPkgInfo *pki)
 }
 
 /**
+ * li_package_graph_branch_to_set_internal:
+ *
+ * Recursive function to walk through the graph and add all nodes a root
+ * node depends on to a set.
+ */
+static void
+li_package_graph_branch_to_set_internal (LiPackageGraph *pg, LiPkgInfo *root, GHashTable *hset)
+{
+	guint i;
+	GPtrArray *arow;
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+
+	arow = g_hash_table_lookup (priv->nindex, li_pkg_info_get_id (root));
+	/* node doesn't exist - this is usually an error in the graph */
+	if (arow == NULL) {
+		g_warning ("Walked by orphaned node '%s'. This is a bug.", li_pkg_info_get_id (root));
+		return;
+	}
+
+	for (i = 0; i < arow->len; i++) {
+		LiPkgInfo *node = LI_PKG_INFO (g_ptr_array_index (arow, i));
+
+		if (g_hash_table_add (hset, node))
+			li_package_graph_branch_to_set_internal (pg, node, hset);
+	}
+}
+
+/**
  * li_package_graph_branch_to_array:
  *
  * Get an array of #LiPkgInfo objects this node depends on.
@@ -347,29 +375,29 @@ li_package_graph_mark_installed (LiPackageGraph *pg, LiPkgInfo *pki)
 GPtrArray*
 li_package_graph_branch_to_array (LiPackageGraph *pg, LiPkgInfo *root, gboolean include_root)
 {
-	guint i;
-	GPtrArray *arow;
+	GList *l;
+	g_autoptr(GList) list = NULL;
+	g_autoptr(GHashTable) hset = NULL;
 	GPtrArray *array;
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	arow = g_hash_table_lookup (priv->nindex, li_pkg_info_get_id (root));
-	if (arow == NULL)
+	/* check if the root node exists at all */
+	if (!g_hash_table_contains (priv->nindex, li_pkg_info_get_id (root)))
 		return NULL;
 
-	array = g_ptr_array_new ();
-	/* if the row only contains itself, the pkg doesn't depend on anything */
-	if (!include_root) {
-		if (arow->len <= 1)
-			return array;
-	}
+	/* walk through the graph */
+	hset = g_hash_table_new (g_direct_hash, g_direct_equal);
+	li_package_graph_branch_to_set_internal (pg, root, hset);
 
-	for (i = 0; i < arow->len; i++) {
-		g_ptr_array_add (array,
-				 g_ptr_array_index (arow, i));
-	}
+	array = g_ptr_array_new_with_free_func (g_object_unref);
+	list = g_hash_table_get_keys (hset);
+	for (l = list; l != NULL; l = l->next) {
+		LiPkgInfo *pki = LI_PKG_INFO (l->data);
 
-	if (!include_root)
-		g_ptr_array_remove (array, root);
+		if ((!include_root) && (pki == root))
+			continue;
+		g_ptr_array_add (array, g_object_ref (pki));
+	}
 
 	return array;
 }
