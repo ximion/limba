@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -58,7 +58,7 @@ struct _LiPackagePrivate
 
 	gchar *install_root;
 	gchar *id;
-	GList *embedded_packages;
+	GPtrArray *embedded_packages;
 
 	LiKeyring *kr;
 	gchar *signature_data;
@@ -100,7 +100,7 @@ li_package_finalize (GObject *object)
 	if (priv->cpt != NULL)
 		g_object_unref (priv->cpt);
 	if (priv->embedded_packages != NULL)
-		g_list_free_full (priv->embedded_packages, g_object_unref);
+		g_ptr_array_unref (priv->embedded_packages);
 	if (priv->tmp_dir != NULL) {
 		li_delete_dir_recursive (priv->tmp_dir);
 		g_free (priv->tmp_dir);
@@ -474,8 +474,6 @@ li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 	gchar *tmp_str;
 	GError *tmp_error = NULL;
 	gboolean ret = FALSE;
-	GPtrArray *epkgs;
-	guint i;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 
 	if (!g_file_test (filename, G_FILE_TEST_IS_REGULAR)) {
@@ -559,18 +557,10 @@ li_package_open_file (LiPackage *pkg, const gchar *filename, GError **error)
 						g_compute_checksum_for_string (G_CHECKSUM_SHA256, index_data, -1));
 			g_free (index_data);
 
-			/* clean up a possible previous list of packages */
-			if (priv->embedded_packages != NULL) {
-				g_list_free_full (priv->embedded_packages, g_object_unref);
-				priv->embedded_packages = NULL;
-			}
-
-			/* convert GPtrArray to GList */
-			epkgs = li_pkg_index_get_packages (idx);
-			for (i = 0; i < epkgs->len; i++) {
-				LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (epkgs, i));
-				priv->embedded_packages = g_list_append (priv->embedded_packages, g_object_ref (pki));
-			}
+			/* take ownership of the embedded packages list */
+			if (priv->embedded_packages != NULL)
+				g_ptr_array_unref (priv->embedded_packages);
+			priv->embedded_packages = g_ptr_array_ref (li_pkg_index_get_packages (idx));
 
 			g_object_unref (idx);
 		} else if (g_strcmp0 (pathname, "_signature") == 0) {
@@ -1399,7 +1389,7 @@ li_package_get_info (LiPackage *pkg)
  *
  * Returns: (transfer none) (element-type LiPkgInfo): Array of available embedded packages
  */
-GList*
+GPtrArray*
 li_package_get_embedded_packages (LiPackage *pkg)
 {
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
@@ -1415,7 +1405,7 @@ gboolean
 li_package_has_embedded_packages (LiPackage *pkg)
 {
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
-	return (priv->embedded_packages != NULL ) && (g_list_length (priv->embedded_packages) > 0);
+	return (priv->embedded_packages != NULL ) && (priv->embedded_packages->len > 0);
 }
 
 /**

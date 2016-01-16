@@ -295,12 +295,15 @@ li_manager_update_software_table (LiManager *mgr, GError **error)
 /**
  * li_manager_get_software_list:
  *
- * Returns: (transfer container) (element-type LiPkgInfo): A list of installed and available software
+ * Returns: (transfer full) (element-type LiPkgInfo): A list of installed and available software
  **/
-GList*
+GPtrArray*
 li_manager_get_software_list (LiManager *mgr, GError **error)
 {
+	GList *l = NULL;
+	g_autoptr(GList) list = NULL;
 	GError *tmp_error = NULL;
+	GPtrArray *res = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	li_manager_update_software_table (mgr, &tmp_error);
@@ -309,7 +312,14 @@ li_manager_get_software_list (LiManager *mgr, GError **error)
 		return NULL;
 	}
 
-	return g_hash_table_get_values (priv->pkgs);
+	res = g_ptr_array_new_with_free_func (g_object_unref);
+	list = g_hash_table_get_values (priv->pkgs);
+	for (l = list; l != NULL; l = l->next) {
+		LiPkgInfo *pki = LI_PKG_INFO (l->data);
+		g_ptr_array_add (res, g_object_ref (pki));
+	}
+
+	return res;
 }
 
 /**
@@ -716,8 +726,8 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	g_ptr_array_add (pkg_array, pki);
 	rt = li_manager_find_runtime_with_members (mgr, pkg_array);
 	if (rt != NULL) {
-		g_autoptr(GList) sw = NULL;
-		GList *l;
+		g_autoptr(GPtrArray) sw = NULL;
+		guint i;
 		gboolean dependency_found = FALSE;
 
 		/* check if this software is in use somewhere */
@@ -727,8 +737,8 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 			return FALSE;
 		}
 
-		for (l = sw; l != NULL; l = l->next) {
-			LiPkgInfo *pki2 = LI_PKG_INFO (l->data);
+		for (i = 0; i < sw->len; i++) {
+			LiPkgInfo *pki2 = LI_PKG_INFO (g_ptr_array_index (sw, i));
 
 			/* check if the package is actually installed */
 			if (!li_pkg_info_has_flag (pki2, LI_PACKAGE_FLAG_INSTALLED))

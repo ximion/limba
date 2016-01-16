@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -83,7 +83,7 @@ gboolean		li_package_graph_test_foundation_dependency (LiPackageGraph *pg,
 									LiPkgInfo *dep_pki,
 									GError **error);
 
-LiPkgInfo		*li_find_satisfying_pkg (GList *pkglist,
+LiPkgInfo		*li_find_satisfying_pkg (GPtrArray *pkglist,
 						 LiPkgInfo *dep);
 
 G_END_DECLS

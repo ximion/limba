@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -169,7 +169,7 @@ void			li_package_set_id (LiPackage *pkg,
 LiPkgInfo		*li_package_get_info (LiPackage *pkg);
 
 gboolean		li_package_has_embedded_packages (LiPackage *pkg);
-GList			*li_package_get_embedded_packages (LiPackage *pkg);
+GPtrArray		*li_package_get_embedded_packages (LiPackage *pkg);
 LiPackage*		li_package_extract_embedded_package (LiPackage *pkg,
 								LiPkgInfo *pki,
 								GError **error);

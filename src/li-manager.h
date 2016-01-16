@@ -70,7 +70,7 @@ GQuark li_manager_error_quark (void);
 
 LiManager		*li_manager_new (void);
 
-GList			*li_manager_get_software_list (LiManager *mgr,
+GPtrArray		*li_manager_get_software_list (LiManager *mgr,
 								GError **error);
 GPtrArray		*li_manager_get_installed_runtimes (LiManager *mgr);
 LiPkgInfo		*li_manager_get_software_by_pkid (LiManager *mgr,

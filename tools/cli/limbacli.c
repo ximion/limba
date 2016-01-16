@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU General Public License Version 2
  *
@@ -58,8 +58,8 @@ static gint
 lipa_list_software (void)
 {
 	LiManager *mgr;
-	GList *sw = NULL;
-	GList *l;
+	g_autoptr(GPtrArray) sw = NULL;
+	guint i;
 	gint exit_code = 0;
 	GError *error = NULL;
 
@@ -72,9 +72,9 @@ lipa_list_software (void)
 		goto out;
 	}
 
-	for (l = sw; l != NULL; l = l->next) {
+	for (i = 0; i < sw->len; i++) {
 		gchar *state;
-		LiPkgInfo *pki = LI_PKG_INFO (l->data);
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (sw, i));
 
 		if (li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_INSTALLED))
 			state = g_strdup ("i");
@@ -92,7 +92,6 @@ lipa_list_software (void)
 	}
 
 out:
-	g_list_free (sw);
 	g_object_unref (mgr);
 	if (error != NULL)
 		g_error_free (error);

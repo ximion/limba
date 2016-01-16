@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2015 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2015-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -120,7 +120,7 @@ li_build_master_init (LiBuildMaster *bmaster)
 static void
 li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, GNode *root, GError **error)
 {
-	g_autoptr(GList) all_pkgs = NULL;
+	g_autoptr(GPtrArray) all_pkgs = NULL;
 	GError *tmp_error = NULL;
 	LiPkgInfo *pki;
 	g_autoptr(GPtrArray) deps = NULL;

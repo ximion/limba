@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -46,6 +46,7 @@ struct _LiInstallerPrivate
 	LiPackageGraph *pg;
 	LiPackage *pkg;
 	LiPkgCache *cache;
+	GPtrArray *all_pkgs;
 
 	gchar *fname;
 	GMainLoop *loop;
@@ -81,6 +82,8 @@ li_installer_finalize (GObject *object)
 	g_object_unref (priv->mgr);
 	g_object_unref (priv->pg);
 	g_object_unref (priv->cache);
+	if (priv->all_pkgs != NULL)
+		g_ptr_array_unref (priv->all_pkgs);
 	if (priv->pkg != NULL)
 		g_object_unref (priv->pkg);
 	g_free (priv->fname);
@@ -177,7 +180,7 @@ li_installer_find_dependency_embedded_single (LiInstaller *inst, GNode *root, Li
 {
 	LiPkgInfo *epki;
 	LiPackage *epkg;
-	GList *embedded;
+	GPtrArray *embedded;
 	GError *tmp_error = NULL;
 	GNode *node;
 	LiPkgInfo *pki = LI_PKG_INFO (root->data);
@@ -193,6 +196,7 @@ li_installer_find_dependency_embedded_single (LiInstaller *inst, GNode *root, Li
 	embedded = li_package_get_embedded_packages (pkg);
 	epki = li_find_satisfying_pkg (embedded, dep_pki);
 	if (epki == NULL) {
+		/* embedded packages were our last chance - we give up */
 		g_set_error (error,
 			LI_INSTALLER_ERROR,
 			LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND,
@@ -291,7 +295,6 @@ li_installer_find_dependency_embedded (LiInstaller *inst, GNode *child, LiPkgInf
 static void
 li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 {
-	g_autoptr(GList) all_pkgs = NULL;
 	GError *tmp_error = NULL;
 	LiPackage *pkg;
 	LiPkgInfo *pki;
@@ -312,10 +315,12 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 	if (deps == NULL)
 		return;
 
-	all_pkgs = li_manager_get_software_list (priv->mgr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return;
+	if (priv->all_pkgs == NULL) {
+		priv->all_pkgs = li_manager_get_software_list (priv->mgr, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
 	}
 
 	for (i = 0; i < deps->len; i++) {
@@ -334,7 +339,7 @@ li_installer_check_dependencies (LiInstaller *inst, GNode *root, GError **error)
 			continue;
 
 		/* test if this package is already in the installed set */
-		ipki = li_find_satisfying_pkg (all_pkgs, dep);
+		ipki = li_find_satisfying_pkg (priv->all_pkgs, dep);
 		if (ipki == NULL) {
 			/* maybe we find this dependency as embedded copy? */
 			li_installer_find_dependency_embedded (inst, root, dep, &tmp_error);
@@ -707,6 +712,11 @@ li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error
 		g_free (priv->fname);
 	priv->fname = g_strdup (filename);
 
+	/* ensure we update the list of known packages */
+	if (priv->all_pkgs != NULL)
+		g_ptr_array_unref (priv->all_pkgs);
+	priv->all_pkgs = NULL;
+
 	return TRUE;
 }
 
@@ -744,6 +754,11 @@ li_installer_open_remote (LiInstaller *inst, const gchar *pkgid, GError **error)
 	li_package_set_auto_verify (pkg, FALSE);
 
 	li_installer_set_package (inst, pkg);
+
+	/* ensure we update the list of known packages */
+	if (priv->all_pkgs != NULL)
+		g_ptr_array_unref (priv->all_pkgs);
+	priv->all_pkgs = NULL;
 
 	return TRUE;
 }
