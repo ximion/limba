@@ -281,10 +281,12 @@ li_test_drop_privileges ()
 int
 main (int argc, char *argv[])
 {
+	guint i;
 	gint exit_code = 0;
 	gboolean ret;
 	gchar *exec_cmd;
 	GOptionContext *opt_context;
+	gchar **child_argv;
 	GError *error = NULL;
 
 	const GOptionEntry client_options[] = {
@@ -332,9 +334,16 @@ main (int argc, char *argv[])
 	exec_cmd = g_strjoinv (" ", argv+1);
 	g_debug ("Running: %s", exec_cmd);
 
-	exit_code = system (exec_cmd);
-	g_free (exec_cmd);
+	child_argv = malloc ((argc) * sizeof (char *));
+	g_assert (child_argv);
 
+	child_argv[0] = argv[1];
+	for (i = 1; i < argc - 1; i++) {
+		child_argv[i] = argv[i+1];
+	}
+	child_argv[i++] = NULL;
+
+	return execv (argv[1], child_argv);
 out:
 	g_option_context_free (opt_context);
 
