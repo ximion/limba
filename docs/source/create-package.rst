@@ -87,7 +87,7 @@ Testing the package
 
 You can now test your package, Just run::
 
-  sudo limba install bundle.ipk
+  sudo limba install-local bundle.ipk
 
 Your software should install successfully.
 If you provided a .desktop file in ``share/applications``, you should find your application in your desktop’s application-menu.
