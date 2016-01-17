@@ -99,6 +99,8 @@ void			li_manager_trust_key_file (LiManager *mgr,
 
 void			li_manager_refresh_cache (LiManager *mgr,
 							GError **error);
+void			li_manager_refresh_keyring (LiManager *mgr,
+							GError **error);
 
 GList			*li_manager_get_update_list (LiManager *mgr,
 							GError **error);

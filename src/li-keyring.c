@@ -202,6 +202,7 @@ li_keyring_scan_keys_for_kind (LiKeyring *kr, LiKeyringKind kind, const gchar *k
 	/* no need to do anything if there is no directory to import stuff from */
 	if (!g_file_test (keys_dir, G_FILE_TEST_IS_DIR))
 		return;
+	g_debug ("Looking for public keys in %s", keys_dir);
 
 	gpgfiles = li_utils_find_files_matching (keys_dir, "*.gpg", FALSE);
 	if (gpgfiles == NULL) {
@@ -296,6 +297,7 @@ li_keyring_refresh_keys (LiKeyring *kr, GError **error)
 		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
+	g_debug ("Keyrings rebuilt successfully.");
 
 	return TRUE;
 }

@@ -46,7 +46,7 @@ lipa_check_su (void)
 	vuid = getuid ();
 
 	if (vuid != ((uid_t) 0)) {
-		li_print_stderr ("This action needs superuser permissions.");
+		li_print_stderr (_("This action needs superuser permissions."));
 		return FALSE;
 	}
 
@@ -69,7 +69,7 @@ lipa_list_software (void)
 
 	sw = li_manager_get_software_list (mgr, &error);
 	if (error != NULL) {
-		li_print_stderr ("An error occured while fetching the software-list: %s", error->message);
+		li_print_stderr (_("An error occured while fetching the software-list: %s"), error->message);
 		exit_code = 2;
 		goto out;
 	}
@@ -181,7 +181,7 @@ lipa_install_package (const gchar *pkgid)
 	li_installer_install (inst, &error);
 	if (error != NULL) {
 		li_abort_progress_bar ();
-		li_print_stderr (_("Could not install software: %s"), error->message);
+		li_print_stderr (_("Unable to install software: %s"), error->message);
 		g_error_free (error);
 		res = 1;
 	}
@@ -262,7 +262,7 @@ lipa_remove_software (const gchar *pkgid)
 
 	li_manager_remove_software (mgr, pkgid, &error);
 	if (error != NULL) {
-		li_print_stderr ("Could not remove software: %s", error->message);
+		li_print_stderr (_("Unable to remove software: %s"), error->message);
 		g_error_free (error);
 		res = 1;
 	}
@@ -288,7 +288,7 @@ lipa_cleanup (void)
 
 	li_manager_cleanup (mgr, &error);
 	if (error != NULL) {
-		li_print_stderr ("Could not cleanup cruft: %s", error->message);
+		li_print_stderr (_("Failed to cleanup cruft: %s"), error->message);
 		g_error_free (error);
 		res = 1;
 	}
@@ -314,7 +314,7 @@ lipa_refresh (void)
 
 	li_manager_refresh_cache (mgr, &error);
 	if (error != NULL) {
-		li_print_stderr ("Could not refresh cache: %s", error->message);
+		li_print_stderr (_("Could not refresh cache: %s"), error->message);
 		g_error_free (error);
 		res = 1;
 	}
@@ -349,7 +349,7 @@ lipa_trust_key (const gchar *key)
 	else
 		li_manager_trust_key (mgr, key, &error);
 	if (error != NULL) {
-		li_print_stderr ("Could not add key: %s", error->message);
+		li_print_stderr (_("Could not add public key: %s"), error->message);
 		g_error_free (error);
 		res = 1;
 	}
@@ -374,7 +374,7 @@ lipa_list_updates (void)
 
 	updates = li_manager_get_update_list (mgr, &error);
 	if (error != NULL) {
-		li_print_stderr ("An error occured while fetching the software-list: %s",error->message);
+		li_print_stderr (_("An error occured while fetching the software-list: %s"),error->message);
 		exit_code = 2;
 		goto out;
 	}
@@ -419,8 +419,38 @@ lipa_update (void)
 
 	li_manager_apply_updates (mgr, &error);
 	if (error != NULL) {
-		li_print_stderr ("Could not apply updates: %s", error->message);
-		exit_code = 2;
+		li_print_stderr (_("Could not apply updates: %s"), error->message);
+		exit_code = 1;
+		goto out;
+	}
+
+out:
+	g_object_unref (mgr);
+	if (error != NULL)
+		g_error_free (error);
+
+	return exit_code;
+}
+
+/**
+ * lipa_refresh_keyring:
+ */
+static gint
+lipa_refresh_keyring (void)
+{
+	LiManager *mgr;
+	gint exit_code = 0;
+	GError *error = NULL;
+
+	if (!lipa_check_su ())
+		return 2;
+
+	mgr = li_manager_new ();
+
+	li_manager_refresh_keyring (mgr, &error);
+	if (error != NULL) {
+		li_print_stderr (_("Could not refresh keyring: %s"), error->message);
+		exit_code = 1;
 		goto out;
 	}
 
@@ -564,6 +594,8 @@ main (int argc, char *argv[])
 		exit_code = lipa_list_updates ();
 	} else if (g_strcmp0 (command, "update") == 0) {
 		exit_code = lipa_update ();
+	} else if (g_strcmp0 (command, "refresh-keyring") == 0) {
+		exit_code = lipa_refresh_keyring ();
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;

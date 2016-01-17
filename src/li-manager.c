@@ -1100,6 +1100,7 @@ out:
 
 /**
  * li_manager_refresh_cache:
+ * @mgr: An instance of #LiManager
  *
  * Refresh the cache of available packages.
  */
@@ -1121,6 +1122,22 @@ li_manager_refresh_cache (LiManager *mgr, GError **error)
 		g_propagate_error (error, tmp_error);
 		return;
 	}
+}
+
+/**
+ * li_manager_refresh_keyring:
+ * @mgr: An instance of #LiManager
+ *
+ * Look for new trusted keys and update the keyring.
+ */
+void
+li_manager_refresh_keyring (LiManager *mgr, GError **error)
+{
+	LiKeyring *kr;
+
+	kr = li_keyring_new ();
+	li_keyring_refresh_keys (kr, error);
+	g_object_unref (kr);
 }
 
 /**
