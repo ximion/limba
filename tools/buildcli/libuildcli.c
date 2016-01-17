@@ -214,9 +214,10 @@ libuild_get_summary ()
 				/* these are commands we can use with limba-build */
 				_("Subcommands:"));
 
-	g_string_append_printf (string, "  %s - %s\n", "run [DIRECTORY]", _("Build the software following its build recipe"));
+	g_string_append_printf (string, "  %s - %s\n", "run [DIRECTORY]", _("Build the software following its build recipe."));
+	g_string_append_printf (string, "  %s - %s\n\n", "run-shell [DIRECTORY]", _("Run an interactive shell in the virtual build environment."));
 	g_string_append_printf (string, "  %s - %s\n", "repo-init [DIRECTORY]", _("Initialize a new repository in DIRECTORY."));
-	g_string_append_printf (string, "  %s - %s\n", "repo-add [PKGNAME] [DIRECTORY]", _("Add a package to the repository"));
+	g_string_append_printf (string, "  %s - %s\n\n", "repo-add [PKGNAME] [DIRECTORY]", _("Add a package to the repository."));
 	g_string_append_printf (string, "  %s - %s\n", "make-template", _("Create sources for a new package."));
 
 	return g_string_free (string, FALSE);
