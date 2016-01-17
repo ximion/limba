@@ -442,6 +442,7 @@ li_pkg_builder_sign_data (LiPkgBuilder *builder, const gchar *data, gpgme_sig_mo
 	if (priv->gpg_key != NULL) {
 		gpgme_key_t akey;
 
+		g_debug ("Explicitly using key: %s", priv->gpg_key);
 		err = gpgme_get_key (ctx, priv->gpg_key, &akey, 1);
 		if (err != 0) {
 			g_set_error (error,
@@ -465,6 +466,8 @@ li_pkg_builder_sign_data (LiPkgBuilder *builder, const gchar *data, gpgme_sig_mo
 		}
 
 		gpgme_key_unref (akey);
+	} else {
+		g_debug ("Using default key for signing.");
 	}
 
 	err = gpgme_data_new_from_mem (&din, data, strlen (data), 0);
