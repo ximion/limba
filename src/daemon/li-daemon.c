@@ -363,6 +363,9 @@ main (gint argc, gchar *argv[])
 		g_setenv ("G_MESSAGES_DEBUG", "all", TRUE);
 	}
 
+	/* just in case someone did weird things and has set umask on the daemon... */
+	li_reset_umask ();
+
 	/* initialize helper */
 	helper.loop = g_main_loop_new (NULL, FALSE);
 	helper.exit_idle_time = 30;
