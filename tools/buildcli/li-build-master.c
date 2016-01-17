@@ -355,6 +355,7 @@ li_build_master_print_section (LiBuildMaster *bmaster, const gchar *section_name
 	g_string_free (str, TRUE);
 }
 
+#if 0
 /**
  * li_build_master_exec:
  */
@@ -370,6 +371,71 @@ li_build_master_exec (LiBuildMaster *bmaster, const gchar *cmd)
 
 	return res;
 }
+#endif
+
+/**
+ * li_build_master_exec_command_sequence:
+ *
+ */
+static gint
+li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stage_id, GPtrArray *cmds)
+{
+	gint fd;
+	guint i;
+	g_autofree gchar *tmp_fname = NULL;
+	g_autofree gchar *scmd = NULL;
+	gint res = 0;
+
+	/* The system() command always spawns a new shell, so if you set
+	 * environment vars or change directories in build.yml it won't work.
+	 * So we cheat and execute a shell script instead.
+	 * FIXME: Env vars from stages before this one will be forgotten.
+	 * We don't want that, so maybe generate one huge script instead of multiple
+	 * small ones instead? */
+
+	tmp_fname = g_strdup_printf ("/tmp/%s-XXXXXX", stage_id);
+	fd = mkstemp (tmp_fname);
+	g_debug ("Command script: %s", tmp_fname);
+	if (fd < 0) {
+		g_error ("Unable to store script for %s.", stage_id);
+		return 1;
+	}
+
+	if (dprintf (fd, "!#/bin/sh\nset -e\n\n") < 0) {
+		g_error ("Unable to write command sequence.");
+		return 1;
+	}
+
+	for (i = 0; i < cmds->len; i++) {
+		gchar *cmd;
+		gchar *tmp;
+		g_autofree gchar *msg = NULL;
+		cmd = (gchar*) g_ptr_array_index (cmds, i);
+
+		tmp = g_shell_quote (cmd);
+		msg = li_str_replace (tmp, "'", "");
+		g_free (tmp);
+
+		if (dprintf (fd, "echo ' ! %s'\n", msg) < 0) {
+			g_error ("Unable to write command sequence.");
+			return 1;
+		}
+		if (dprintf (fd, "%s", cmd) < 0) {
+			g_error ("Unable to write command sequence.");
+			return 1;
+		}
+		dprintf (fd, "\n");
+	}
+
+	scmd = g_strdup_printf ("sh %s", tmp_fname);
+	res = system (scmd);
+	if (res > 255)
+		res = 1;
+
+	return res;
+}
+
+
 
 /**
  * li_build_master_mount_deps:
@@ -472,7 +538,6 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 {
 	gint res = 0;
 	gboolean ret;
-	guint i;
 	gchar *tmp;
 	g_autofree gchar *build_data_root = NULL;
 	g_autofree gchar *newroot_dir = NULL;
@@ -564,13 +629,9 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 
 	li_build_master_print_section (bmaster, "Preparing Build Environment");
 	if (priv->cmds_pre != NULL) {
-		for (i = 0; i < priv->cmds_pre->len; i++) {
-			gchar *cmd;
-			cmd = (gchar*) g_ptr_array_index (priv->cmds_pre, i);
-			res = li_build_master_exec (bmaster, cmd);
-			if (res != 0)
-				goto out;
-		}
+		res = li_build_master_exec_command_sequence (bmaster, "prepare", priv->cmds_pre);
+		if (res != 0)
+			goto out;
 	}
 
 	if (priv->get_shell) {
@@ -579,24 +640,16 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	} else {
 		/* we don't start an interactive shell, and get to business instead */
 		li_build_master_print_section (bmaster, "Build");
-		for (i = 0; i < priv->cmds->len; i++) {
-			gchar *cmd;
-			cmd = (gchar*) g_ptr_array_index (priv->cmds, i);
-			res = li_build_master_exec (bmaster, cmd);
-			if (res != 0)
-				goto out;
-		}
+		res = li_build_master_exec_command_sequence (bmaster, "build", priv->cmds);
+		if (res != 0)
+			goto out;
 	}
 
 	li_build_master_print_section (bmaster, "Cleanup");
 	if (priv->cmds_post != NULL) {
-		for (i = 0; i < priv->cmds_post->len; i++) {
-			gchar *cmd;
-			cmd = (gchar*) g_ptr_array_index (priv->cmds_post, i);
-			res = li_build_master_exec (bmaster, cmd);
-			if (res != 0)
-				goto out;
-		}
+		res = li_build_master_exec_command_sequence (bmaster, "cleanup", priv->cmds_post);
+		if (res != 0)
+			goto out;
 	}
 
 out:
@@ -697,7 +750,8 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 
 	g_debug ("Executor is done, rescuing build artifacts...");
 	tmp = g_build_filename (env_root, "volatile", "lipkg", NULL);
-	artifacts = li_utils_find_files_matching (tmp, "*.ipk*", FALSE);
+	if (g_file_test (tmp, G_FILE_TEST_IS_DIR))
+		artifacts = li_utils_find_files_matching (tmp, "*.ipk*", FALSE);
 	g_free (tmp);
 	if ((artifacts == NULL) || (artifacts->len == 0)) {
 		g_print ("Unable to find build artifacts!\n");
