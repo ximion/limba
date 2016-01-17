@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -42,8 +42,11 @@
 typedef struct _LiKeyringPrivate	LiKeyringPrivate;
 struct _LiKeyringPrivate
 {
-	gchar *gpg_home_user;
-	gchar *gpg_home_automatic;
+	gchar *keys_dir_vendor;
+	gchar *keys_dir_extra;
+
+	gchar *gpg_home_vendor;
+	gchar *gpg_home_extra;
 	gchar *gpg_home_tmp;
 };
 
@@ -61,8 +64,10 @@ li_keyring_finalize (GObject *object)
 	LiKeyring *kr = LI_KEYRING (object);
 	LiKeyringPrivate *priv = GET_PRIVATE (kr);
 
-	g_free (priv->gpg_home_user);
-	g_free (priv->gpg_home_automatic);
+	g_free (priv->gpg_home_vendor);
+	g_free (priv->gpg_home_extra);
+	g_free (priv->keys_dir_vendor);
+	g_free (priv->keys_dir_extra);
 	if (priv->gpg_home_tmp != NULL) {
 		li_delete_dir_recursive (priv->gpg_home_tmp);
 		g_free (priv->gpg_home_tmp);
@@ -89,9 +94,12 @@ li_keyring_init (LiKeyring *kr)
 		g_assert (err == 0);
 	}
 
-	priv->gpg_home_user = g_build_filename (LI_KEYRING_ROOT, "trusted", NULL);
-	priv->gpg_home_automatic = g_build_filename (LI_KEYRING_ROOT, "automatic", NULL);
+	priv->gpg_home_vendor = g_build_filename (LI_KEYRING_ROOT, "trusted-vendor", NULL);
+	priv->gpg_home_extra = g_build_filename (LI_KEYRING_ROOT, "trusted-extra", NULL);
 	priv->gpg_home_tmp = NULL;
+
+	priv->keys_dir_vendor = g_build_filename (DATADIR, "vendor-keys", NULL);
+	priv->keys_dir_extra = g_strdup (LI_EXTRA_KEYS_DIR);
 }
 
 /**
@@ -106,10 +114,10 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 	gpgme_ctx_t ctx;
 	LiKeyringPrivate *priv = GET_PRIVATE (kr);
 
-	if (kind == LI_KEYRING_KIND_USER) {
-		home = priv->gpg_home_user;
-	} else if (kind == LI_KEYRING_KIND_AUTOMATIC) {
-		home = priv->gpg_home_automatic;
+	if (kind == LI_KEYRING_KIND_VENDOR) {
+		home = priv->gpg_home_vendor;
+	} else if (kind == LI_KEYRING_KIND_EXTRA) {
+		home = priv->gpg_home_extra;
 	} else {
 		/* we create these super-ugly temporary GPG home dirs to prevent a normal
 		 * signature validation from tampering with our keyring (e.g. by occasionally
@@ -177,6 +185,122 @@ li_keyring_get_context (LiKeyring *kr, LiKeyringKind kind)
 }
 
 /**
+ * li_keyring_scan_keys_for_kind:
+ * @kr: An instance of #LiKeyring
+ *
+ * Internal helper function.
+ */
+static void
+li_keyring_scan_keys_for_kind (LiKeyring *kr, LiKeyringKind kind, const gchar *keys_dir, GError **error)
+{
+	guint i;
+	g_autoptr(GPtrArray) gpgfiles = NULL;
+	gpgme_ctx_t ctx;
+	gpgme_error_t err;
+	LiKeyringPrivate *priv = GET_PRIVATE (kr);
+
+	/* no need to do anything if there is no directory to import stuff from */
+	if (!g_file_test (keys_dir, G_FILE_TEST_IS_DIR))
+		return;
+
+	gpgfiles = li_utils_find_files_matching (keys_dir, "*.gpg", FALSE);
+	if (gpgfiles == NULL) {
+		g_set_error (error,
+			LI_KEYRING_ERROR,
+			LI_KEYRING_ERROR_SCAN,
+			_("Unable to scan for new trusted keys."));
+		return;
+	}
+
+	/* we just recreate the keyring, instead of removing old keys */
+	if (kind == LI_KEYRING_KIND_VENDOR) {
+		li_delete_dir_recursive (priv->gpg_home_vendor);
+	} else if (kind == LI_KEYRING_KIND_EXTRA) {
+		li_delete_dir_recursive (priv->gpg_home_extra);
+	}
+
+	/* add keys to keyring */
+	ctx = li_keyring_get_context (kr, kind);
+	for (i = 0; i < gpgfiles->len; i++) {
+		FILE *keyfile;
+		gpgme_data_t keyd;
+		gpgme_import_result_t ires;
+		const gchar *fname = g_ptr_array_index (gpgfiles, i);
+
+		keyfile = fopen (fname, "r");
+		gpgme_data_new_from_stream (&keyd, keyfile);
+
+		err = gpgme_op_import (ctx, keyd);
+		if (err != 0) {
+			g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_IMPORT,
+				_("Import of key '%s' failed: %s"),
+				fname,
+				gpgme_strerror (err));
+			gpgme_data_release (keyd);
+			fclose (keyfile);
+			goto out;
+		}
+		gpgme_data_release (keyd);
+		fclose (keyfile);
+
+		ires = gpgme_op_import_result (ctx);
+		if (!ires) {
+			g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_IMPORT,
+				_("Importing of key failed: %s"),
+				_("No import result returned."));
+			goto out;
+		}
+
+		/* we tried to import one key, so one key should have been accepted */
+		if (ires->considered != 1 || !ires->imports) {
+			g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_IMPORT,
+				_("Importing of key failed: %s"),
+				_("Zero results returned."));
+			goto out;
+		}
+	}
+
+out:
+	gpgme_release (ctx);
+}
+
+/**
+ * li_keyring_refresh_keys:
+ * @kr: An instance of #LiKeyring
+ *
+ * Scan for keys in keyring import directories and
+ * rebuild the actual keyrings using them.
+ */
+gboolean
+li_keyring_refresh_keys (LiKeyring *kr, GError **error)
+{
+	GError *tmp_error = NULL;
+	LiKeyringPrivate *priv = GET_PRIVATE (kr);
+
+	/* handle vendor keys */
+	li_keyring_scan_keys_for_kind (kr, LI_KEYRING_KIND_VENDOR, priv->keys_dir_vendor, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	/* handle user keys */
+	li_keyring_scan_keys_for_kind (kr, LI_KEYRING_KIND_EXTRA, priv->keys_dir_extra, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/**
  * li_keyring_lookup_key:
  */
 static gpgme_key_t
@@ -235,14 +359,14 @@ li_keyring_lookup_key (gpgme_ctx_t ctx, const gchar *fpr, gboolean remote, GErro
 }
 
 /**
- * li_keyring_import_key:
+ * li_keyring_add_key:
+ * @kr: An instance of #LiKeyring
  * @fpr: The fingerprint of the key to fetch.
- * @kind: The keyring type to add this key to
  *
- * Get a key matching the fingerprint and add it to the respective keyring.
+ * Get a key matching the fingerprint and add it to the list of trusted keys.
  */
 gboolean
-li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GError **error)
+li_keyring_add_key (LiKeyring *kr, const gchar *fpr, GError **error)
 {
 	gpgme_ctx_t ctx_target;
 	gpgme_ctx_t ctx_tmp;
@@ -250,12 +374,17 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 	gpgme_error_t err;
 	gpgme_key_t keys[2];
 	gpgme_data_t key_data = NULL;
-	gpgme_import_result_t ires;
 	gchar *cmd;
+	gint ret;
+	FILE *keyfile;
+	g_autofree gchar *fname = NULL;
+	#define BUF_SIZE 512
+	char buf[BUF_SIZE + 1];
 	gpgme_engine_info_t engine;
 	GError *tmp_error = NULL;
+	LiKeyringPrivate *priv = GET_PRIVATE (kr);
 
-	ctx_target = li_keyring_get_context (kr, kind);
+	ctx_target = li_keyring_get_context (kr, LI_KEYRING_KIND_EXTRA);
 	ctx_tmp = li_keyring_get_context (kr, LI_KEYRING_KIND_NONE);
 
 	/* check if we already have that key */
@@ -271,16 +400,15 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 		g_debug ("Key '%s' is already in the keyring.", fpr);
 		gpgme_key_unref (key);
 		gpgme_release (ctx_tmp);
-		gpgme_release (ctx_target);
 		return TRUE;
 	}
+	gpgme_release (ctx_target);
 
 	/* fetch key from remote */
 	key = li_keyring_lookup_key (ctx_tmp, fpr, TRUE, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		gpgme_release (ctx_tmp);
-		gpgme_release (ctx_target);
 		return FALSE;
 	}
 	if (key == NULL) {
@@ -289,7 +417,6 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 			LI_KEYRING_ERROR_KEY_UNKNOWN,
 			_("Key lookup failed, could not find remote key."));
 		gpgme_release (ctx_tmp);
-		gpgme_release (ctx_target);
 		return FALSE;
 	}
 
@@ -306,7 +433,6 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 			gpgme_strerror (err));
 		gpgme_key_unref (key);
 		gpgme_release (ctx_tmp);
-		gpgme_release (ctx_target);
 		return FALSE;
 	}
 
@@ -326,7 +452,6 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 			gpgme_strerror (err));
 		gpgme_key_unref (key);
 		gpgme_release (ctx_tmp);
-		gpgme_release (ctx_target);
 		return FALSE;
 	}
 
@@ -339,50 +464,89 @@ li_keyring_import_key (LiKeyring *kr, const gchar *fpr, LiKeyringKind kind, GErr
 			_("Key export failed: %s"),
 			gpgme_strerror (err));
 		gpgme_key_unref (key);
-		gpgme_release (ctx_target);
 		gpgme_data_release (key_data);
 		return FALSE;
 	}
+
+	g_mkdir_with_parents (priv->keys_dir_extra, 0755);
+	if ((key->subkeys != NULL) && (key->subkeys->fpr != NULL))
+		fname = g_strdup_printf ("%s/%s.gpg", priv->keys_dir_extra, key->subkeys->fpr);
+	else
+		fname = g_strdup_printf ("%s/%s.gpg", priv->keys_dir_extra, fpr);
 	gpgme_key_unref (key);
 
+	keyfile = fopen (fname, "w");
+	if (keyfile == NULL) {
+		g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_IMPORT,
+				_("Unable to store new key. Error: %s"), g_strerror (errno));
+		return FALSE;
+	}
+
 	/* rewind manually, GPGMe doesn't do that for us */
-	gpgme_data_seek (key_data, 0, SEEK_SET);
+	ret = gpgme_data_seek (key_data, 0, SEEK_SET);
+	while ((ret = gpgme_data_read (key_data, buf, BUF_SIZE)) > 0) {
+		if (fwrite (buf, sizeof (char), ret, keyfile) < 0) {
+			g_set_error (error,
+				LI_KEYRING_ERROR,
+				LI_KEYRING_ERROR_IMPORT,
+				_("Unable to store new key. Error: %s"), g_strerror (errno));
+			gpgme_data_release (key_data);
+			return FALSE;
+		}
+	}
 
-	err = gpgme_op_import (ctx_target, key_data);
 	gpgme_data_release (key_data);
-	if (err != 0) {
-		g_set_error (error,
-			LI_KEYRING_ERROR,
-			LI_KEYRING_ERROR_IMPORT,
-			_("Importing of key failed: %s"),
-			gpgme_strerror (err));
-		gpgme_release (ctx_target);
+	fclose (keyfile);
+
+	/* we need to rebuild the keyring to activate the new key */
+	li_keyring_refresh_keys (kr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
 
-	ires = gpgme_op_import_result (ctx_target);
-	if (!ires) {
-		g_set_error (error,
-			LI_KEYRING_ERROR,
-			LI_KEYRING_ERROR_IMPORT,
-			_("Importing of key failed: %s"),
-			_("No import result returned."));
-		gpgme_release (ctx_target);
+	return TRUE;
+}
+
+/**
+ * li_keyring_add_key_file:
+ * @kr: An instance of #LiKeyring
+ * @fname: The fingerprint of the key to fetch.
+ *
+ * Get a key matching the fingerprint and add it to the list of trusted keys.
+ */
+gboolean
+li_keyring_add_key_file (LiKeyring *kr, const gchar *fname, GError **error)
+{
+	gchar *tmp;
+	g_autofree gchar *dest_fname = NULL;
+	GError *tmp_error = NULL;
+	LiKeyringPrivate *priv = GET_PRIVATE (kr);
+
+	tmp = g_path_get_basename (fname);
+	if (g_str_has_suffix (tmp, ".gpg"))
+		dest_fname = g_build_filename (priv->keys_dir_extra, tmp, NULL);
+	else
+		dest_fname = g_strdup_printf ("%s/%s.gpg", priv->keys_dir_extra, tmp);
+	g_free (tmp);
+
+	g_mkdir_with_parents (priv->keys_dir_extra, 0755);
+
+	g_debug ("Installing key: %s", dest_fname);
+	li_copy_file (fname, dest_fname, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
 
-	/* we tried to import one key, so one key should have been accepted */
-	if (ires->considered != 1 || !ires->imports) {
-		g_set_error (error,
-			LI_KEYRING_ERROR,
-			LI_KEYRING_ERROR_IMPORT,
-			_("Importing of key failed: %s"),
-			_("Zero results returned."));
-		gpgme_release (ctx_target);
+	/* we need to rebuild the keyring to activate the new key */
+	li_keyring_refresh_keys (kr, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
 		return FALSE;
 	}
-
-	gpgme_release (ctx_target);
 
 	return TRUE;
 }
@@ -459,17 +623,17 @@ li_keyring_verify_clear_signature (LiKeyring *kr, LiKeyringKind kind, const gcha
 		return NULL;
 	}
 
-	if (sig->status != GPG_ERR_NO_ERROR) {
-		if (sig->status == GPG_ERR_NO_PUBKEY) {
+	if (gpgme_err_code (sig->status) != GPG_ERR_NO_ERROR) {
+		if (gpgme_err_code (sig->status) == GPG_ERR_NO_PUBKEY) {
 			g_set_error (error,
 				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_VERIFY,
+				LI_KEYRING_ERROR_KEY_MISSING,
 				_("Could not verify signature: They key could not be found or downloaded."));
 		} else {
 			g_set_error (error,
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_VERIFY,
-				_("Signature validation failed. Signature is invalid. (%s)"),
+				_("Signature validation failed. Signature is invalidZZZ. (%s)"),
 				gpgme_strerror (sig->status));
 		}
 		gpgme_data_release (sigdata);
@@ -512,14 +676,14 @@ li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_d
 
 	/* Trust levels:
 	 * None: Signature is broken, package is not trusted.
-	 * Low: Signature is valid, but we don't trust they key it was signed with.
-	 * Medium: Signature is implicitly trusted.
-	 * High: Signature is explicitly trusted.
+	 * Low: Signature is valid, but we don't trust they key it was signed with (not implemented).
+	 * Medium: Signature is trusted by manually added key.
+	 * High: Signature is trusted by vendor key.
 	 */
 
 	/* can we validate the signature with keys in our trusted database? */
 	sdata = li_keyring_verify_clear_signature (kr,
-					LI_KEYRING_KIND_USER,
+					LI_KEYRING_KIND_VENDOR,
 					sigtext,
 					&fpr,
 					&error_ucheck);
@@ -528,11 +692,10 @@ li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_d
 	if (error_ucheck != NULL) {
 		/* do we implicitly trust that key? */
 		sdata = li_keyring_verify_clear_signature (kr,
-					LI_KEYRING_KIND_AUTOMATIC,
+					LI_KEYRING_KIND_EXTRA,
 					sigtext,
 					&fpr,
 					&tmp_error);
-
 		level = LI_TRUST_LEVEL_MEDIUM;
 		if (tmp_error == NULL) {
 			g_error_free (error_ucheck);
@@ -549,7 +712,6 @@ li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_d
 
 	if (out_fpr != NULL)
 		*out_fpr = g_strdup (fpr);
-
 
 	if (fpr != NULL)
 		g_free (fpr);

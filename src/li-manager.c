@@ -1124,17 +1124,36 @@ li_manager_refresh_cache (LiManager *mgr, GError **error)
 }
 
 /**
- * li_manager_receive_key:
+ * li_manager_trust_key:
+ * @mgr: An instance of #LiManager
+ * @fpr: The fingerprint of the key to add.
  *
- * Download a PGP key and add it to the database of highly trusted keys.
+ * Download a PGP key and add it to the database of trusted keys.
  */
 void
-li_manager_receive_key (LiManager *mgr, const gchar *fpr, GError **error)
+li_manager_trust_key (LiManager *mgr, const gchar *fpr, GError **error)
 {
 	LiKeyring *kr;
 
 	kr = li_keyring_new ();
-	li_keyring_import_key (kr, fpr, LI_KEYRING_KIND_USER, error);
+	li_keyring_add_key (kr, fpr, error);
+	g_object_unref (kr);
+}
+
+/**
+ * li_manager_trust_key_file:
+ * @mgr: An instance of #LiManager
+ * @fname: The filename of the GPG key that should be added.
+ *
+ * Download a PGP key and add it to the database of trusted keys.
+ */
+void
+li_manager_trust_key_file (LiManager *mgr, const gchar *fname, GError **error)
+{
+	LiKeyring *kr;
+
+	kr = li_keyring_new ();
+	li_keyring_add_key_file (kr, fname, error);
 	g_object_unref (kr);
 }
 

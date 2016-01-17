@@ -118,7 +118,11 @@ li_delete_dir_recursive (const gchar* dirname)
 		return TRUE;
 
 	dir = g_file_new_for_path (dirname);
-	enr = g_file_enumerate_children (dir, "standard::name", G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, NULL, &error);
+	enr = g_file_enumerate_children (dir,
+					 "standard::name",
+					 G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+					 NULL,
+					 &error);
 	if (error != NULL)
 		goto out;
 
@@ -160,7 +164,7 @@ out:
  * li_utils_find_files_matching:
  */
 GPtrArray*
-li_utils_find_files_matching (const gchar* dir, const gchar* pattern, gboolean recursive)
+li_utils_find_files_matching (const gchar *dir, const gchar *pattern, gboolean recursive)
 {
 	GPtrArray* list;
 	GError *error = NULL;
@@ -181,8 +185,8 @@ li_utils_find_files_matching (const gchar* dir, const gchar* pattern, gboolean r
 		if (g_file_info_get_is_hidden (file_info))
 			continue;
 		path = g_build_filename (dir,
-								 g_file_info_get_name (file_info),
-								 NULL);
+					 g_file_info_get_name (file_info),
+					 NULL);
 		if ((g_file_test (path, G_FILE_TEST_IS_DIR)) && (recursive)) {
 			GPtrArray *subdir_list;
 			guint i;
@@ -196,7 +200,7 @@ li_utils_find_files_matching (const gchar* dir, const gchar* pattern, gboolean r
 			}
 			for (i=0; i<subdir_list->len; i++)
 				g_ptr_array_add (list,
-								 g_strdup ((gchar *) g_ptr_array_index (subdir_list, i)));
+						 g_strdup ((gchar *) g_ptr_array_index (subdir_list, i)));
 			g_ptr_array_unref (subdir_list);
 		} else {
 			if (!li_str_empty (pattern)) {

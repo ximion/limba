@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -49,18 +49,18 @@ struct _LiKeyringClass
 
 /**
  * LiKeyringKind:
- * @LI_KEYRING_KIND_NONE:		No specific keyring should be used
- * @LI_KEYRING_KIND_USER:		Use the manual keyring, containing explicitly trusted keys
- * @LI_KEYRING_KIND_AUTOMATIC:	Use the automatic keyring, containing automatically added keys
- * @LI_KEYRING_KIND_ALL:		Peek all keyrings
+ * @LI_KEYRING_KIND_NONE:	No specific keyring should be used.
+ * @LI_KEYRING_KIND_ALL:	Use all keyrings.
+ * @LI_KEYRING_KIND_VENDOR:	Use the vendor keyring, containing explicitly trusted keys by the distribution vendor.
+ * @LI_KEYRING_KIND_EXTRA:	Use the extra keyring, containing manually trusted keys by the user.
  *
  * Type of the keyring to validate against.
  **/
 typedef enum {
 	LI_KEYRING_KIND_NONE,
-	LI_KEYRING_KIND_USER,
-	LI_KEYRING_KIND_AUTOMATIC,
 	LI_KEYRING_KIND_ALL,
+	LI_KEYRING_KIND_VENDOR,
+	LI_KEYRING_KIND_EXTRA,
 	/*< private >*/
 	LI_KEYRING_LAST
 } LiKeyringKind;
@@ -68,19 +68,23 @@ typedef enum {
 /**
  * LiKeyringError:
  * @LI_KEYRING_ERROR_FAILED:		Generic failure
+ * @LI_KEYRING_ERROR_SCAN:		Looking for keys has failed.
+ * @LI_KEYRING_ERROR_IMPORT:		Importing of a key failed
  * @LI_KEYRING_ERROR_LOOKUP:		An error occured while looking up a key
  * @LI_KEYRING_ERROR_KEY_UNKNOWN: 	The key we are dealing with is unknown
- * @LI_KEYRING_ERROR_IMPORT:		Importing of a key failed
  * @LI_KEYRING_ERROR_VERIFY:		Verification failed
+ * @LI_KEYRING_ERROR_KEY_MISSING:	A (public) key is missing to complete the validation.
  *
  * The error type.
  **/
 typedef enum {
 	LI_KEYRING_ERROR_FAILED,
+	LI_KEYRING_ERROR_SCAN,
+	LI_KEYRING_ERROR_IMPORT,
 	LI_KEYRING_ERROR_LOOKUP,
 	LI_KEYRING_ERROR_KEY_UNKNOWN,
-	LI_KEYRING_ERROR_IMPORT,
 	LI_KEYRING_ERROR_VERIFY,
+	LI_KEYRING_ERROR_KEY_MISSING,
 	/*< private >*/
 	LI_KEYRING_ERROR_LAST
 } LiKeyringError;
@@ -90,16 +94,20 @@ GQuark li_keyring_error_quark (void);
 
 LiKeyring		*li_keyring_new (void);
 
-gboolean		li_keyring_import_key (LiKeyring *kr,
+gboolean		li_keyring_add_key (LiKeyring *kr,
 						const gchar *fpr,
-						LiKeyringKind kind,
 						GError **error);
+gboolean		li_keyring_add_key_file (LiKeyring *kr,
+							const gchar *fname,
+							GError **error);
+gboolean		li_keyring_refresh_keys (LiKeyring *kr,
+							GError **error);
+
 gchar			*li_keyring_verify_clear_signature (LiKeyring *kr,
 							LiKeyringKind kind,
 							const gchar *sigtext,
 							gchar **out_fpr,
 							GError **error);
-
 LiTrustLevel		li_keyring_process_signature (LiKeyring *kr,
 					const gchar *sigtext,
 					gchar **out_data,

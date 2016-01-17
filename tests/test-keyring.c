@@ -66,6 +66,21 @@ test_keyring () {
 	kr = li_keyring_new ();
 
 	/* validate signature */
+	level = li_keyring_process_signature (kr, sig_signature, NULL, NULL, &error);
+	g_assert_error (error, LI_KEYRING_ERROR, LI_KEYRING_ERROR_KEY_MISSING);
+	g_assert (level == LI_TRUST_LEVEL_NONE);
+	g_error_free (error);
+	error = NULL;
+
+	/* import that key into the trust database (file import) */
+	tmp = g_build_filename (datadir, "..", "gpg", "F90FD60F.gpg", NULL);
+	g_assert (g_file_test (tmp, G_FILE_TEST_IS_REGULAR));
+	li_keyring_add_key_file (kr, tmp, &error);
+	g_assert_no_error (error);
+	g_free (tmp);
+	tmp = NULL;
+
+	/* check if we have a higher trust level now */
 	level = li_keyring_process_signature (kr, sig_signature, &tmp, &fpr, &error);
 	g_assert_no_error (error);
 	g_assert_cmpstr (sig_message, ==, tmp);
@@ -73,15 +88,10 @@ test_keyring () {
 	g_free (tmp);
 	g_assert (level == LI_TRUST_LEVEL_MEDIUM);
 
-	/* import that key to the high-trust database */
-	li_keyring_import_key (kr, fpr, LI_KEYRING_KIND_USER, &error);
+	/* add a key from a remote source to the keyring */
+	li_keyring_add_key (kr, "BF4DECEB", &error);
 	g_assert_no_error (error);
 	g_free (fpr);
-
-	/* check if we have a higher trust level now */
-	level = li_keyring_process_signature (kr, sig_signature, NULL, NULL, &error);
-	g_assert_no_error (error);
-	g_assert (level == LI_TRUST_LEVEL_HIGH);
 
 	g_object_unref (kr);
 }
@@ -89,8 +99,6 @@ test_keyring () {
 int
 main (int argc, char **argv)
 {
-	gchar *tmp;
-	gchar *cmd;
 	int ret;
 
 	if (argc == 0) {
@@ -102,14 +110,6 @@ main (int argc, char **argv)
 	g_assert (datadir != NULL);
 	datadir = g_build_filename (datadir, "data", NULL);
 	g_assert (g_file_test (datadir, G_FILE_TEST_EXISTS) != FALSE);
-
-	/* set fake GPG home */
-	tmp = g_build_filename (argv[1], "gpg", NULL);
-	g_mkdir_with_parents ("/var/lib/limba/keyrings", 0755);
-	cmd = g_strdup_printf ("cp -r '%s' /var/lib/limba/keyrings/automatic", tmp);
-	g_assert (system (cmd) == 0); /* meh for call to system() - but okay for the testsuite */
-	g_free (tmp);
-	g_free (cmd);
 
 	li_set_verbose_mode (TRUE);
 	g_test_init (&argc, &argv, NULL);

@@ -50,4 +50,6 @@
 
 #define LI_KEYRING_ROOT "@CMAKE_INSTALL_FULL_LOCALSTATEDIR@/lib/limba/keyrings"
 
+#define LI_EXTRA_KEYS_DIR "@CMAKE_INSTALL_FULL_LOCALSTATEDIR@/lib/limba/trusted-keys"
+
 #endif /*CONFIG_H*/

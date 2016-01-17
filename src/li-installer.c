@@ -705,10 +705,10 @@ li_installer_get_package_info (LiInstaller *inst)
  * Returns: The trust-level for the to-be-installed package
  */
 LiTrustLevel
-li_installer_get_package_trust_level (LiInstaller *inst)
+li_installer_get_package_trust_level (LiInstaller *inst, GError **error)
 {
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
-	return li_package_verify_signature (priv->pkg, NULL);
+	return li_package_verify_signature (priv->pkg, error);
 }
 
 /**

@@ -53,22 +53,38 @@ void
 test_installer_simple ()
 {
 	LiInstaller *inst;
+	LiManager *mgr;
 	g_autofree gchar *fname_app = NULL;
 	g_autofree gchar *fname_lib = NULL;
+	g_autofree gchar *gpg_key_fname = NULL;
+	LiTrustLevel tlevel;
 	GError *error = NULL;
 
 	fname_app = g_build_filename (datadir, "foobar.ipk", NULL);
 	fname_lib = g_build_filename (datadir, "libfoo.ipk", NULL);
+	gpg_key_fname = g_build_filename (datadir, "..", "gpg", "F90FD60F.gpg", NULL);
 
 	inst = li_installer_new ();
 
 	li_installer_open_file (inst, fname_app, &error);
 	g_assert_no_error (error);
+
+	/* trust level is none, since we don#t know the key the package is signed with yet */
+	tlevel = li_installer_get_package_trust_level (inst, &error);
+	g_assert_no_error (error);
+	g_assert (tlevel == LI_TRUST_LEVEL_NONE);
+
 	li_installer_install (inst, &error);
 	/* this has to fail, we don't have libfoo yet */
 	g_assert_error (error, LI_INSTALLER_ERROR, LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND);
 	g_error_free (error);
 	error = NULL;
+
+	/* now trust the key the packages are signed with */
+	mgr = li_manager_new ();
+	li_manager_trust_key_file (mgr, gpg_key_fname, &error);
+	g_assert_no_error (error);
+	g_object_unref (mgr);
 
 	/* install library */
 	li_installer_open_file (inst, fname_lib, &error);
@@ -79,6 +95,12 @@ test_installer_simple ()
 	/* now we should be able to install the app */
 	li_installer_open_file (inst, fname_app, &error);
 	g_assert_no_error (error);
+	/* trust level should be MEDIUM now */
+	tlevel = li_installer_get_package_trust_level (inst, &error);
+	g_assert_no_error (error);
+	/* FIXME: Packages lack any signature at time... */
+	/* g_assert (tlevel == LI_TRUST_LEVEL_MEDIUM); */
+
 	li_installer_install (inst, &error);
 	g_assert_no_error (error);
 
@@ -199,7 +221,7 @@ test_pkg_cache_setup ()
 
 	/* we need to trust the sample repository key */
 	mgr = li_manager_new ();
-	li_manager_receive_key (mgr, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB", &error);
+	li_manager_trust_key (mgr, "D33A3F0CA16B0ACC51A60738494C8A5FBF4DECEB", &error);
 	g_assert_no_error (error);
 	g_object_unref (mgr);
 

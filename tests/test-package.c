@@ -167,6 +167,8 @@ int
 main (int argc, char **argv)
 {
 	int ret;
+	gchar *tmp;
+	gchar *cmd;
 
 	if (argc == 0) {
 		g_error ("No test data directory specified!");
@@ -177,6 +179,13 @@ main (int argc, char **argv)
 	g_assert (datadir != NULL);
 	datadir = g_build_filename (datadir, "data", NULL);
 	g_assert (g_file_test (datadir, G_FILE_TEST_EXISTS) != FALSE);
+
+	/* set fake GPG home */
+	tmp = g_build_filename (argv[1], "gpg", NULL);
+	cmd = g_strdup_printf ("cp -dpr '%s' /tmp/test-gpghome", tmp);
+	system (cmd); /* meh for call to system() - but okay for the testsuite */
+	g_free (tmp);
+	g_setenv ("GNUPGHOME", "/tmp/test-gpghome", TRUE);
 
 	li_set_verbose_mode (TRUE);
 	g_test_init (&argc, &argv, NULL);

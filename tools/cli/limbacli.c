@@ -327,7 +327,7 @@ lipa_refresh (void)
  * lipa_trust_key:
  */
 static gint
-lipa_trust_key (const gchar *fpr)
+lipa_trust_key (const gchar *key)
 {
 	LiManager *mgr;
 	gint res = 0;
@@ -336,14 +336,18 @@ lipa_trust_key (const gchar *fpr)
 	if (!lipa_check_su ())
 		return 2;
 
-	if (fpr == NULL) {
-		li_print_stderr (_("You need to specify a key fingerprint."));
+	if (key == NULL) {
+		li_print_stderr (_("You need to specify a key fingerprint or file."));
 		return 4;
 	}
 
 	mgr = li_manager_new ();
 
-	li_manager_receive_key (mgr, fpr, &error);
+	/* determine if we are dealing with an FPR or file, then trust the key */
+	if ((g_str_has_prefix (key, "/")) || (g_str_has_prefix (key, ".")))
+		li_manager_trust_key_file (mgr, key, &error);
+	else
+		li_manager_trust_key (mgr, key, &error);
 	if (error != NULL) {
 		li_print_stderr ("Could not add key: %s", error->message);
 		g_error_free (error);
