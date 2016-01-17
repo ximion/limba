@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2015 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2015-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -30,7 +30,10 @@
 #include <glib-object.h>
 #include <glib/gi18n-lib.h>
 #include <yaml.h>
+#include <appstream.h>
+
 #include "limba.h"
+#include "li-utils-private.h"
 
 typedef struct _LiBuildConfPrivate	LiBuildConfPrivate;
 struct _LiBuildConfPrivate
@@ -353,9 +356,13 @@ void
 li_build_conf_open_from_dir (LiBuildConf *bconf, const gchar *dir, GError **error)
 {
 	GFile *file;
-	LiPkgInfo *pki = NULL;
 	GError *tmp_error = NULL;
 	gchar *fname = NULL;
+	AsComponent *cpt;
+	gchar *tmp;
+	const gchar *version;
+	g_autoptr(LiPkgInfo) pki = NULL;
+	g_autoptr(AsMetadata) mdata = NULL;
 	LiBuildConfPrivate *priv = GET_PRIVATE (bconf);
 
 	fname = g_build_filename (dir, "lipkg", "build.yml", NULL);
@@ -417,7 +424,56 @@ li_build_conf_open_from_dir (LiBuildConf *bconf, const gchar *dir, GError **erro
 		return;
 	}
 
-	priv->pki = pki;
+	/* load elementary information from AppStream metainfo */
+	fname = g_build_filename (dir, "lipkg", "metainfo.xml", NULL);
+	file = g_file_new_for_path (fname);
+	g_free (fname);
+	if (!g_file_query_exists (file, NULL)) {
+		g_object_unref (file);
+		g_set_error_literal (error,
+					G_FILE_ERROR,
+					G_FILE_ERROR_NOENT,
+					_("Could not find an AppStream metainfo file!"));
+		return;
+	}
+
+	mdata = as_metadata_new ();
+	as_metadata_set_locale (mdata, "C");
+	as_metadata_parse_file (mdata, file, &tmp_error);
+	g_object_unref (file);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+	cpt = as_metadata_get_component (mdata);
+
+	/* set basic package information */
+	tmp = li_get_pkgname_from_component (cpt);
+	if (tmp == NULL) {
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Could not determine package name."));
+		return;
+	}
+	li_pkg_info_set_name (pki, tmp);
+	g_free (tmp);
+
+	version = li_get_last_version_from_component (cpt);
+	if (version == NULL) {
+		/* no version? give up. */
+		g_set_error (error,
+				LI_PACKAGE_ERROR,
+				LI_PACKAGE_ERROR_DATA_MISSING,
+				_("Could not determine package version."));
+		return;
+	}
+	li_pkg_info_set_version (pki, version);
+
+	/* the human-friendly application name */
+	li_pkg_info_set_appname (pki, as_component_get_name (cpt));
+
+	priv->pki = g_object_ref (pki);
 }
 
 /**

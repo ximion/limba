@@ -425,20 +425,13 @@ li_package_read_component_data (LiPackage *pkg, const gchar *data, GError **erro
 		return FALSE;
 	}
 
-	tmp = li_str_replace (as_component_get_id (priv->cpt), ".desktop", "");
-	g_strstrip (tmp);
-	if ((tmp == NULL) || (g_strcmp0 (tmp, "") == 0)) {
-		g_free (tmp);
-		tmp = li_str_replace (as_component_get_name (priv->cpt), " ", "_");
-		if ((tmp == NULL) || (g_strcmp0 (tmp, "") == 0)) {
-			g_free (tmp);
-			/* no package name is found, we give up */
-			g_set_error (error,
+	tmp = li_get_pkgname_from_component (priv->cpt);
+	if (tmp == NULL) {
+		g_set_error (error,
 				LI_PACKAGE_ERROR,
 				LI_PACKAGE_ERROR_DATA_MISSING,
 				_("Could not determine package name."));
-			return FALSE;
-		}
+		return FALSE;
 	}
 	li_pkg_info_set_name (priv->info, tmp);
 	g_free (tmp);

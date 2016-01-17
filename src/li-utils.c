@@ -499,6 +499,31 @@ li_reset_umask (void)
 }
 
 /**
+ * li_get_pkgname_from_component:
+ *
+ * Convert an AppStream-ID into a valid bundle name.
+ */
+gchar*
+li_get_pkgname_from_component (AsComponent *cpt)
+{
+	gchar *pkgname;
+
+	pkgname = li_str_replace (as_component_get_id (cpt), ".desktop", "");
+	g_strstrip (pkgname);
+	if ((pkgname == NULL) || (g_strcmp0 (pkgname, "") == 0)) {
+		g_free (pkgname);
+		pkgname = li_str_replace (as_component_get_name (cpt), " ", "_");
+		if ((pkgname == NULL) || (g_strcmp0 (pkgname, "") == 0)) {
+			g_free (pkgname);
+			/* no package name is found, we give up */
+			return NULL;
+		}
+	}
+
+	return pkgname;
+}
+
+/**
  * li_compare_versions:
  *
  * Compare alpha and numeric segments of two versions.

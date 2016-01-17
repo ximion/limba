@@ -214,27 +214,34 @@ li_package_graph_add_package (LiPackageGraph *pg, LiPkgInfo *parent, LiPkgInfo *
 {
 	GPtrArray *row;
 	GPtrArray *parent_row;
+	const gchar *pkid;
 	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
 
-	row = g_hash_table_lookup (priv->nindex, li_pkg_info_get_id (pki));
+	pkid = li_pkg_info_get_id (pki);
+	if (pkid == NULL) {
+		g_critical ("Tried to add package with empty ID to graph. This is a bug.");
+		return NULL;
+	}
+
+	row = g_hash_table_lookup (priv->nindex, pkid);
 	if (row == NULL) {
 		row = g_ptr_array_new_with_free_func (g_object_unref);
 		g_ptr_array_add (row, g_object_ref (pki));
 		g_ptr_array_add (priv->alist, row);
 		g_hash_table_insert (priv->nindex,
-					g_strdup (li_pkg_info_get_id (pki)),
+					g_strdup (pkid),
 					row);
-		g_debug ("Added: %s", li_pkg_info_get_id (pki));
+		g_debug ("Added: %s", pkid);
 	}
 
 	if (parent != NULL) {
 		parent_row = g_hash_table_lookup (priv->nindex, li_pkg_info_get_id (parent));
 		if (parent_row == NULL) {
-			g_warning ("Tried to add %s to invalid parent.", li_pkg_info_get_id (pki));
+			g_warning ("Tried to add %s to invalid parent.", pkid);
 		} else {
 			g_ptr_array_add (parent_row, g_object_ref (pki));
 		}
-		/* g_debug ("Set parent '%s' for '%s'", li_pkg_info_get_id (parent), li_pkg_info_get_id (pki)); */
+		/* g_debug ("Set parent '%s' for '%s'", li_pkg_info_get_id (parent), pkid); */
 	}
 
 	if (satisfied_dep != NULL)

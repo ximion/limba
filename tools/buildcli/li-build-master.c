@@ -123,6 +123,7 @@ li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, LiPkgInf
 	g_autoptr(GPtrArray) all_pkgs = NULL;
 	GError *tmp_error = NULL;
 	g_autoptr(GPtrArray) deps = NULL;
+	g_autoptr(GPtrArray) install_todo = NULL;
 	guint i;
 
 	if (use_builddeps) {
@@ -143,6 +144,7 @@ li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, LiPkgInf
 		return;
 	}
 
+	install_todo = g_ptr_array_new ();
 	for (i = 0; i < deps->len; i++) {
 		LiPkgInfo *ipki;
 		gboolean ret;
@@ -178,13 +180,28 @@ li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, LiPkgInf
 				return;
 			}
 		} else {
-			g_set_error (error,
-					LI_BUILD_MASTER_ERROR,
-					LI_BUILD_MASTER_ERROR_BUILD_DEP_MISSING,
-					_("Bundle '%s' needs to be installed in order to build this software."),
-					li_pkg_info_get_id (dep));
-			return;
+			g_ptr_array_add (install_todo, dep);
+			continue;
 		}
+	}
+
+	if (install_todo->len > 0) {
+		g_autoptr(GString) depline = NULL;
+
+		depline = g_string_new ("");
+		for (i = 0; i < install_todo->len; i++) {
+			LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (install_todo, i));
+			g_string_append_printf (depline, "%s ", li_pkg_info_get_id (dep));
+		}
+		if (depline->len > 0)
+			g_string_truncate (depline, depline->len - 1);
+
+		g_set_error (error,
+				LI_BUILD_MASTER_ERROR,
+				LI_BUILD_MASTER_ERROR_BUILD_DEP_MISSING,
+				_("Bundle(s) '%s' need to be installed in order to build this software."),
+				depline->str);
+		return;
 	}
 }
 

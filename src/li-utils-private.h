@@ -51,6 +51,7 @@ gboolean		li_utils_is_root (void);
 gchar			*li_compute_checksum_for_file (const gchar *fname);
 gchar			*li_get_uuid_string (void);
 const gchar		*li_get_last_version_from_component (AsComponent *cpt);
+gchar			*li_get_pkgname_from_component (AsComponent *cpt);
 
 void			li_add_to_new_scope (const gchar *domain,
 						const gchar *idname,
