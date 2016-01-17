@@ -401,7 +401,7 @@ li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stag
 		return 1;
 	}
 
-	if (dprintf (fd, "!#/bin/sh\nset -e\n\n") < 0) {
+	if (dprintf (fd, "#!/bin/sh\nset -e\n\n") < 0) {
 		g_error ("Unable to write command sequence.");
 		return 1;
 	}
