@@ -625,16 +625,11 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname_rt,
 	g_autofree gchar *email = NULL;
 	g_autofree gchar *username = NULL;
 	g_autofree gchar *target_repo = NULL;
+	FILE *file;
 	gchar *tmp;
 	gchar *tmp2;
 	gchar *tmp3;
-
-	gpgme_data_t sigdata;
-	#define BUF_SIZE 512
-	char buf[BUF_SIZE + 1];
-	FILE *file;
-	gint ret;
-	GError *tmp_error = NULL;
+	LiPkgBuilderPrivate *priv = GET_PRIVATE (builder);
 
 	cdata = li_config_data_new ();
 
@@ -673,35 +668,60 @@ li_pkg_builder_write_dsc_file (LiPkgBuilder *builder, const gchar *pkg_fname_rt,
 	/* set target repository */
 	li_config_data_set_value (cdata, "Target", target_repo);
 
-	tmp = li_config_data_get_data (cdata);
-	sigdata = li_pkg_builder_sign_data (builder, tmp, GPGME_SIG_MODE_CLEAR, &tmp_error);
-	g_free (tmp);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return;
-	}
-	g_print ("%s\n", _("DSC file signed."));
-
 	fname = g_strdup_printf ("%s.dsc", pkg_fname_rt);
-	tmp = li_config_data_get_data (cdata);
+	if (priv->sign_package) {
+		gpgme_data_t sigdata;
+		#define BUF_SIZE 512
+		char buf[BUF_SIZE + 1];
+		gint ret;
+		GError *tmp_error = NULL;
 
-	file = fopen (fname, "w");
-	if (file == NULL) {
-		g_set_error (error,
-			LI_BUILDER_ERROR,
-			LI_BUILDER_ERROR_SIGN,
-			_("Unable to write signature on dsc file: %s"),
-			g_strerror (errno));
+		tmp = li_config_data_get_data (cdata);
+		sigdata = li_pkg_builder_sign_data (builder, tmp, GPGME_SIG_MODE_CLEAR, &tmp_error);
+		g_free (tmp);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+		g_print ("%s\n", _("DSC file signed."));
+
+		file = fopen (fname, "w");
+		if (file == NULL) {
+			g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Unable to write signed DSC file: %s"),
+				g_strerror (errno));
+			gpgme_data_release (sigdata);
+			return;
+		}
+
+		gpgme_data_seek (sigdata, 0, SEEK_SET);
+		while ((ret = gpgme_data_read (sigdata, buf, BUF_SIZE)) > 0)
+			fwrite (buf, sizeof (char), ret, file);
+		fclose (file);
+
 		gpgme_data_release (sigdata);
-		return;
+	} else {
+		/* Just write file without signature */
+		g_print ("%s\n", _("DSC file will not be signed."));
+
+		file = fopen (fname, "w");
+		if (file == NULL) {
+			g_set_error (error,
+				LI_BUILDER_ERROR,
+				LI_BUILDER_ERROR_SIGN,
+				_("Unable to write DSC file: %s"),
+				g_strerror (errno));
+			return;
+		}
+
+		tmp = li_config_data_get_data (cdata);
+		fwrite (tmp, sizeof (char), strlen (tmp), file);
+		g_free (tmp);
+
+		fclose (file);
 	}
-
-	gpgme_data_seek (sigdata, 0, SEEK_SET);
-	while ((ret = gpgme_data_read (sigdata, buf, BUF_SIZE)) > 0)
-		fwrite (buf, ret, 1, file);
-	fclose (file);
-
-	gpgme_data_release (sigdata);
 }
 
 /**
