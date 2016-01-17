@@ -237,7 +237,7 @@ li_build_master_resolve_builddeps (LiBuildMaster *bmaster, LiPkgInfo *pki, GErro
 		return;
 	}
 
-	full_deps = li_package_graph_branch_to_array (pg, pki, TRUE);
+	full_deps = li_package_graph_branch_to_array (pg, pki, FALSE);
 	if (full_deps == NULL) {
 		g_warning ("Building package with no build-dependencies defined.");
 		return;
