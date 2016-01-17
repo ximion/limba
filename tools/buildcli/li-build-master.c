@@ -377,12 +377,15 @@ li_build_master_exec (LiBuildMaster *bmaster, const gchar *cmd)
  * Mount the depdenencies into the environment as an overlay.
  */
 static gint
-li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir)
+li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir, const gchar *env_root)
 {
 	guint i;
 	gint res;
 	g_autoptr(GString) lowerdirs = NULL;
 	g_autofree gchar *mount_target = NULL;
+	g_autofree gchar *volatile_data_dir = NULL;
+	g_autofree gchar *ofs_wdir = NULL;
+	g_autofree gchar *app_mount_target = NULL;
 	gchar *tmp;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
@@ -414,13 +417,36 @@ li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir)
 		goto out;
 	}
 
-	/* bind-mount /app to /usr, so binaries compiled with that prefix can find their data  */
-	tmp = g_build_filename (chroot_dir, LI_SW_ROOT_PREFIX, NULL);
-	res = mount (mount_target, tmp,
-				 NULL, MS_BIND, NULL);
+	/* Now we mount /app as an overlay on /usr and make it writable using OverlayFS.
+	 * That way, binaries compiled with that prefix can find their data and we allow
+	 * the setup process to place data here which can then be found by other steps in
+	 * the same stup process. This is useful for creating one bundle out of multiple
+	 * submodules. */
+
+	/* create volatile data dir for /app */
+	volatile_data_dir = g_build_filename (env_root, "volatile_app", NULL);
+	res = g_mkdir_with_parents (volatile_data_dir, 0755);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment (volatile /app): %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* create OverlayFS work dir */
+	ofs_wdir = g_build_filename (env_root, "ofs_work_app", NULL);
+	res = g_mkdir_with_parents (ofs_wdir, 0755);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment (workdir /app): %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* now mount our build-data directory via OverlayFS */
+	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", mount_target, volatile_data_dir, ofs_wdir);
+	app_mount_target = g_build_filename (chroot_dir, LI_SW_ROOT_PREFIX, NULL);
+	res = mount ("overlay", app_mount_target,
+			 "overlay", MS_MGC_VAL | MS_NOSUID, tmp);
 	g_free (tmp);
 	if (res != 0) {
-		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		g_warning ("Unable to set up the environment (/app mount): %s", g_strerror (errno));
 		goto out;
 	}
 
@@ -428,6 +454,8 @@ out:
 	if (res != 0) {
 		if (mount_target != NULL)
 			umount (mount_target);
+		if (app_mount_target != NULL)
+			umount (app_mount_target);
 	}
 
 	return res;
@@ -493,7 +521,7 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	}
 
 	/* overlay the base filesystem with the build-dependency data */
-	res = li_build_master_mount_deps (bmaster, newroot_dir);
+	res = li_build_master_mount_deps (bmaster, newroot_dir, env_root);
 	if (res != 0) {
 		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
 		goto out;
