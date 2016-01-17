@@ -493,13 +493,13 @@ li_set_verbose_mode (gboolean verbose)
 /**
  * li_reset_umask:
  *
- * Reset umask potentially set by the user, so we can
- * create files with the correct permissions.
+ * Reset umask potentially set by the user to a default value,
+ * so we can create files with the correct permissions.
  */
 void
 li_reset_umask (void)
 {
-	umask (0002);
+	umask (0022);
 }
 
 /**
