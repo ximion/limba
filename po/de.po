@@ -1,6 +1,6 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR Matthias Klumpp
-# This file is distributed under the same license as the PACKAGE package.
+# This file is distributed under the same license as the limba package.
 #
 # Translators:
 # Matthias K. <matthias@tenstral.net>, 2015
@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Limba\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-01-16 19:01+0100\n"
-"PO-Revision-Date: 2015-06-26 13:38+0000\n"
+"POT-Creation-Date: 2016-01-17 19:22+0100\n"
+"PO-Revision-Date: 2016-01-16 18:05+0000\n"
 "Last-Translator: Matthias K. <matthias@tenstral.net>\n"
 "Language-Team: German (http://www.transifex.com/matk/limba/language/de/)\n"
 "Language: de\n"
@@ -31,7 +31,11 @@ msgstr ""
 msgid "Add a PGP key to the trusted database."
 msgstr ""
 
-msgid "Add a package to the repository"
+msgid "Add a package to the repository."
+msgstr ""
+
+#, c-format
+msgid "An error occured while fetching the software-list: %s"
 msgstr ""
 
 msgid "Authentication is required to install a local package"
@@ -49,11 +53,11 @@ msgstr ""
 msgid "Build in a chroot environment"
 msgstr ""
 
-msgid "Build the software following its build recipe"
+msgid "Build the software following its build recipe."
 msgstr ""
 
 #, c-format
-msgid "Bundle '%s' needs to be installed in order to build this software."
+msgid "Bundle(s) '%s' need to be installed in order to build this software."
 msgstr ""
 
 #, c-format
@@ -73,6 +77,14 @@ msgstr "Befehl '%s' ist unbekannt."
 
 #, c-format
 msgid "Completed %s"
+msgstr ""
+
+#, c-format
+msgid "Could not add public key: %s"
+msgstr ""
+
+#, c-format
+msgid "Could not apply updates: %s"
 msgstr ""
 
 #, c-format
@@ -104,6 +116,9 @@ msgid "Could not determine package version."
 msgstr ""
 
 msgid "Could not find a 'build.yml' file!"
+msgstr ""
+
+msgid "Could not find an AppStream metainfo file!"
 msgstr ""
 
 msgid "Could not find an IPK control file!"
@@ -190,6 +205,14 @@ msgid "Could not override file '%s'. The file already exists!"
 msgstr ""
 
 #, c-format
+msgid "Could not refresh cache: %s"
+msgstr ""
+
+#, c-format
+msgid "Could not refresh keyring: %s"
+msgstr ""
+
+#, c-format
 msgid "Could not remove software directory."
 msgstr ""
 
@@ -259,6 +282,10 @@ msgid "Failed to add package: %s"
 msgstr ""
 
 #, c-format
+msgid "Failed to cleanup cruft: %s"
+msgstr ""
+
+#, c-format
 msgid "Failed to initialize repository: %s"
 msgstr ""
 
@@ -282,6 +309,10 @@ msgid "Finished"
 msgstr ""
 
 msgid "GID of the group running the build."
+msgstr ""
+
+#, c-format
+msgid "Import of key '%s' failed: %s"
 msgstr ""
 
 #, c-format
@@ -417,6 +448,9 @@ msgstr ""
 msgid "Run '%s --help' to see a full list of available command line options."
 msgstr ""
 
+msgid "Run an interactive shell in the virtual build environment."
+msgstr ""
+
 #, c-format
 msgid "Runtime '%s' is not valid. Could not find control file."
 msgstr ""
@@ -508,6 +542,9 @@ msgstr ""
 msgid "The signature on this package is broken."
 msgstr ""
 
+msgid "This action needs superuser permissions."
+msgstr ""
+
 msgid "This package can not be trusted. It likely is not signed."
 msgstr ""
 
@@ -550,6 +587,10 @@ msgid "Unable to find or unpack package payload."
 msgstr ""
 
 #, c-format
+msgid "Unable to install software: %s"
+msgstr ""
+
+#, c-format
 msgid "Unable to open package. %s"
 msgstr ""
 
@@ -562,11 +603,23 @@ msgid "Unable to remove existing installation of '%s (%s)'."
 msgstr ""
 
 #, c-format
+msgid "Unable to remove software: %s"
+msgstr ""
+
+#, c-format
 msgid "Unable to rename file."
 msgstr ""
 
 #, c-format
+msgid "Unable to scan for new trusted keys."
+msgstr ""
+
+#, c-format
 msgid "Unable to set permissions on file '%s'. Error: %s"
+msgstr ""
+
+#, c-format
+msgid "Unable to store new key. Error: %s"
 msgstr ""
 
 #, c-format
@@ -611,7 +664,7 @@ msgstr ""
 msgid "You need to specify a directory with build-metadata."
 msgstr ""
 
-msgid "You need to specify a key fingerprint."
+msgid "You need to specify a key fingerprint or file."
 msgstr ""
 
 msgid "You need to specify a package file to add to the repository."

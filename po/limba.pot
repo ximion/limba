@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2016-01-16 19:04+0100\n"
+        "POT-Creation-Date: 2016-01-17 19:23+0100\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -58,6 +58,24 @@ msgid   "No package is loaded."
 msgstr  ""
 
 #, c-format
+msgid   "Unable to scan for new trusted keys."
+msgstr  ""
+
+#, c-format
+msgid   "Import of key '%s' failed: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Importing of key failed: %s"
+msgstr  ""
+
+msgid   "No import result returned."
+msgstr  ""
+
+msgid   "Zero results returned."
+msgstr  ""
+
+#, c-format
 msgid   "Key lookup failed: %s"
 msgstr  ""
 
@@ -74,13 +92,7 @@ msgid   "Key export failed: %s"
 msgstr  ""
 
 #, c-format
-msgid   "Importing of key failed: %s"
-msgstr  ""
-
-msgid   "No import result returned."
-msgstr  ""
-
-msgid   "Zero results returned."
+msgid   "Unable to store new key. Error: %s"
 msgstr  ""
 
 #, c-format
@@ -379,12 +391,15 @@ msgstr  ""
 msgid   "Could not find an IPK control file!"
 msgstr  ""
 
+msgid   "Could not find an AppStream metainfo file!"
+msgstr  ""
+
 #, c-format
 msgid   "Could not find bundle '%s' which is necessary to build this software."
 msgstr  ""
 
 #, c-format
-msgid   "Bundle '%s' needs to be installed in order to build this software."
+msgid   "Bundle(s) '%s' need to be installed in order to build this software."
 msgstr  ""
 
 msgid   "Could not find commands to build this application!"
@@ -473,13 +488,16 @@ msgstr  ""
 msgid   "Subcommands:"
 msgstr  ""
 
-msgid   "Build the software following its build recipe"
+msgid   "Build the software following its build recipe."
+msgstr  ""
+
+msgid   "Run an interactive shell in the virtual build environment."
 msgstr  ""
 
 msgid   "Initialize a new repository in DIRECTORY."
 msgstr  ""
 
-msgid   "Add a package to the repository"
+msgid   "Add a package to the repository."
 msgstr  ""
 
 msgid   "Create sources for a new package."
@@ -518,6 +536,13 @@ msgstr  ""
 msgid   "Command '%s' is unknown."
 msgstr  ""
 
+msgid   "This action needs superuser permissions."
+msgstr  ""
+
+#, c-format
+msgid   "An error occured while fetching the software-list: %s"
+msgstr  ""
+
 msgid   "Progress"
 msgstr  ""
 
@@ -545,7 +570,7 @@ msgid   "Could not find package: %s"
 msgstr  ""
 
 #, c-format
-msgid   "Could not install software: %s"
+msgid   "Unable to install software: %s"
 msgstr  ""
 
 msgid   "Software was installed successfully."
@@ -555,10 +580,38 @@ msgstr  ""
 msgid   "Could not open package: %s"
 msgstr  ""
 
+#, c-format
+msgid   "Could not install software: %s"
+msgstr  ""
+
 msgid   "You need to specify a package to remove."
 msgstr  ""
 
-msgid   "You need to specify a key fingerprint."
+#, c-format
+msgid   "Unable to remove software: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Failed to cleanup cruft: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Could not refresh cache: %s"
+msgstr  ""
+
+msgid   "You need to specify a key fingerprint or file."
+msgstr  ""
+
+#, c-format
+msgid   "Could not add public key: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Could not apply updates: %s"
+msgstr  ""
+
+#, c-format
+msgid   "Could not refresh keyring: %s"
 msgstr  ""
 
 #. : This is the header to the --help menu

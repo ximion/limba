@@ -1,6 +1,6 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR Matthias Klumpp
-# This file is distributed under the same license as the PACKAGE package.
+# This file is distributed under the same license as the limba package.
 #
 # Translators:
 # Valentin OVD <vovd.tanglu@gmail.com>, 2015
@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Limba\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-01-16 19:01+0100\n"
-"PO-Revision-Date: 2015-06-26 13:38+0000\n"
+"POT-Creation-Date: 2016-01-17 19:22+0100\n"
+"PO-Revision-Date: 2016-01-16 18:05+0000\n"
 "Last-Translator: Matthias K. <matthias@tenstral.net>\n"
 "Language-Team: French (http://www.transifex.com/matk/limba/language/fr/)\n"
 "Language: fr\n"
@@ -33,8 +33,13 @@ msgstr ""
 msgid "Add a PGP key to the trusted database."
 msgstr "Ajouter une clé PGP à la base de données fiable."
 
-msgid "Add a package to the repository"
+#, fuzzy
+msgid "Add a package to the repository."
 msgstr "Ajouter un paquet dans le dépôt"
+
+#, c-format
+msgid "An error occured while fetching the software-list: %s"
+msgstr ""
 
 msgid "Authentication is required to install a local package"
 msgstr ""
@@ -51,11 +56,11 @@ msgstr ""
 msgid "Build in a chroot environment"
 msgstr ""
 
-msgid "Build the software following its build recipe"
+msgid "Build the software following its build recipe."
 msgstr ""
 
 #, c-format
-msgid "Bundle '%s' needs to be installed in order to build this software."
+msgid "Bundle(s) '%s' need to be installed in order to build this software."
 msgstr ""
 
 #, c-format
@@ -79,18 +84,24 @@ msgid "Completed %s"
 msgstr ""
 
 #, fuzzy, c-format
+msgid "Could not add public key: %s"
+msgstr "Impossible de trouver le paquet : %s"
+
+#, fuzzy, c-format
+msgid "Could not apply updates: %s"
+msgstr "Impossible d'ouvrir le paquet : %s"
+
+#, c-format
 msgid "Could not build package: AppStream metadata is missing."
 msgstr ""
-"Impossible de générer le nom de fichier du paquet : les métadonnées "
-"AppStream sont introuvable."
 
 #, c-format
 msgid "Could not create directory structure '%s'. %s"
 msgstr "Impossible de créer la structure de dossier '%s'. %s"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Could not create runtime cache directory. %s"
-msgstr "Impossible de créer le dossier système : %s"
+msgstr ""
 
 #, c-format
 msgid "Could not create system directory: %s"
@@ -112,16 +123,18 @@ msgid "Could not find a 'build.yml' file!"
 msgstr ""
 
 #, fuzzy
-msgid "Could not find an IPK control file!"
+msgid "Could not find an AppStream metainfo file!"
 msgstr "Impossible de trouver le fichier de contrôle pour l'archive!"
+
+msgid "Could not find an IPK control file!"
+msgstr ""
 
 #, c-format
 msgid "Could not find bundle '%s' which is necessary to build this software."
 msgstr ""
 
-#, fuzzy
 msgid "Could not find commands to build this application!"
-msgstr "Impossible de trouver le fichier de contrôle pour l'archive!"
+msgstr ""
 
 #, c-format
 msgid "Could not find control file for the archive!"
@@ -139,12 +152,10 @@ msgstr "Impossible de trouver le paquet : %s"
 msgid "Could not find package: %s"
 msgstr "Impossible de trouver le paquet : %s"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Could not find payload data in the 'target' or 'rt.target' subdirectory."
 msgstr ""
-"Impossible de trouver les données de payload dans le sous-dossier "
-"'inst_target'."
 
 #, c-format
 msgid "Could not find remote data '%s': %s."
@@ -200,6 +211,14 @@ msgstr "Impossible d'ouvrir le paquet : %s"
 #, c-format
 msgid "Could not override file '%s'. The file already exists!"
 msgstr "Impossible de écrire sur le fichier '%s'. Le fichier existe déjà !"
+
+#, fuzzy, c-format
+msgid "Could not refresh cache: %s"
+msgstr "Impossible de trouver le paquet : %s"
+
+#, fuzzy, c-format
+msgid "Could not refresh keyring: %s"
+msgstr "Impossible de trouver le paquet : %s"
 
 #, c-format
 msgid "Could not remove software directory."
@@ -271,6 +290,10 @@ msgstr "Le paquet embarqué '%s' est introuvable."
 msgid "Failed to add package: %s"
 msgstr "Impossible de déballer le paquet. %s"
 
+#, fuzzy, c-format
+msgid "Failed to cleanup cruft: %s"
+msgstr "Impossible de déballer le paquet. %s"
+
 #, c-format
 msgid "Failed to initialize repository: %s"
 msgstr ""
@@ -297,6 +320,10 @@ msgstr ""
 msgid "GID of the group running the build."
 msgstr ""
 
+#, fuzzy, c-format
+msgid "Import of key '%s' failed: %s"
+msgstr "La signature du paquet %s a échoué"
+
 #, c-format
 msgid "Importing of key failed: %s"
 msgstr "La signature du paquet %s a échoué"
@@ -310,13 +337,11 @@ msgid "Initialize a new repository in DIRECTORY."
 msgstr ""
 "Créer un nouveau paquet en utilisant les données disponible dans DOSSIER."
 
-#, fuzzy
 msgid "Install a Limba package"
-msgstr "Installer un paquet logiciel local"
+msgstr ""
 
-#, fuzzy
 msgid "Install a local package file"
-msgstr "Installer un paquet logiciel local"
+msgstr ""
 
 msgid "Install a local software package"
 msgstr "Installer un paquet logiciel local"
@@ -339,13 +364,13 @@ msgstr "Paquet invalide : Le composant de métadonnée est introuvable."
 msgid "Invalid path to directory."
 msgstr "Déballer le paquet Limba dans un dossier."
 
-#, fuzzy, c-format
+#, c-format
 msgid "Key export failed: %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
-#, fuzzy, c-format
+#, c-format
 msgid "Key import failed: %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
 #, c-format
 msgid "Key lookup failed, could not find remote key."
@@ -403,9 +428,8 @@ msgstr "Aucun résultat reçu."
 msgid "Package file '%s' was not found."
 msgstr "Le fichier paquet '%s' est introuvable."
 
-#, fuzzy
 msgid "Package signed."
-msgstr "Paquet signé pour 0x%s\n"
+msgstr ""
 
 msgid "Please specify a path to the AppStream XML data:"
 msgstr "Merci de spécifier un chemin aux données XML d'AppStream :"
@@ -419,9 +443,8 @@ msgstr "Rafraichir le cache des paquets disponibles "
 msgid "Remove an installed software package"
 msgstr "Supprimer un paquet de logiciel installé"
 
-#, fuzzy
 msgid "Remove package"
-msgstr "Paquet logiciel"
+msgstr ""
 
 #, c-format
 msgid "Removing '%s' would break at least '%s'."
@@ -435,6 +458,9 @@ msgstr ""
 msgid "Run '%s --help' to see a full list of available command line options."
 msgstr ""
 "Lancer '%s --help' pour voir la liste des options de commandes disponibles."
+
+msgid "Run an interactive shell in the virtual build environment."
+msgstr ""
 
 #, c-format
 msgid "Runtime '%s' is not valid. Could not find control file."
@@ -464,21 +490,21 @@ msgstr ""
 msgid "Signature validation failed: %s"
 msgstr "La signature du paquet %s a échoué"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Signing of package failed (get-key): %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
-#, fuzzy, c-format
+#, c-format
 msgid "Signing of package failed (init): %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
-#, fuzzy, c-format
+#, c-format
 msgid "Signing of package failed (sign): %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
-#, fuzzy, c-format
+#, c-format
 msgid "Signing of package failed (signers-add): %s"
-msgstr "La signature du paquet %s a échoué"
+msgstr ""
 
 #, c-format
 msgid "Signing of package failed: %s"
@@ -529,6 +555,9 @@ msgstr "Ce paquet est construit pour une architecture différente."
 msgid "The signature on this package is broken."
 msgstr "La signature de ce paquet est cassé."
 
+msgid "This action needs superuser permissions."
+msgstr ""
+
 msgid "This package can not be trusted. It likely is not signed."
 msgstr ""
 "Ce paquet ne peut pas être digne de confiance. Ce paquet n'est probablement "
@@ -572,26 +601,42 @@ msgstr "Impossible d'extraire le fichier. Erreur : %s"
 msgid "Unable to find or unpack package payload."
 msgstr "Impossible de trouver ou de déballer le payload du paquet."
 
+#, fuzzy, c-format
+msgid "Unable to install software: %s"
+msgstr "Impossible d'installer le logiciel : %s"
+
 #, c-format
 msgid "Unable to open package. %s"
 msgstr "Impossible d'ouvrir le paquet. %s"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to read symlink destination for file: %s"
-msgstr "Impossible de créer le lien. Erreur : %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to remove existing installation of '%s (%s)'."
 msgstr "Impossible de supprimer l'installation existante de '%s (%s)'."
+
+#, fuzzy, c-format
+msgid "Unable to remove software: %s"
+msgstr "Impossible d'écrire la signature : %s"
 
 #, c-format
 msgid "Unable to rename file."
 msgstr ""
 
 #, c-format
+msgid "Unable to scan for new trusted keys."
+msgstr ""
+
+#, c-format
 msgid "Unable to set permissions on file '%s'. Error: %s"
 msgstr ""
 "Impossible de déterminer les permissions sur le fichier '%s'. Erreur : %s"
+
+#, fuzzy, c-format
+msgid "Unable to store new key. Error: %s"
+msgstr "Impossible de créer le lien. Erreur : %s"
 
 #, c-format
 msgid "Unable to unpack package. %s"
@@ -605,9 +650,9 @@ msgstr "Impossible d'écrire le fichier 'control'. %s"
 msgid "Unable to write AppStream data. %s"
 msgstr "Impossible d'écrire les données AppStream. %s"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to write signature on dsc file: %s"
-msgstr "Impossible d'écrire la signature : %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to write signature: %s"
@@ -635,7 +680,8 @@ msgstr "Vous devez spécifier une commande."
 msgid "You need to specify a directory with build-metadata."
 msgstr "Vous devez spécifier un dossier avec les métadonnées de construction."
 
-msgid "You need to specify a key fingerprint."
+#, fuzzy
+msgid "You need to specify a key fingerprint or file."
 msgstr "Vous devez spécifier l'empreinte d'une clé."
 
 msgid "You need to specify a package file to add to the repository."
@@ -658,15 +704,3 @@ msgstr ""
 
 msgid "Zero results returned."
 msgstr "résultats zéro retournés."
-
-#~ msgid "Could not create directory structure for runtime. %s"
-#~ msgstr "Impossible de crée la structure de dossier pour l'exécution. %s"
-
-#~ msgid "Could not find AppStream metadata for the new package!"
-#~ msgstr "La métadonnée d'AppStream pour le nouveau paquet est introuvable."
-
-#~ msgid "Limba repository builder"
-#~ msgstr "Créateur de paquet Limba"
-
-#~ msgid "Package signed for \"%s\" [0x%s]\n"
-#~ msgstr "Paquet signé pour \"%s\" [0x%s]\n"

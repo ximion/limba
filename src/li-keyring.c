@@ -628,7 +628,7 @@ li_keyring_verify_clear_signature (LiKeyring *kr, LiKeyringKind kind, const gcha
 			g_set_error (error,
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_VERIFY,
-				_("Signature validation failed. Signature is invalidZZZ. (%s)"),
+				_("Signature validation failed. Signature is invalid. (%s)"),
 				gpgme_strerror (sig->status));
 		}
 		gpgme_data_release (sigdata);
