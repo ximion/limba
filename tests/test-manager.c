@@ -19,9 +19,10 @@
  */
 
 #include <glib.h>
-#include "limba.h"
 #include <stdlib.h>
+#include "limba.h"
 
+#include "li-keyring.h"
 #include "li-pkg-cache.h"
 #include "li-utils-private.h"
 
@@ -69,12 +70,17 @@ test_installer_simple ()
 	li_installer_open_file (inst, fname_app, &error);
 	g_assert_no_error (error);
 
-	/* trust level is none, since we don#t know the key the package is signed with yet */
+	/* trust level is none, since we don't know the key the package is signed with yet */
 	tlevel = li_installer_get_package_trust_level (inst, &error);
-	g_assert_no_error (error);
-	g_assert (tlevel == LI_TRUST_LEVEL_NONE);
+	g_assert_error (error, LI_KEYRING_ERROR, LI_KEYRING_ERROR_KEY_MISSING);
+	g_assert (tlevel == LI_TRUST_LEVEL_LOW);
+	g_error_free (error);
+	error = NULL;
 
+	/* attempt an unsecure installation */
+	li_installer_set_allow_insecure (inst, TRUE);
 	li_installer_install (inst, &error);
+	li_installer_set_allow_insecure (inst, FALSE);
 	/* this has to fail, we don't have libfoo yet */
 	g_assert_error (error, LI_INSTALLER_ERROR, LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND);
 	g_error_free (error);
@@ -98,8 +104,7 @@ test_installer_simple ()
 	/* trust level should be MEDIUM now */
 	tlevel = li_installer_get_package_trust_level (inst, &error);
 	g_assert_no_error (error);
-	/* FIXME: Packages lack any signature at time... */
-	/* g_assert (tlevel == LI_TRUST_LEVEL_MEDIUM); */
+	g_assert (tlevel == LI_TRUST_LEVEL_MEDIUM);
 
 	li_installer_install (inst, &error);
 	g_assert_no_error (error);

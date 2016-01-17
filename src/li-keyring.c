@@ -661,7 +661,7 @@ li_keyring_verify_clear_signature (LiKeyring *kr, LiKeyringKind kind, const gcha
 LiTrustLevel
 li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_data, gchar **out_fpr, GError **error)
 {
-	gchar *sdata;
+	gchar *sdata = NULL;
 	gchar *fpr = NULL;
 	LiTrustLevel level;
 	GError *error_ucheck = NULL;
@@ -669,7 +669,7 @@ li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_d
 
 	/* Trust levels:
 	 * None: Signature is broken, package is not trusted.
-	 * Low: Signature is valid, but we don't trust they key it was signed with (not implemented).
+	 * Low: Signature is present, but we don't know the key the package was signed with.
 	 * Medium: Signature is trusted by manually added key.
 	 * High: Signature is trusted by vendor key.
 	 */
@@ -683,21 +683,31 @@ li_keyring_process_signature (LiKeyring *kr, const gchar *sigtext, gchar **out_d
 	level = LI_TRUST_LEVEL_HIGH;
 
 	if (error_ucheck != NULL) {
+		gboolean no_key = FALSE;
+
+		no_key = g_error_matches (error_ucheck, LI_KEYRING_ERROR, LI_KEYRING_ERROR_KEY_MISSING);
+		g_error_free (error_ucheck);
+
 		/* do we implicitly trust that key? */
 		sdata = li_keyring_verify_clear_signature (kr,
 					LI_KEYRING_KIND_EXTRA,
 					sigtext,
 					&fpr,
 					&tmp_error);
+
 		level = LI_TRUST_LEVEL_MEDIUM;
-		if (tmp_error == NULL) {
-			g_error_free (error_ucheck);
-		} else {
+		if (tmp_error != NULL) {
+			if ((no_key) && (g_error_matches (tmp_error, LI_KEYRING_ERROR, LI_KEYRING_ERROR_KEY_MISSING)))
+				level = LI_TRUST_LEVEL_LOW;
+			else
+				level = LI_TRUST_LEVEL_NONE;
+
 			g_propagate_error (error, tmp_error);
-			return LI_TRUST_LEVEL_NONE;
+			goto out;
 		}
 	}
 
+out:
 	if (out_data != NULL)
 		*out_data = sdata;
 	else

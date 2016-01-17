@@ -1249,6 +1249,7 @@ li_package_verify_signature (LiPackage *pkg, GError **error)
 
 	level = li_keyring_process_signature (priv->kr, priv->signature_data, &sig_content, &priv->sig_fpr, &tmp_error);
 	if (tmp_error != NULL) {
+		priv->tlevel = level;
 		g_propagate_error (error, tmp_error);
 		goto out;
 	}

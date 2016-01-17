@@ -46,6 +46,7 @@ struct _LiInstallerPrivate
 	LiPackage *pkg;
 	LiPkgCache *cache;
 	GPtrArray *all_pkgs;
+	gboolean allow_insecure;
 
 	gchar *fname;
 	GMainLoop *loop;
@@ -341,6 +342,10 @@ li_installer_install_node (LiInstaller *inst, LiPkgInfo *node, GError **error)
 		/* only the initial package was set for manual installation */
 		if (info != li_package_get_info (priv->pkg))
 			li_pkg_info_add_flag (info, LI_PACKAGE_FLAG_AUTOMATIC);
+
+		/* when in insecure mode (don't do that!) we skip verification */
+		if (priv->allow_insecure)
+			li_package_set_auto_verify (pkg, FALSE);
 
 		/* now install the package */
 		li_package_install (pkg, &tmp_error);
@@ -713,6 +718,7 @@ li_installer_get_package_trust_level (LiInstaller *inst, GError **error)
 
 /**
  * li_installer_get_appstream_data:
+ * @inst: An instance of #LiInstaller
  *
  * Dump of AppStream XML data describing the software which will be installed.
  *
@@ -727,6 +733,23 @@ li_installer_get_appstream_data (LiInstaller *inst)
 		return NULL;
 
 	return li_package_get_appstream_data (priv->pkg);
+}
+
+/**
+ * li_installer_set_allow_insecure:
+ * @inst: An instance of #LiInstaller
+ * @insecure: Set %TRUE if insecure packages should be allowed to be installed.
+ *
+ * Set if the installer shoule be allowed to install packages with insecure trust levels
+ * (LOW or NONE), by performng no trust checks at all.
+ * This is off by default, do only ever enable it after warning the user about the danger
+ * of installing untrusted software.
+ */
+void
+li_installer_set_allow_insecure (LiInstaller *inst, gboolean insecure)
+{
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+	priv->allow_insecure = insecure;
 }
 
 /**

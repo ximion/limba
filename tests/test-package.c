@@ -97,8 +97,8 @@ test_package_build ()
 	test_compile_foobar ();
 
 	builder = li_pkg_builder_new ();
-	/* don't sign packages for now, this feature needs some more work */
-	li_pkg_builder_set_sign_package (builder, FALSE);
+	/* sign the packages with the testuite key */
+	li_pkg_builder_set_sign_package (builder, TRUE);
 
 	/* ****** */
 	/* build application package */
@@ -169,6 +169,7 @@ main (int argc, char **argv)
 	int ret;
 	gchar *tmp;
 	gchar *cmd;
+	#define TEST_GPGHOME "/tmp/limba-test-gpghome"
 
 	if (argc == 0) {
 		g_error ("No test data directory specified!");
@@ -181,11 +182,13 @@ main (int argc, char **argv)
 	g_assert (g_file_test (datadir, G_FILE_TEST_EXISTS) != FALSE);
 
 	/* set fake GPG home */
+	if (g_file_test (TEST_GPGHOME, G_FILE_TEST_IS_DIR))
+		li_delete_dir_recursive (TEST_GPGHOME);
 	tmp = g_build_filename (argv[1], "gpg", NULL);
-	cmd = g_strdup_printf ("cp -dpr '%s' /tmp/test-gpghome", tmp);
+	cmd = g_strdup_printf ("cp -dpr '%s' " TEST_GPGHOME, tmp);
 	system (cmd); /* meh for call to system() - but okay for the testsuite */
 	g_free (tmp);
-	g_setenv ("GNUPGHOME", "/tmp/test-gpghome", TRUE);
+	g_setenv ("GNUPGHOME", TEST_GPGHOME, TRUE);
 
 	li_set_verbose_mode (TRUE);
 	g_test_init (&argc, &argv, NULL);

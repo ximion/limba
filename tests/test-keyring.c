@@ -66,9 +66,9 @@ test_keyring () {
 	kr = li_keyring_new ();
 
 	/* validate signature */
-	level = li_keyring_process_signature (kr, sig_signature, NULL, NULL, &error);
+	level = li_keyring_process_signature (kr, sig_signature, &tmp, NULL, &error);
 	g_assert_error (error, LI_KEYRING_ERROR, LI_KEYRING_ERROR_KEY_MISSING);
-	g_assert (level == LI_TRUST_LEVEL_NONE);
+	g_assert (level == LI_TRUST_LEVEL_LOW);
 	g_error_free (error);
 	error = NULL;
 
