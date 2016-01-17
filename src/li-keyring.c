@@ -487,14 +487,7 @@ li_keyring_add_key (LiKeyring *kr, const gchar *fpr, GError **error)
 	/* rewind manually, GPGMe doesn't do that for us */
 	ret = gpgme_data_seek (key_data, 0, SEEK_SET);
 	while ((ret = gpgme_data_read (key_data, buf, BUF_SIZE)) > 0) {
-		if (fwrite (buf, sizeof (char), ret, keyfile) < 0) {
-			g_set_error (error,
-				LI_KEYRING_ERROR,
-				LI_KEYRING_ERROR_IMPORT,
-				_("Unable to store new key. Error: %s"), g_strerror (errno));
-			gpgme_data_release (key_data);
-			return FALSE;
-		}
+		fwrite (buf, sizeof (char), ret, keyfile);
 	}
 
 	gpgme_data_release (key_data);
