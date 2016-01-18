@@ -953,20 +953,19 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 	g_object_ref (cpt);
 
 	if (out_fname == NULL) {
-		gchar *tmp;
+		g_autofree gchar *pkgname = NULL;
 		const gchar *version;
 
 		/* we need to auto-generate a package filename */
-		tmp = li_str_replace (as_component_get_name (cpt), " ", "");
+		pkgname = li_get_pkgname_from_component (cpt);
 		version = li_get_last_version_from_component (cpt);
 		if (version != NULL) {
-			pkg_fname_rt  = g_strdup_printf ("%s/%s-%s.ipk", dir, tmp, version);
-			pkg_fname_sdk = g_strdup_printf ("%s/%s-%s.devel.ipk", dir, tmp, version);
+			pkg_fname_rt  = g_strdup_printf ("%s/%s-%s.ipk", dir, pkgname, version);
+			pkg_fname_sdk = g_strdup_printf ("%s/%s-%s.devel.ipk", dir, pkgname, version);
 		} else {
-			pkg_fname_rt  = g_strdup_printf ("%s/%s.ipk", dir, tmp);
-			pkg_fname_sdk = g_strdup_printf ("%s/%s.devel.ipk", dir, tmp);
+			pkg_fname_rt  = g_strdup_printf ("%s/%s.ipk", dir, pkgname);
+			pkg_fname_sdk = g_strdup_printf ("%s/%s.devel.ipk", dir, pkgname);
 		}
-		g_free (tmp);
 	} else {
 		g_autofree gchar *base_fname;
 		g_autofree gchar *dirname;
