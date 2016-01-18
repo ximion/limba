@@ -112,6 +112,9 @@ li_build_master_init (LiBuildMaster *bmaster)
 	priv->build_root = NULL;
 	priv->dep_data_paths = NULL;
 	priv->get_shell = FALSE;
+
+	priv->build_uid = getuid ();
+	priv->build_gid = getgid ();
 }
 
 /**
@@ -473,9 +476,11 @@ li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir, con
 	}
 	g_string_append (lowerdirs, mount_target);
 
+	/* IMPORTANT: We do *not* mount the root filesystem NOSUID, so the build process can use sudo on demand.
+	 * All other stuff and especially the environment when running the app *must not* perform mounts with SUID allowed. */
 	tmp = g_strdup_printf ("lowerdir=%s", lowerdirs->str);
 	res = mount ("overlay", mount_target,
-				 "overlay", MS_MGC_VAL | MS_RDONLY | MS_NOSUID, tmp);
+				 "overlay", MS_MGC_VAL | MS_RDONLY, tmp);
 	g_free (tmp);
 	if (res != 0) {
 		fprintf (stderr, "Unable to mount directory. %s\n", strerror (errno));
@@ -513,6 +518,12 @@ li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir, con
 	g_free (tmp);
 	if (res != 0) {
 		g_warning ("Unable to set up the environment (/app mount): %s", g_strerror (errno));
+		goto out;
+	}
+
+	res = chown (volatile_data_dir, priv->build_uid, priv->build_gid);
+	if (res != 0) {
+		g_warning ("Could not adjust permissions on volatile /app dir: %s", g_strerror (errno));
 		goto out;
 	}
 
@@ -609,7 +620,8 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	}
 
 	/* we now finished everything we needed root for, so drop root in case we build as user */
-	if (chown (volatile_data_dir, priv->build_uid, priv->build_gid) != 0) {
+	res = chown (volatile_data_dir, priv->build_uid, priv->build_gid);
+	if (res != 0) {
 		g_warning ("Could not adjust permissions on volatile data dir: %s", g_strerror (errno));
 		goto out;
 	}

@@ -566,7 +566,6 @@ li_pkg_builder_sign_package (LiPkgBuilder *builder, const gchar *tmp_dir, GPtrAr
 		g_propagate_error (error, tmp_error);
 		return NULL;
 	}
-	g_print ("%s\n", _("Package signed."));
 
 	sig_fname = g_build_filename (tmp_dir, "_signature", NULL);
 	file = fopen (sig_fname, "w");
@@ -870,6 +869,7 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 
 	if (priv->sign_package) {
 		sig_fname = li_pkg_builder_sign_package (builder, tmp_dir, sign_files, &tmp_error);
+		g_print ("Package for '%s' signed.\n", as_component_get_id (cpt));
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return FALSE;
