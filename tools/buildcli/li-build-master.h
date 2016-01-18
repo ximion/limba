@@ -54,6 +54,7 @@ struct _LiBuildMasterClass
 /**
  * LiBuildMasterError:
  * @LI_BUILD_MASTER_ERROR_FAILED:		Generic failure
+ * @LI_BUILD_MASTER_ERROR_INIT:			Something bad happened while initailizing.
  * @LI_BUILD_MASTER_ERROR_NO_COMMANDS:		No commands to execute
  * @LI_BUILD_MASTER_ERROR_BUILD_DEP_MISSING:	A build dependency is missing
  * @LI_BUILD_MASTER_ERROR_STEP_FAILED:		A build step failed
@@ -62,6 +63,7 @@ struct _LiBuildMasterClass
  **/
 typedef enum {
 	LI_BUILD_MASTER_ERROR_FAILED,
+	LI_BUILD_MASTER_ERROR_INIT,
 	LI_BUILD_MASTER_ERROR_NO_COMMANDS,
 	LI_BUILD_MASTER_ERROR_BUILD_DEP_MISSING,
 	LI_BUILD_MASTER_ERROR_STEP_FAILED,

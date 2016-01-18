@@ -38,6 +38,8 @@
 #include <sys/wait.h>
 #include <sys/mount.h>
 #include <sched.h>
+#include <grp.h>
+#include <pwd.h>
 
 #include "li-utils.h"
 #include "li-utils-private.h"
@@ -619,12 +621,26 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		goto out;
 	}
 
-	/* we now finished everything we needed root for, so drop root in case we build as user */
+	/* ensure we can write volatile data */
 	res = chown (volatile_data_dir, priv->build_uid, priv->build_gid);
 	if (res != 0) {
 		g_warning ("Could not adjust permissions on volatile data dir: %s", g_strerror (errno));
 		goto out;
 	}
+
+	/* try to initialize groups, failure is not fatal */
+	if (priv->build_uid > 0) {
+		struct passwd *upws;
+
+		upws = getpwuid (priv->build_uid);
+		if (upws != NULL) {
+			if (initgroups (upws->pw_name, priv->build_gid) < 0)
+				g_warning ("Unable to initialize user groups: %s", g_strerror (errno));
+		} else {
+			g_warning ("Unable to initialize user groups: Could not determine user name: %s", g_strerror (errno));
+		}
+	}
+	/* we now finished everything we needed root for, so drop root in case we build as user */
 	if (setgid (priv->build_gid) != 0) {
 		g_warning ("Unable to set gid: %s", g_strerror (errno));
 		goto out;
@@ -724,16 +740,16 @@ li_build_master_run (LiBuildMaster *bmaster, GError **error)
 
 	/* fork our build helper */
 	pid = fork ();
-
 	if (pid == 0) {
 		/* child process */
+
 		res = li_build_master_run_executor (bmaster, env_root);
 		exit (res);
 	} else if (pid < 0) {
 		/* error */
 		g_set_error_literal (error,
 				LI_BUILD_MASTER_ERROR,
-				LI_BUILD_MASTER_ERROR_FAILED,
+				LI_BUILD_MASTER_ERROR_INIT,
 				"Unable to fork.");
 	}
 
@@ -803,7 +819,7 @@ finish:
 	li_delete_dir_recursive (env_root);
 
 out:
-	if (res != 0)
+	if ((res != 0) && (*error == NULL))
 		g_set_error_literal (error,
 				LI_BUILD_MASTER_ERROR,
 				LI_BUILD_MASTER_ERROR_STEP_FAILED,
