@@ -383,7 +383,7 @@ li_build_master_exec (LiBuildMaster *bmaster, const gchar *cmd)
  *
  */
 static gint
-li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stage_id, GPtrArray *cmds)
+li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stage_id, GPtrArray *cmds, const gchar *env_fname)
 {
 	gint fd;
 	guint i;
@@ -393,10 +393,10 @@ li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stag
 
 	/* The system() command always spawns a new shell, so if you set
 	 * environment vars or change directories in build.yml it won't work.
-	 * So we cheat and execute a shell script instead.
-	 * FIXME: Env vars from stages before this one will be forgotten.
-	 * We don't want that, so maybe generate one huge script instead of multiple
-	 * small ones instead? */
+	 * So we cheat and execute a shell script instead, which even sources
+	 * the environment from previous steps.
+	 * This is more hack than a proper solution, so if you have a better idea
+	 * for this, please implement it. */
 
 	tmp_fname = g_strdup_printf ("/tmp/%s-XXXXXX", stage_id);
 	fd = mkstemp (tmp_fname);
@@ -406,7 +406,13 @@ li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stag
 		return 1;
 	}
 
-	if (dprintf (fd, "#!/bin/sh\nset -e\n\n") < 0) {
+	res = g_chmod (tmp_fname, 0775);
+	if (res < 0) {
+		g_error ("Unable to set permissions: %s", g_strerror (errno));
+		return res;
+	}
+
+	if (dprintf (fd, "#!/bin/sh\n. %s\nset -e\n\n", env_fname) < 0) {
 		g_error ("Unable to write command sequence.");
 		return 1;
 	}
@@ -425,22 +431,28 @@ li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stag
 			g_error ("Unable to write command sequence.");
 			return 1;
 		}
-		if (dprintf (fd, "%s", cmd) < 0) {
+		if (dprintf (fd, "%s\n", cmd) < 0) {
 			g_error ("Unable to write command sequence.");
 			return 1;
 		}
 		dprintf (fd, "\n");
 	}
 
+	/* ensure we export the environment to our environment file */
+	if (dprintf (fd, "export > %s\n", env_fname) < 0) {
+		g_error ("Unable to write command sequence.");
+		return 1;
+	}
+
+	/* run command script */
 	scmd = g_strdup_printf ("sh %s", tmp_fname);
 	res = system (scmd);
 	if (res > 255)
 		res = 1;
+	close (fd);
 
 	return res;
 }
-
-
 
 /**
  * li_build_master_mount_deps:
@@ -556,6 +568,8 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	g_autofree gchar *newroot_dir = NULL;
 	g_autofree gchar *volatile_data_dir = NULL;
 	g_autofree gchar *ofs_wdir = NULL;
+	g_autofree gchar *env_tmp_fname = NULL;
+	gint env_fd = 0;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
 	newroot_dir = li_run_env_setup_with_root (priv->chroot_orig_dir);
@@ -655,27 +669,54 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 				 priv->email,
 				 priv->target_repo);
 
+	/* prepare our environment-file hack */
+	env_tmp_fname = g_strdup ("/tmp/environment-XXXXXX");
+	env_fd = mkstemp (env_tmp_fname);
+	if (env_fd < 0) {
+		g_error ("Unable to create environment file: %s", g_strerror (errno));
+		res = 1;
+		goto out;
+	}
+	res = g_chmod (env_tmp_fname, 0775);
+	if (res < 0) {
+		g_error ("Unable to set permissions: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* now start running the actual commands */
 	li_build_master_print_section (bmaster, "Preparing Build Environment");
 	if (priv->cmds_pre != NULL) {
-		res = li_build_master_exec_command_sequence (bmaster, "prepare", priv->cmds_pre);
+		res = li_build_master_exec_command_sequence (bmaster,
+								"prepare",
+								priv->cmds_pre,
+								env_tmp_fname);
 		if (res != 0)
 			goto out;
 	}
 
 	if (priv->get_shell) {
+		g_autofree gchar *cmd = NULL;
+
 		g_debug ("Starting new shell session...");
-		system ("sh");
+		cmd = g_strdup_printf ("sh -sc '. %s'", env_tmp_fname);
+		system (cmd);
 	} else {
 		/* we don't start an interactive shell, and get to business instead */
 		li_build_master_print_section (bmaster, "Build");
-		res = li_build_master_exec_command_sequence (bmaster, "build", priv->cmds);
+		res = li_build_master_exec_command_sequence (bmaster,
+								"build",
+								priv->cmds,
+								env_tmp_fname);
 		if (res != 0)
 			goto out;
 	}
 
 	li_build_master_print_section (bmaster, "Cleanup");
 	if (priv->cmds_post != NULL) {
-		res = li_build_master_exec_command_sequence (bmaster, "cleanup", priv->cmds_post);
+		res = li_build_master_exec_command_sequence (bmaster,
+								"cleanup",
+								priv->cmds_post,
+								env_tmp_fname);
 		if (res != 0)
 			goto out;
 	}
@@ -686,6 +727,8 @@ out:
 		umount (tmp);
 		g_free (tmp);
 	}
+	if (env_fd > 0)
+		close (env_fd);
 
 	return res;
 }
