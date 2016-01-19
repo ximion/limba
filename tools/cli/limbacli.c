@@ -33,6 +33,7 @@ static gboolean optn_show_version = FALSE;
 static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
 static gboolean optn_no_fail = FALSE;
+static gboolean optn_no_verify = FALSE;
 
 static guint current_progress = 0;
 
@@ -226,6 +227,19 @@ lipa_install_local_package (const gchar *fname)
 		g_error_free (error);
 		res = 1;
 		goto out;
+	}
+
+	if (optn_no_verify) {
+		if (optn_no_fancy)
+			g_print (" /!\\");
+		else
+			g_print ("%c[%dm%s%c[%dm", 0x1B, 31, " ☢", 0x1B, 0);
+		g_print (" %s ", _("Installing UNTRUSTED package without verification!"));
+		if (optn_no_fancy)
+			g_print ("/!\\\n");
+		else
+			g_print ("%c[%dm%s%c[%dm", 0x1B, 31, "☢\n", 0x1B, 0);
+		li_installer_set_allow_insecure (inst, TRUE);
 	}
 
 	li_installer_install (inst, &error);
@@ -524,6 +538,7 @@ main (int argc, char *argv[])
 		{ "verbose", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_verbose_mode, _("Show extra debugging information"), NULL },
 		{ "no-fancy", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_fancy, _("Don't show \"fancy\" output"), NULL },
 		{ "no-fail", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_fail, _("Do not fail action with an error code."), NULL },
+		{ "no-verify", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_verify, _("Do not verify packages before installing them."), NULL },
 		{ NULL }
 	};
 
