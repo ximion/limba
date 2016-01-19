@@ -623,7 +623,7 @@ li_keyring_verify_clear_signature (LiKeyring *kr, LiKeyringKind kind, const gcha
 			g_set_error (error,
 				LI_KEYRING_ERROR,
 				LI_KEYRING_ERROR_KEY_MISSING,
-				_("Could not verify signature: They key could not be found or downloaded."));
+				_("Could not verify signature: Its key could not be found or downloaded."));
 		} else {
 			g_set_error (error,
 				LI_KEYRING_ERROR,
