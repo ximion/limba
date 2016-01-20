@@ -7,7 +7,7 @@
 msgid   ""
 msgstr  "Project-Id-Version: limba\n"
         "Report-Msgid-Bugs-To: \n"
-        "POT-Creation-Date: 2016-01-19 00:08+0100\n"
+        "POT-Creation-Date: 2016-01-20 19:15+0100\n"
         "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
         "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
         "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -107,7 +107,7 @@ msgid   "Signature validation failed. Signature is invalid or not a signature."
 msgstr  ""
 
 #, c-format
-msgid   "Could not verify signature: They key could not be found or downloaded."
+msgid   "Could not verify signature: Its key could not be found or downloaded."
 msgstr  ""
 
 #, c-format
@@ -584,6 +584,9 @@ msgstr  ""
 msgid   "Could not open package: %s"
 msgstr  ""
 
+msgid   "Installing UNTRUSTED package without verification!"
+msgstr  ""
+
 #, c-format
 msgid   "Could not install software: %s"
 msgstr  ""
@@ -644,6 +647,9 @@ msgid   "Add a PGP key to the trusted database."
 msgstr  ""
 
 msgid   "Do not fail action with an error code."
+msgstr  ""
+
+msgid   "Do not verify packages before installing them."
 msgstr  ""
 
 msgid   "You need to specify a directory with build-metadata."

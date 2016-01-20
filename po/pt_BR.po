@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Limba\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-01-19 00:08+0100\n"
-"PO-Revision-Date: 2016-01-17 18:24+0000\n"
+"POT-Creation-Date: 2016-01-20 19:15+0100\n"
+"PO-Revision-Date: 2016-01-20 18:14+0000\n"
 "Last-Translator: Matthias K. <matthias@tenstral.net>\n"
 "Language-Team: Portuguese (Brazil) (http://www.transifex.com/matk/limba/"
 "language/pt_BR/)\n"
@@ -217,7 +217,7 @@ msgid "Could not remove software directory."
 msgstr ""
 
 #, c-format
-msgid "Could not verify signature: They key could not be found or downloaded."
+msgid "Could not verify signature: Its key could not be found or downloaded."
 msgstr ""
 
 #, c-format
@@ -260,6 +260,9 @@ msgid "Do not fail action with an error code."
 msgstr ""
 
 msgid "Do not sign the package"
+msgstr ""
+
+msgid "Do not verify packages before installing them."
 msgstr ""
 
 #, c-format
@@ -347,6 +350,9 @@ msgstr ""
 
 #, c-format
 msgid "Installing %s"
+msgstr ""
+
+msgid "Installing UNTRUSTED package without verification!"
 msgstr ""
 
 #, c-format

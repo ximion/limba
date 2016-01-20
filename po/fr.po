@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Limba\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-01-19 00:08+0100\n"
-"PO-Revision-Date: 2016-01-17 18:24+0000\n"
+"POT-Creation-Date: 2016-01-20 19:15+0100\n"
+"PO-Revision-Date: 2016-01-20 18:14+0000\n"
 "Last-Translator: Matthias K. <matthias@tenstral.net>\n"
 "Language-Team: French (http://www.transifex.com/matk/limba/language/fr/)\n"
 "Language: fr\n"
@@ -223,7 +223,7 @@ msgid "Could not remove software directory."
 msgstr "Impossible de supprimer le dossier du logiciel."
 
 #, c-format
-msgid "Could not verify signature: They key could not be found or downloaded."
+msgid "Could not verify signature: Its key could not be found or downloaded."
 msgstr ""
 
 #, c-format
@@ -268,6 +268,9 @@ msgstr "Ne pas manquer l'action avec une code d'erreur."
 
 msgid "Do not sign the package"
 msgstr "Ne pas signer le paquet"
+
+msgid "Do not verify packages before installing them."
+msgstr ""
 
 #, c-format
 msgid "Do you have an AppStream XML file for your software? [y/N]"
@@ -355,6 +358,9 @@ msgstr ""
 
 #, c-format
 msgid "Installing %s"
+msgstr ""
+
+msgid "Installing UNTRUSTED package without verification!"
 msgstr ""
 
 #, c-format
@@ -648,17 +654,17 @@ msgstr "Impossible d'écrire le fichier 'control'. %s"
 msgid "Unable to write AppStream data. %s"
 msgstr "Impossible d'écrire les données AppStream. %s"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to write DSC file: %s"
-msgstr "Impossible d'écrire le fichier 'control'. %s"
+msgstr ""
 
 #, c-format
 msgid "Unable to write signature: %s"
 msgstr "Impossible d'écrire la signature : %s"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to write signed DSC file: %s"
-msgstr "Impossible d'écrire la signature : %s"
+msgstr ""
 
 msgid "Unknown"
 msgstr ""
