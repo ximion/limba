@@ -184,7 +184,7 @@ mkdir_and_bindmount (const gchar *newroot, const gchar *oldroot, const gchar *ta
 		/* we have a symbolic link */
 
 		if (symlink (dir, target_abs) != 0) {
-			g_printerr ("Symlink failed (%s).\n", target_abs);
+			g_printerr ("Symlink failed (%s): %s\n", target_abs, strerror(errno));
 			return 1;
 		}
 	} else {
@@ -235,7 +235,7 @@ li_run_env_setup_with_root (const gchar *root_fs)
 	 * receive mounts from the real root, but don't
 	 * propagate mounts to the real root. */
 	if (mount (NULL, root_fs, NULL, MS_SLAVE | MS_REC, NULL) < 0) {
-		g_printerr ("Failed to make / slave.\n");
+		g_printerr ("Failed to make / slave: %s\n", strerror(errno));
 		return NULL;
 	}
 
