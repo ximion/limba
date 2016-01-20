@@ -1,3 +1,40 @@
+Version 0.5.5
+~~~~~~~~~~~~~~
+Released: 2016-01-20
+
+Features:
+ * Simplify symlink handling on installations
+ * Make cleanup routines smarter and more "aggressive"
+ * Improve package-graph for use outside of LiInstaller
+ * testrunner: Use execv() to replace the process tree
+ * Refactor package graph
+ * Recursively select dependencies in the dependency graph
+ * test: Minor fixes for keyring test
+ * bcli: Fix some quirks and show full list of missing SDKs
+ * bcli: Make /app directory writable for build process
+ * Improve keyring handling and allow vendor to auto-supply trusted keys
+ * cli: Allow refreshing keyrings
+ * tests: Run signed-package tests without any user interaction
+ * bcli: Make executor run a script to preserve directory changes and env vars
+ * Update README
+ * bcli: Allow any user to write stuff to /app and make use of sudo possible
+ * bcli: Load user groups in virtual environment
+ * lipkgen: Output bundles with sane filenames by default
+ * cli: Allow installing untrusted local packages
+ * l10n: Update
+
+Bugfixes:
+ * Reversed limba-build dependency overlay order. (Jesse Pullinen)
+ * Fix a few minor memory leaks
+ * pkgen: Handle symbolic links correctly
+ * Don't try to set permissions on symlinks
+ * Don't fail removals if exported file is gone for some reason
+ * cli: Never make progress bar vanish when changing state
+ * Make tools deal with umask set in a root environment
+ * bcli: Don't fail creation of build environment by building impossible graph
+ * Don't sign the dsc file if we are already not signing the package
+ * bcli: Deal with environment variables like users would expect it
+
 Version 0.5.4
 ~~~~~~~~~~~~~~
 Released: 2015-12-12
