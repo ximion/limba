@@ -400,7 +400,7 @@ li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stag
 
 	tmp_fname = g_strdup_printf ("/tmp/%s-XXXXXX", stage_id);
 	fd = mkstemp (tmp_fname);
-	g_debug ("Command script: %s", tmp_fname);
+	g_debug ("Using command script: %s", tmp_fname);
 	if (fd < 0) {
 		g_error ("Unable to store script for %s.", stage_id);
 		return 1;
@@ -619,6 +619,13 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		goto out;
 	}
 
+	/* ensure we can write volatile data */
+	res = chown (volatile_data_dir, priv->build_uid, priv->build_gid);
+	if (res != 0) {
+		g_warning ("Could not adjust permissions on volatile data dir: %s", g_strerror (errno));
+		goto out;
+	}
+
 	if (!li_run_env_enter (newroot_dir)) {
 		g_warning ("Could not enter build environment.");
 		goto out;
@@ -632,13 +639,6 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	res = g_chdir (build_data_root);
 	if ((!ret) || (res != 0)) {
 		g_warning ("Unable to set up the environment!");
-		goto out;
-	}
-
-	/* ensure we can write volatile data */
-	res = chown (volatile_data_dir, priv->build_uid, priv->build_gid);
-	if (res != 0) {
-		g_warning ("Could not adjust permissions on volatile data dir: %s", g_strerror (errno));
 		goto out;
 	}
 

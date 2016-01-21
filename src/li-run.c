@@ -234,7 +234,7 @@ li_run_env_setup_with_root (const gchar *root_fs)
 	/* Mark everything as slave, so that we still
 	 * receive mounts from the real root, but don't
 	 * propagate mounts to the real root. */
-	if (mount (NULL, root_fs, NULL, MS_SLAVE | MS_REC, NULL) < 0) {
+	if (mount (NULL, "/", NULL, MS_SLAVE | MS_REC, NULL) < 0) {
 		g_printerr ("Failed to make / slave: %s\n", strerror(errno));
 		return NULL;
 	}
@@ -253,11 +253,9 @@ li_run_env_setup_with_root (const gchar *root_fs)
 	}
 
 	/* build & bindmount the root filesystem */
+	if (mkdir_and_bindmount (newroot, root_fs, "/sbin", FALSE) != 0)
+		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/bin", FALSE) != 0)
-		return NULL;
-	if (mkdir_and_bindmount (newroot, root_fs, "/cdrom", FALSE) != 0)
-		return NULL;
-	if (mkdir_and_bindmount (newroot, root_fs, "/dev", FALSE) != 0)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/etc", FALSE) != 0)
 		return NULL;
@@ -265,23 +263,30 @@ li_run_env_setup_with_root (const gchar *root_fs)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/lib", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, root_fs, "/lib64", FALSE) != 0)
-		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/media", TRUE) != 0)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/mnt", TRUE) != 0)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/opt", FALSE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, root_fs, "/proc", FALSE) != 0)
-		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/srv", FALSE) != 0)
-		return NULL;
-	if (mkdir_and_bindmount (newroot, root_fs, "/sys", FALSE) != 0)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/usr", FALSE) != 0)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/var", TRUE) != 0)
+		return NULL;
+	if (mkdir_and_bindmount (newroot, "/", "/sys", FALSE) != 0)
+		return NULL;
+	if (mkdir_and_bindmount (newroot, "/", "/dev", FALSE) != 0)
+		return NULL;
+	if (mkdir_and_bindmount (newroot, "/", "/proc", FALSE) != 0)
+		return NULL;
+
+	if (mkdir_and_bindmount (newroot, root_fs, "/lib64", FALSE) != 0)
+		return NULL;
+	if (mkdir_and_bindmount (newroot, root_fs, "/lib32", FALSE) != 0)
+		return NULL;
+	if (mkdir_and_bindmount (newroot, root_fs, "/libx32", FALSE) != 0)
 		return NULL;
 
 	/* prepare /run - give access to session data and DBus system bus */
@@ -330,7 +335,7 @@ li_run_env_setup_with_root (const gchar *root_fs)
 		/* Maybe if failed because there is no mount
 		 * to be made private at that point, lets
 		 * add a bind mount there. */
-		g_debug (("mount (bind)\n"));
+		g_debug ("mount (bind)");
 		res = mount (approot_dir, approot_dir,
 					 NULL, MS_BIND, NULL);
 		/* And try again */
