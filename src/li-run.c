@@ -170,31 +170,30 @@ mkdir_and_bindmount (const gchar *newroot, const gchar *oldroot, const gchar *ta
 {
 	struct stat buf;
 	int res;
-	g_autofree gchar *target_abs = NULL;
-	g_autofree gchar *dir = NULL;
+	g_autofree gchar *source_abs = NULL;
+	g_autofree gchar *target_lcn = NULL;
 
-	target_abs = g_build_filename (oldroot, target, NULL);
-	if (!g_file_test (target_abs, G_FILE_TEST_EXISTS))
+	source_abs = g_build_filename (oldroot, target, NULL);
+	if (!g_file_test (source_abs, G_FILE_TEST_EXISTS))
 		return 0;
 
-	dir = g_build_filename (newroot, target_abs, NULL);
-
-	lstat (target_abs, &buf);
+	target_lcn = g_build_filename (newroot, target, NULL);
+	lstat (source_abs, &buf);
 	if ((buf.st_mode & S_IFMT) == S_IFLNK) {
 		/* we have a symbolic link */
 
-		if (symlink (dir, target_abs) != 0) {
-			g_printerr ("Symlink failed (%s): %s\n", target_abs, strerror(errno));
+		if (symlink (source_abs, target_lcn) != 0) {
+			g_printerr ("Symlink failed (%s): %s\n", source_abs, strerror(errno));
 			return 1;
 		}
 	} else {
 		/* we have a regular file */
-		if (g_mkdir_with_parents (dir, 0755) != 0) {
-			g_printerr ("Unable to create %s.\n", target_abs);
+		if (g_mkdir_with_parents (target_lcn, 0755) != 0) {
+			g_printerr ("Unable to create %s.\n", source_abs);
 			return 1;
 		}
 
-		res = bind_mount (target_abs, dir, BIND_PRIVATE | (writable?0:BIND_READONLY));
+		res = bind_mount (source_abs, target_lcn, BIND_PRIVATE | (writable?0:BIND_READONLY));
 		if (res != 0) {
 			g_printerr ("Bindmount failed (%i).\n", res);
 			return 1;
@@ -275,7 +274,7 @@ li_run_env_setup_with_root (const gchar *root_fs)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, root_fs, "/var", TRUE) != 0)
 		return NULL;
-	if (mkdir_and_bindmount (newroot, "/", "/sys", FALSE) != 0)
+	if (mkdir_and_bindmount (newroot, root_fs, "/sys", FALSE) != 0)
 		return NULL;
 	if (mkdir_and_bindmount (newroot, "/", "/dev", FALSE) != 0)
 		return NULL;
