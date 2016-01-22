@@ -179,10 +179,25 @@ mkdir_and_bindmount (const gchar *newroot, const gchar *oldroot, const gchar *ta
 
 	target_lcn = g_build_filename (newroot, target, NULL);
 	lstat (source_abs, &buf);
-	if ((buf.st_mode & S_IFMT) == S_IFLNK) {
+	if (S_ISLNK (buf.st_mode)) {
+		g_autofree gchar *linktarget = NULL;
+		ssize_t r;
+
 		/* we have a symbolic link */
 
-		if (symlink (source_abs, target_lcn) != 0) {
+		linktarget = malloc (buf.st_size + 1);
+		r = readlink (source_abs, linktarget, buf.st_size + 1);
+		if (r < 0) {
+			g_printerr ("Could not follow symlink '%s', readlink failed. Skipping it.", source_abs);
+			return 1;
+		}
+		if (r > buf.st_size) {
+			g_printerr ("Could not follow symlink '%s', buffer too small. Skipping it.", source_abs);
+			return 1;
+		}
+		linktarget[buf.st_size] = '\0';
+
+		if (symlink (linktarget, target_lcn) != 0) {
 			g_printerr ("Symlink failed (%s): %s\n", source_abs, strerror(errno));
 			return 1;
 		}
