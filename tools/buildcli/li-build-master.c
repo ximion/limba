@@ -61,6 +61,7 @@ struct _LiBuildMasterPrivate
 	GPtrArray *cmds;
 	GPtrArray *cmds_post;
 	LiPkgInfo *pki;
+	gboolean ignore_foundations;
 
 	gchar **dep_data_paths;
 
@@ -121,6 +122,7 @@ li_build_master_init (LiBuildMaster *bmaster)
 	priv->build_uid = getuid ();
 	priv->build_gid = getgid ();
 	priv->pki = NULL;
+	priv->ignore_foundations = FALSE;
 }
 
 /**
@@ -229,6 +231,7 @@ li_build_master_resolve_builddeps (LiBuildMaster *bmaster, GError **error)
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
 	pg = li_package_graph_new ();
+	li_package_graph_set_ignore_foundations (pg, priv->ignore_foundations);
 
 	/* ensure the graph is initialized and additional data (foundations list) is loaded */
 	li_package_graph_initialize (pg, &tmp_error);
@@ -932,6 +935,16 @@ li_build_master_set_build_group (LiBuildMaster *bmaster, gid_t gid)
 {
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 	priv->build_gid = gid;
+}
+
+/**
+ * li_build_master_set_ignore_foundations:
+ */
+void
+li_build_master_set_ignore_foundations (LiBuildMaster *bmaster, gboolean ignore)
+{
+	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
+	priv->ignore_foundations = ignore;
 }
 
 /**

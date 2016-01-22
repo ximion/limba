@@ -92,6 +92,9 @@ void			li_build_master_set_build_user (LiBuildMaster *bmaster,
 void			li_build_master_set_build_group (LiBuildMaster *bmaster,
 							gid_t gid);
 
+void			li_build_master_set_ignore_foundations (LiBuildMaster *bmaster,
+							       gboolean ignore);
+
 G_END_DECLS
 
 #endif /* __LI_BUILD_MASTER_H */
