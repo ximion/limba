@@ -334,6 +334,9 @@ li_manager_get_software_by_pkid (LiManager *mgr, const gchar *pkid, GError **err
 	GError *tmp_error = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
+	if (pkid == NULL)
+		return NULL;
+
 	li_manager_update_software_table (mgr, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
