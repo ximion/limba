@@ -85,6 +85,8 @@ gchar			*li_installer_get_appstream_data (LiInstaller *inst);
 LiTrustLevel		li_installer_get_package_trust_level (LiInstaller *inst,
 								GError **error);
 
+void			li_installer_set_ignore_foundations  (LiInstaller *inst,
+								gboolean ignore);
 void			li_installer_set_allow_insecure (LiInstaller *inst,
 							 gboolean insecure);
 

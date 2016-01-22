@@ -735,6 +735,19 @@ li_installer_get_appstream_data (LiInstaller *inst)
 	return li_package_get_appstream_data (priv->pkg);
 }
 
+
+/**
+ * li_installer_set_ignore_foundations:
+ * @inst: An instance of #LiInstaller
+ * @ignore: %TRUE if foundation dependencies should be ignored.
+ */
+void
+li_installer_set_ignore_foundations  (LiInstaller *inst, gboolean ignore)
+{
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+	li_package_graph_set_ignore_foundations (priv->pg, ignore);
+}
+
 /**
  * li_installer_set_allow_insecure:
  * @inst: An instance of #LiInstaller

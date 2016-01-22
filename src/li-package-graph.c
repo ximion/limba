@@ -48,6 +48,7 @@ struct _LiPackageGraphPrivate
 	guint max_progress;
 
 	GHashTable *foundations;
+	gboolean ignore_foundations;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiPackageGraph, li_package_graph, G_TYPE_OBJECT)
@@ -90,6 +91,7 @@ li_package_graph_init (LiPackageGraph *pg)
 	priv->nindex = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 	priv->install_todo = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 	priv->foundations = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+	priv->ignore_foundations = FALSE;
 }
 
 /**
@@ -111,7 +113,7 @@ li_package_graph_update_foundations_table (LiPackageGraph *pg, GError **error)
 	if (g_file_query_exists (file, NULL)) {
 		li_config_data_load_file (fdconf, file, &tmp_error);
 	} else {
-		g_warning ("No foundation (system-component) was defined. Continuing without that knowledge.");
+		g_warning ("No foundations (system-components) were defined. Continuing without that knowledge.");
 	}
 	g_object_unref (file);
 	if (tmp_error != NULL) {
@@ -488,6 +490,11 @@ li_package_graph_test_foundation_dependency (LiPackageGraph *pg, LiPkgInfo *dep_
 
 	pkname = li_pkg_info_get_name (dep_pki);
 
+	if (priv->ignore_foundations) {
+		g_debug ("Ignoring dependency on foundation: %s", pkname);
+		return TRUE;
+	}
+
 	/* check if this dependency is a foundation dependency */
 	if (!g_str_has_prefix (pkname, "foundation:"))
 		return FALSE;
@@ -503,6 +510,18 @@ li_package_graph_test_foundation_dependency (LiPackageGraph *pg, LiPkgInfo *dep_
 			_("Could not find system component: '%s'. Please install it manually."), pkname);
 		return FALSE;
 	}
+}
+
+/**
+ * li_package_graph_set_ignore_foundations:
+ * @pg: An instance of #LiPackageGraph
+ * @ignore: %TRUE if foundation dependencies should be ignored.
+ */
+void
+li_package_graph_set_ignore_foundations (LiPackageGraph *pg, gboolean ignore)
+{
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+	priv->ignore_foundations = ignore;
 }
 
 /**

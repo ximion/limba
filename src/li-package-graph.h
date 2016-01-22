@@ -83,6 +83,9 @@ gboolean		li_package_graph_test_foundation_dependency (LiPackageGraph *pg,
 									LiPkgInfo *dep_pki,
 									GError **error);
 
+void			li_package_graph_set_ignore_foundations (LiPackageGraph *pg,
+								 gboolean ignore);
+
 LiPkgInfo		*li_find_satisfying_pkg (GPtrArray *pkglist,
 						 LiPkgInfo *dep);
 

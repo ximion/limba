@@ -34,6 +34,7 @@ static gboolean optn_verbose_mode = FALSE;
 static gboolean optn_no_fancy = FALSE;
 static gboolean optn_no_fail = FALSE;
 static gboolean optn_no_verify = FALSE;
+static gboolean optn_ignore_foundations = FALSE;
 
 static guint current_progress = 0;
 
@@ -179,6 +180,7 @@ lipa_install_package (const gchar *pkgid)
 		goto out;
 	}
 
+	li_installer_set_ignore_foundations (inst, optn_ignore_foundations);
 	li_installer_install (inst, &error);
 	if (error != NULL) {
 		li_abort_progress_bar ();
@@ -242,6 +244,7 @@ lipa_install_local_package (const gchar *fname)
 		li_installer_set_allow_insecure (inst, TRUE);
 	}
 
+	li_installer_set_ignore_foundations (inst, optn_ignore_foundations);
 	li_installer_install (inst, &error);
 	if (error != NULL) {
 		li_print_stderr (_("Could not install software: %s"), error->message);
@@ -539,6 +542,7 @@ main (int argc, char *argv[])
 		{ "no-fancy", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_fancy, _("Don't show \"fancy\" output"), NULL },
 		{ "no-fail", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_fail, _("Do not fail action with an error code."), NULL },
 		{ "no-verify", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_no_verify, _("Do not verify packages before installing them."), NULL },
+		{ "ignore-foundations", (gchar) 0, 0, G_OPTION_ARG_NONE, &optn_ignore_foundations, _("Assume all dependencies on foundations are satisfied."), NULL },
 		{ NULL }
 	};
 
