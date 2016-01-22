@@ -60,6 +60,7 @@ struct _LiBuildMasterPrivate
 	GPtrArray *cmds_pre;
 	GPtrArray *cmds;
 	GPtrArray *cmds_post;
+	LiPkgInfo *pki;
 
 	gchar **dep_data_paths;
 
@@ -96,6 +97,8 @@ li_build_master_finalize (GObject *object)
 		g_ptr_array_unref (priv->cmds_post);
 	if (priv->dep_data_paths != NULL)
 		g_strfreev (priv->dep_data_paths);
+	if (priv->pki != NULL)
+		g_object_unref (priv->pki);
 	g_free (priv->email);
 	g_free (priv->username);
 	g_free (priv->target_repo);
@@ -117,6 +120,7 @@ li_build_master_init (LiBuildMaster *bmaster)
 
 	priv->build_uid = getuid ();
 	priv->build_gid = getgid ();
+	priv->pki = NULL;
 }
 
 /**
@@ -213,8 +217,8 @@ li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, LiPkgInf
 /**
  * li_build_master_resolve_builddeps:
  */
-void
-li_build_master_resolve_builddeps (LiBuildMaster *bmaster, LiPkgInfo *pki, GError **error)
+static void
+li_build_master_resolve_builddeps (LiBuildMaster *bmaster, GError **error)
 {
 	g_autoptr(LiPackageGraph) pg = NULL;
 	g_autoptr(GPtrArray) full_deps = NULL;
@@ -234,15 +238,15 @@ li_build_master_resolve_builddeps (LiBuildMaster *bmaster, LiPkgInfo *pki, GErro
 	}
 
 	mgr = li_manager_new ();
-	li_package_graph_add_package (pg, NULL, pki, NULL);
+	li_package_graph_add_package (pg, NULL, priv->pki, NULL);
 
-	li_build_master_check_dependencies (pg, mgr, pki, TRUE, &tmp_error);
+	li_build_master_check_dependencies (pg, mgr, priv->pki, TRUE, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		return;
 	}
 
-	full_deps = li_package_graph_branch_to_array (pg, pki, FALSE);
+	full_deps = li_package_graph_branch_to_array (pg, priv->pki, FALSE);
 	if (full_deps == NULL) {
 		g_warning ("Building package with no build-dependencies defined.");
 		return;
@@ -278,7 +282,6 @@ void
 li_build_master_init_build (LiBuildMaster *bmaster, const gchar *dir, const gchar *chroot_orig, GError **error)
 {
 	g_autoptr(LiBuildConf) bconf = NULL;
-	g_autoptr(LiPkgInfo) pki = NULL;
 	GError *tmp_error = NULL;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
@@ -317,8 +320,10 @@ li_build_master_init_build (LiBuildMaster *bmaster, const gchar *dir, const gcha
 	priv->build_root = g_strdup (dir);
 
 	/* get list of build dependencies */
-	pki = li_build_conf_get_pkginfo (bconf);
-	li_build_master_resolve_builddeps (bmaster, pki, &tmp_error);
+	if (priv->pki != NULL)
+		g_object_unref (priv->pki);
+	priv->pki = li_build_conf_get_pkginfo (bconf);
+	li_build_master_resolve_builddeps (bmaster, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		return;
@@ -573,6 +578,12 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	g_autofree gchar *env_tmp_fname = NULL;
 	gint env_fd = 0;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
+
+	tmp = g_strdup_printf ("Building %s - %s",
+			       li_pkg_info_get_name (priv->pki),
+			       li_pkg_info_get_version (priv->pki));
+	li_build_master_print_section (bmaster, tmp);
+	g_free (tmp);
 
 	newroot_dir = li_run_env_setup_with_root (priv->chroot_orig_dir);
 	if (!newroot_dir) {
