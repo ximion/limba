@@ -358,6 +358,8 @@ li_build_master_print_section (LiBuildMaster *bmaster, const gchar *section_name
 
 	printf ("%s", str->str);
 	g_string_free (str, TRUE);
+
+	fflush (stdout);
 }
 
 #if 0
