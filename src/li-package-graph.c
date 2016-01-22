@@ -490,14 +490,14 @@ li_package_graph_test_foundation_dependency (LiPackageGraph *pg, LiPkgInfo *dep_
 
 	pkname = li_pkg_info_get_name (dep_pki);
 
+	/* check if this dependency is a foundation dependency */
+	if (!g_str_has_prefix (pkname, "foundation:"))
+		return FALSE;
+
 	if (priv->ignore_foundations) {
 		g_debug ("Ignoring dependency on foundation: %s", pkname);
 		return TRUE;
 	}
-
-	/* check if this dependency is a foundation dependency */
-	if (!g_str_has_prefix (pkname, "foundation:"))
-		return FALSE;
 
 	if (g_hash_table_lookup (priv->foundations, pkname) != NULL) {
 		/* foundation was found, dependency is satisfied! */
