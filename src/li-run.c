@@ -36,6 +36,8 @@
 #include <sys/capability.h>
 #include <sys/prctl.h>
 
+#include "li-utils.h"
+
 /**
  * SECTION:li-run
  * @short_description: Primitive low-level functions to set up a runtime environment an run Limba apps.
@@ -420,4 +422,47 @@ li_run_env_enter (const gchar *newroot)
 	}
 
 	return TRUE;
+}
+
+/**
+ * update_env_var_list:
+ */
+static void
+update_env_var_list (const gchar *var, const gchar *item)
+{
+	const gchar *env;
+	gchar *value;
+
+	env = getenv (var);
+	if (env == NULL || *env == 0) {
+		setenv (var, item, 1);
+	} else {
+		value = g_strconcat (item, ":", env, NULL);
+		setenv (var, value, 1);
+		free (value);
+	}
+}
+
+/**
+ * li_run_env_set_path_variables:
+ *
+ * Set linker environment variables (LD_LIBRARY_PATH) and PATH to match
+ * the additional paths in a Limba virtual environments.
+ */
+void
+li_run_env_set_path_variables (void)
+{
+	g_autofree gchar *triplet = NULL;
+	g_autofree gchar *ma_lib_path = NULL;
+
+	/* add generic library path */
+	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/lib");
+
+	/* add multiarch library path for compatibility reasons */
+	triplet = li_get_arch_triplet ();
+	ma_lib_path = g_build_filename (LI_SW_ROOT_PREFIX, "lib", triplet, NULL);
+	update_env_var_list ("LD_LIBRARY_PATH", ma_lib_path);
+
+	/* add generic binary directory to PATH */
+	update_env_var_list ("PATH", LI_SW_ROOT_PREFIX "/bin");
 }

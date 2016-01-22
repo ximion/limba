@@ -32,6 +32,8 @@ gchar		*li_run_env_setup (void);
 gchar		*li_run_env_setup_with_root (const gchar *root_fs);
 gboolean	li_run_env_enter (const gchar *newroot);
 
+void		li_run_env_set_path_variables (void);
+
 G_END_DECLS
 
 #endif /* __LI_RUN_PRIVATE_H */

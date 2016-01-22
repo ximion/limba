@@ -151,25 +151,6 @@ out:
 }
 
 /**
- * update_env_var_list:
- */
-static void
-update_env_var_list (const gchar *var, const gchar *item)
-{
-	const gchar *env;
-	gchar *value;
-
-	env = getenv (var);
-	if (env == NULL || *env == 0) {
-		setenv (var, item, 1);
-	} else {
-		value = g_strconcat (item, ":", env, NULL);
-		setenv (var, value, 1);
-		free (value);
-	}
-}
-
-/**
  * main:
  */
 int
@@ -180,8 +161,6 @@ main (gint argc, gchar *argv[])
 	g_autofree gchar *scope_name = NULL;
 	g_autofree gchar *executable = NULL;
 	struct utsname uts_data;
-	gchar *ma_lib_path = NULL;
-	gchar *tmp;
 	g_auto(GStrv) strv = NULL;
 	gchar **child_argv = NULL;
 	guint i;
@@ -244,18 +223,8 @@ main (gint argc, gchar *argv[])
 		executable = g_build_filename (LI_SW_ROOT_PREFIX, strv[1], NULL);
 	}
 
-	/* add generic library path */
-	update_env_var_list ("LD_LIBRARY_PATH", LI_SW_ROOT_PREFIX "/lib");
-
-	/* add multiarch library path for compatibility reasons */
-	tmp = li_get_arch_triplet ();
-	ma_lib_path = g_build_filename (LI_SW_ROOT_PREFIX, "lib", tmp, NULL);
-	g_free (tmp);
-	update_env_var_list ("LD_LIBRARY_PATH", ma_lib_path);
-	g_free (ma_lib_path);
-
-	/* add generic binary directory to PATH */
-	update_env_var_list ("PATH", LI_SW_ROOT_PREFIX "/bin");
+	/* set LD_LIBRARY_PATH and PATH */
+	li_run_env_set_path_variables ();
 
 	child_argv = malloc ((argc) * sizeof (char *));
 	if (child_argv == NULL) {

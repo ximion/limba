@@ -642,6 +642,9 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		goto out;
 	}
 
+	/* set linker paths and PATH */
+	li_run_env_set_path_variables ();
+
 	/* try to initialize groups, failure is not fatal */
 	if (priv->build_uid > 0) {
 		struct passwd *upws;
