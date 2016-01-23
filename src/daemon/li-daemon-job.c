@@ -28,6 +28,7 @@
 
 typedef enum {
 	LI_JOB_KIND_NONE,
+	LI_JOB_KIND_REFRESH_CACHE,
 	LI_JOB_KIND_INSTALL,
 	LI_JOB_KIND_INSTALL_LOCAL,
 	LI_JOB_KIND_REMOVE,
@@ -119,6 +120,33 @@ li_daemon_job_emit_finished (LiDaemonJob *job, gboolean success)
 {
 	LiDaemonJobPrivate *priv = GET_PRIVATE (job);
 	li_proxy_manager_emit_finished (priv->mgr_bus, success);
+}
+
+/**
+ * li_daemon_job_execute_refresh_cache:
+ */
+static gboolean
+li_daemon_job_execute_refresh_cache (LiDaemonJob *job)
+{
+	g_autoptr(LiManager) mgr = NULL;
+	GError *error = NULL;
+	gboolean ret = FALSE;
+	LiDaemonJobPrivate *priv = GET_PRIVATE (job);
+
+	mgr = li_manager_new ();
+	g_signal_connect (mgr, "progress",
+			G_CALLBACK (li_daemon_job_progress_proxy_cb), priv->mgr_bus);
+
+	li_manager_refresh_cache (mgr, &error);
+	if (error != NULL) {
+		li_daemon_job_emit_error (job, error);
+		goto out;
+	}
+
+	ret = TRUE;
+out:
+	li_daemon_job_emit_finished (job, ret);
+	return ret;
 }
 
 /**
@@ -235,7 +263,9 @@ li_daemon_job_thread_func (gpointer thread_data)
 
 	priv->running = TRUE;
 
-	if (priv->kind == LI_JOB_KIND_REMOVE) {
+	if (priv->kind == LI_JOB_KIND_REFRESH_CACHE) {
+		li_daemon_job_execute_refresh_cache (job);
+	} else if (priv->kind == LI_JOB_KIND_REMOVE) {
 		li_daemon_job_execute_remove (job);
 	} else if (priv->kind == LI_JOB_KIND_INSTALL) {
 		li_daemon_job_execute_install (job);
@@ -252,6 +282,22 @@ li_daemon_job_thread_func (gpointer thread_data)
 	priv->running = FALSE;
 
 	return NULL;
+}
+
+/**
+ * li_daemon_job_run_refresh_cache:
+ */
+void
+li_daemon_job_run_refresh_cache (LiDaemonJob *job)
+{
+	LiDaemonJobPrivate *priv = GET_PRIVATE (job);
+
+	priv->kind = LI_JOB_KIND_REFRESH_CACHE;
+
+	/* create & run thread */
+	priv->thread = g_thread_new ("LI-DaemonJob",
+					  li_daemon_job_thread_func,
+					  job);
 }
 
 /**

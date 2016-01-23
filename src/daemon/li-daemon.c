@@ -66,6 +66,58 @@ li_daemon_init_job (LiHelperDaemon *helper, LiProxyManager *mgr_bus, GDBusMethod
 }
 
 /**
+ * bus_manager_refresh_cache_cb:
+ */
+static gboolean
+bus_manager_refresh_cache_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *context, LiHelperDaemon *helper)
+{
+	GError *error = NULL;
+	PolkitAuthorizationResult *pres = NULL;
+	PolkitSubject *subject;
+	const gchar *sender;
+
+	sender = g_dbus_method_invocation_get_sender (context);
+
+	subject = polkit_system_bus_name_new (sender);
+	pres = polkit_authority_check_authorization_sync (helper->authority,
+							subject,
+							"org.freedesktop.limba.refresh-cache",
+							NULL,
+							POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+							NULL,
+							&error);
+	g_object_unref (subject);
+
+	if (error != NULL) {
+		g_dbus_method_invocation_take_error (context, error);
+		goto out;
+	}
+
+	if (!polkit_authorization_result_get_is_authorized (pres)) {
+		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Manager.Error.NotAuthorized",
+								"Authorization failed.");
+		goto out;
+	}
+
+	/* initialize our job, in case it is idling */
+	if (!li_daemon_init_job (helper, mgr_bus, context))
+		goto out;
+
+	/* do the thing */
+	li_daemon_job_run_refresh_cache (helper->job);
+
+	li_proxy_manager_complete_refresh_cache (mgr_bus, context);
+
+out:
+	if (pres != NULL)
+		g_object_unref (pres);
+
+	li_daemon_reset_timer (helper);
+
+	return TRUE;
+}
+
+/**
  * bus_installer_install_local_cb:
  */
 static gboolean
@@ -213,7 +265,7 @@ bus_manager_remove_software_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *
 	/* do the thing */
 	li_daemon_job_run_remove_package (helper->job, pkid);
 
-	li_proxy_manager_complete_remove_software (mgr_bus, context);
+	li_proxy_manager_complete_remove (mgr_bus, context);
 
 out:
 	if (pres != NULL)
@@ -249,18 +301,23 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 	g_object_unref (mgr_bus);
 
 	g_signal_connect (mgr_bus,
-			"handle-remove-software",
-			G_CALLBACK (bus_manager_remove_software_cb),
+			"handle-refresh-cache",
+			G_CALLBACK (bus_manager_refresh_cache_cb),
 			helper);
 
 	g_signal_connect (mgr_bus,
-			"handle-install-local",
-			G_CALLBACK (bus_installer_install_local_cb),
+			"handle-remove",
+			G_CALLBACK (bus_manager_remove_software_cb),
 			helper);
 
 	g_signal_connect (mgr_bus,
 			"handle-install",
 			G_CALLBACK (bus_installer_install_cb),
+			helper);
+
+	g_signal_connect (mgr_bus,
+			"handle-install-local",
+			G_CALLBACK (bus_installer_install_local_cb),
 			helper);
 
 	/* export the object */

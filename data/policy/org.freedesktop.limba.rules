@@ -1,4 +1,9 @@
 polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.limba.refresh-cache" &&
+        subject.active == true && subject.local == true) {
+            return polkit.Result.YES;
+    }
+
     if (action.id == "org.freedesktop.limba.install-package" &&
         subject.active == true && subject.local == true &&
         subject.isInGroup("sudo")) {

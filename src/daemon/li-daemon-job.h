@@ -67,6 +67,7 @@ LiDaemonJob		*li_daemon_job_new	(void);
 gboolean		li_daemon_job_prepare (LiDaemonJob *job,
 						LiProxyManager *mgr_bus);
 
+void			li_daemon_job_run_refresh_cache (LiDaemonJob *job);
 void			li_daemon_job_run_remove_package (LiDaemonJob *job,
 						const gchar *pkid);
 void			li_daemon_job_run_install (LiDaemonJob *job,

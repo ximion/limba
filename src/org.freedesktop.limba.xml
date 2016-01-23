@@ -8,13 +8,23 @@
 	-->
 	<interface name="org.freedesktop.Limba.Manager">
 		<!--
-			RemoveSoftware:
+			RefreshCache:
+			@since: 0.5
+
+			Refresh information about available packages.
+		-->
+		<method name="RefreshCache">
+		</method>
+
+
+		<!--
+			Remove:
 			@pkid: A package identifier
 			@since: 0.4
 
 			Remove a Limba package.
 		-->
-		<method name="RemoveSoftware">
+		<method name="Remove">
 			<arg direction="in" type="s" name="pkid"/>
 		</method>
 

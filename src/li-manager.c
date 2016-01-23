@@ -142,6 +142,132 @@ li_manager_reset_cached_data (LiManager *mgr)
 }
 
 /**
+ * li_manager_bus_vanished:
+ */
+static void
+li_manager_bus_vanished (GDBusConnection *connection, const gchar *name, LiManager *mgr)
+{
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	/* check if we are actually running any action */
+	if (!g_main_loop_is_running (priv->loop))
+		return;
+
+	if (priv->proxy_error == NULL) {
+		/* set error, since the DBus name vanished while performing an action, indicating that something crashed */
+		g_set_error (&priv->proxy_error,
+			LI_INSTALLER_ERROR,
+			LI_INSTALLER_ERROR_INTERNAL,
+			_("The Limba daemon vanished from the bus mid-transaction, so it likely crashed. Please file a bug against Limba."));
+	}
+
+	g_main_loop_quit (priv->loop);
+}
+
+/**
+ * li_manager_proxy_progress_cb:
+ */
+static void
+li_manager_proxy_progress_cb (LiProxyManager *mgr_bus, const gchar *id, gint percentage, LiManager *mgr)
+{
+	if (g_strcmp0 (id, "") == 0)
+		id = NULL;
+
+	g_signal_emit (mgr, signals[SIGNAL_PROGRESS], 0,
+					percentage, id);
+}
+
+/**
+ * li_manager_proxy_error_cb:
+ *
+ * Callback for the Error() DBus signal
+ */
+static void
+li_manager_proxy_error_cb (LiProxyManager *mgr_bus, guint32 domain, guint code, const gchar *message, LiManager *mgr)
+{
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	/* ensure no error is set */
+	if (priv->proxy_error != NULL) {
+		g_error_free (priv->proxy_error);
+		priv->proxy_error = NULL;
+	}
+
+	g_set_error (&priv->proxy_error, domain, code, "%s", message);
+}
+
+/**
+ * li_manager_proxy_finished_cb:
+ *
+ * Callback for the Finished() DBus signal
+ */
+static void
+li_manager_proxy_finished_cb (LiProxyManager *mgr_bus, gboolean success, LiManager *mgr)
+{
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	if (success) {
+		/* ensure no error is set */
+		if (priv->proxy_error != NULL) {
+			g_error_free (priv->proxy_error);
+			priv->proxy_error = NULL;
+		}
+	}
+
+	g_main_loop_quit (priv->loop);
+}
+
+/**
+ * li_manager_get_dbus_proxy:
+ */
+static LiProxyManager*
+li_manager_get_dbus_proxy (LiManager *mgr, GError **error)
+{
+	GError *tmp_error = NULL;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	if (priv->bus_proxy == NULL) {
+		/* looks like we do not yet have a bus connection, so we create one */
+		priv->bus_proxy = li_proxy_manager_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+									G_DBUS_PROXY_FLAGS_NONE,
+									"org.freedesktop.Limba",
+									"/org/freedesktop/Limba/Manager",
+									NULL,
+									&tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return NULL;
+		}
+
+		/* we want to know when the bus name vanishes unexpectedly */
+		if (priv->bus_watch_id == 0) {
+			priv->bus_watch_id = g_bus_watch_name (G_BUS_TYPE_SYSTEM,
+								"org.freedesktop.Limba",
+								G_BUS_NAME_WATCHER_FLAGS_NONE,
+								NULL,
+								(GBusNameVanishedCallback) li_manager_bus_vanished,
+								mgr,
+								NULL);
+		}
+
+		g_signal_connect (priv->bus_proxy, "progress",
+					G_CALLBACK (li_manager_proxy_progress_cb), mgr);
+		g_signal_connect (priv->bus_proxy, "error",
+					G_CALLBACK (li_manager_proxy_error_cb), mgr);
+		g_signal_connect (priv->bus_proxy, "finished",
+					G_CALLBACK (li_manager_proxy_finished_cb), mgr);
+	}
+
+	/* ensure no error is set */
+	if (priv->proxy_error != NULL) {
+		g_error_free (priv->proxy_error);
+		priv->proxy_error = NULL;
+	}
+
+	return priv->bus_proxy;
+}
+
+/**
  * li_manager_find_installed_software:
  **/
 static GHashTable*
@@ -550,82 +676,6 @@ out:
 }
 
 /**
- * li_manager_proxy_progress_cb:
- */
-static void
-li_manager_proxy_progress_cb (LiProxyManager *mgr_bus, const gchar *id, gint percentage, LiManager *mgr)
-{
-	if (g_strcmp0 (id, "") == 0)
-		id = NULL;
-
-	g_signal_emit (mgr, signals[SIGNAL_PROGRESS], 0,
-					percentage, id);
-}
-
-/**
- * li_manager_proxy_error_cb:
- *
- * Callback for the Error() DBus signal
- */
-static void
-li_manager_proxy_error_cb (LiProxyManager *mgr_bus, guint32 domain, guint code, const gchar *message, LiManager *mgr)
-{
-	LiManagerPrivate *priv = GET_PRIVATE (mgr);
-
-	/* ensure no error is set */
-	if (priv->proxy_error != NULL) {
-		g_error_free (priv->proxy_error);
-		priv->proxy_error = NULL;
-	}
-
-	g_set_error (&priv->proxy_error, domain, code, "%s", message);
-}
-
-/**
- * li_manager_proxy_finished_cb:
- *
- * Callback for the Finished() DBus signal
- */
-static void
-li_manager_proxy_finished_cb (LiProxyManager *mgr_bus, gboolean success, LiManager *mgr)
-{
-	LiManagerPrivate *priv = GET_PRIVATE (mgr);
-
-	if (success) {
-		/* ensure no error is set */
-		if (priv->proxy_error != NULL) {
-			g_error_free (priv->proxy_error);
-			priv->proxy_error = NULL;
-		}
-	}
-
-	g_main_loop_quit (priv->loop);
-}
-
-/**
- * li_manager_bus_vanished:
- */
-static void
-li_manager_bus_vanished (GDBusConnection *connection, const gchar *name, LiManager *mgr)
-{
-	LiManagerPrivate *priv = GET_PRIVATE (mgr);
-
-	/* check if we are actually running any action */
-	if (!g_main_loop_is_running (priv->loop))
-		return;
-
-	if (priv->proxy_error == NULL) {
-		/* set error, since the DBus name vanished while performing an action, indicating that something crashed */
-		g_set_error (&priv->proxy_error,
-			LI_INSTALLER_ERROR,
-			LI_INSTALLER_ERROR_INTERNAL,
-			_("The Limba daemon vanished from the bus mid-transaction, so it likely crashed. Please file a bug against Limba."));
-	}
-
-	g_main_loop_quit (priv->loop);
-}
-
-/**
  * li_manager_remove_software:
  **/
 gboolean
@@ -642,48 +692,17 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	if (!li_utils_is_root ()) {
+		LiProxyManager *bus_proxy;
 		/* we do not have root privileges - call the helper daemon to install the package */
 		g_debug ("Calling Limba DBus service.");
 
-		if (priv->bus_proxy == NULL) {
-			/* looks like we do not yet have a bus connection, so we create one */
-			priv->bus_proxy = li_proxy_manager_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
-										G_DBUS_PROXY_FLAGS_NONE,
-										"org.freedesktop.Limba",
-										"/org/freedesktop/Limba/Manager",
-										NULL,
-										&tmp_error);
-			if (tmp_error != NULL) {
-				g_propagate_error (error, tmp_error);
-				goto out;
-			}
-
-			/* we want to know when the bus name vanishes unexpectedly */
-			if (priv->bus_watch_id == 0) {
-				priv->bus_watch_id = g_bus_watch_name (G_BUS_TYPE_SYSTEM,
-									"org.freedesktop.Limba",
-									G_BUS_NAME_WATCHER_FLAGS_NONE,
-									NULL,
-									(GBusNameVanishedCallback) li_manager_bus_vanished,
-									mgr,
-									NULL);
-			}
-
-			g_signal_connect (priv->bus_proxy, "progress",
-						G_CALLBACK (li_manager_proxy_progress_cb), mgr);
-			g_signal_connect (priv->bus_proxy, "error",
-						G_CALLBACK (li_manager_proxy_error_cb), mgr);
-			g_signal_connect (priv->bus_proxy, "finished",
-						G_CALLBACK (li_manager_proxy_finished_cb), mgr);
+		bus_proxy = li_manager_get_dbus_proxy (mgr, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			goto out;
 		}
 
-		/* ensure no error is set */
-		if (priv->proxy_error != NULL) {
-			g_error_free (priv->proxy_error);
-			priv->proxy_error = NULL;
-		}
-
-		li_proxy_manager_call_remove_software_sync (priv->bus_proxy,
+		li_proxy_manager_call_remove_sync (bus_proxy,
 						pkgid,
 						NULL,
 						&tmp_error);
@@ -1112,6 +1131,35 @@ li_manager_refresh_cache (LiManager *mgr, GError **error)
 {
 	g_autoptr(LiPkgCache) cache = NULL;
 	GError *tmp_error = NULL;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	/* handle root elevation */
+	if (!li_utils_is_root ()) {
+		LiProxyManager *bus_proxy;
+		/* we do not have root privileges - call the helper daemon to install the package */
+		g_debug ("Calling Limba DBus service for RefreshCache().");
+
+		bus_proxy = li_manager_get_dbus_proxy (mgr, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+
+		li_proxy_manager_call_refresh_cache_sync (bus_proxy, NULL, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+
+		g_main_loop_run (priv->loop);
+		if (priv->proxy_error != NULL) {
+			g_propagate_error (error, priv->proxy_error);
+			priv->proxy_error = NULL;
+			return;
+		}
+
+		return;
+	}
 
 	cache = li_pkg_cache_new ();
 	li_pkg_cache_open (cache, &tmp_error);

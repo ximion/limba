@@ -324,9 +324,6 @@ lipa_refresh (void)
 	gint res = 0;
 	GError *error = NULL;
 
-	if (!lipa_check_su ())
-		return 2;
-
 	mgr = li_manager_new ();
 
 	li_manager_refresh_cache (mgr, &error);
