@@ -26,7 +26,9 @@
 #define __LI_MANAGER_H
 
 #include <glib-object.h>
+
 #include "li-runtime.h"
+#include "li-update-item.h"
 
 G_BEGIN_DECLS
 
@@ -106,6 +108,12 @@ GList			*li_manager_get_update_list (LiManager *mgr,
 							GError **error);
 
 gboolean		li_manager_apply_updates (LiManager *mgr,
+							GError **error);
+gboolean		li_manager_apply_update (LiManager *mgr,
+						 LiUpdateItem *uitem,
+						 GError **error);
+LiUpdateItem		*li_manager_get_update_for_id (LiManager *mgr,
+							const gchar *pkid,
 							GError **error);
 
 G_END_DECLS

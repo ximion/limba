@@ -223,7 +223,7 @@ li_manager_proxy_finished_cb (LiProxyManager *mgr_bus, gboolean success, LiManag
 static LiProxyManager*
 li_manager_get_dbus_proxy (LiManager *mgr, GError **error)
 {
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	if (priv->bus_proxy == NULL) {
@@ -233,9 +233,9 @@ li_manager_get_dbus_proxy (LiManager *mgr, GError **error)
 									"org.freedesktop.Limba",
 									"/org/freedesktop/Limba/Manager",
 									NULL,
-									&tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+									&error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			return NULL;
 		}
 
@@ -273,7 +273,7 @@ li_manager_get_dbus_proxy (LiManager *mgr, GError **error)
 static GHashTable*
 li_manager_get_installed_software (LiManager *mgr, GError **error)
 {
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	g_autoptr(GFile) fdir = NULL;
 	g_autoptr(GFileEnumerator) enumerator = NULL;
 	GFileInfo *file_info;
@@ -286,19 +286,19 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 
 	/* get stuff in the software directory */
 	fdir = g_file_new_for_path (LI_SOFTWARE_ROOT);
-	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
-	if (tmp_error != NULL)
+	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &error_local);
+	if (error_local != NULL)
 		goto out;
 
 	pkgs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 
-	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
+	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &error_local)) != NULL) {
 		g_autoptr(GFile) fsdir = NULL;
 		g_autoptr(GFileEnumerator) senum = NULL;
 		g_autofree gchar *mpath = NULL;
 		GFileInfo *s_finfo;
 
-		if (tmp_error != NULL)
+		if (error_local != NULL)
 			goto out;
 		if (g_file_info_get_is_hidden (file_info))
 			continue;
@@ -309,14 +309,14 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 		mpath = g_build_filename (LI_SOFTWARE_ROOT, g_file_info_get_name (file_info), NULL);
 
 		fsdir = g_file_new_for_path (mpath);
-		senum = g_file_enumerate_children (fsdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
-		if (tmp_error != NULL)
+		senum = g_file_enumerate_children (fsdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &error_local);
+		if (error_local != NULL)
 			goto out;
 
-		while ((s_finfo = g_file_enumerator_next_file (senum, NULL, &tmp_error)) != NULL) {
+		while ((s_finfo = g_file_enumerator_next_file (senum, NULL, &error_local)) != NULL) {
 			g_autofree gchar *cpath = NULL;
 
-			if (tmp_error != NULL)
+			if (error_local != NULL)
 				goto out;
 			if (g_file_info_get_is_hidden (s_finfo))
 				continue;
@@ -335,8 +335,8 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 					/* create new LiPkgInfo for an installed package */
 					pki = li_pkg_info_new ();
 
-					li_pkg_info_load_file (pki, ctlfile, &tmp_error);
-					if (tmp_error != NULL) {
+					li_pkg_info_load_file (pki, ctlfile, &error_local);
+					if (error_local != NULL) {
 						g_object_unref (pki);
 						goto out;
 					}
@@ -355,9 +355,9 @@ li_manager_get_installed_software (LiManager *mgr, GError **error)
 	}
 
 out:
-	if (tmp_error != NULL) {
+	if (error_local != NULL) {
 		g_propagate_prefixed_error (error,
-					tmp_error,
+					error_local,
 					"Error while searching for installed software:");
 		if (pkgs != NULL)
 			g_hash_table_unref (pkgs);
@@ -377,7 +377,7 @@ li_manager_update_software_table (LiManager *mgr, GError **error)
 	GPtrArray *apkgs;
 	GHashTable *ipkgs;
 	guint i;
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	if (g_hash_table_size (priv->pkgs) > 0) {
@@ -387,16 +387,16 @@ li_manager_update_software_table (LiManager *mgr, GError **error)
 
 	cache = li_pkg_cache_new ();
 
-	li_pkg_cache_open (cache, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_pkg_cache_open (cache, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return;
 	}
 
 	/* populate table with installed packages */
-	ipkgs = li_manager_get_installed_software (mgr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	ipkgs = li_manager_get_installed_software (mgr, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return;
 	}
 
@@ -429,13 +429,13 @@ li_manager_get_software_list (LiManager *mgr, GError **error)
 {
 	GList *l = NULL;
 	g_autoptr(GList) list = NULL;
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	GPtrArray *res = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
-	li_manager_update_software_table (mgr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_manager_update_software_table (mgr, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return NULL;
 	}
 
@@ -457,15 +457,15 @@ li_manager_get_software_list (LiManager *mgr, GError **error)
 LiPkgInfo*
 li_manager_get_software_by_pkid (LiManager *mgr, const gchar *pkid, GError **error)
 {
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	if (pkid == NULL)
 		return NULL;
 
-	li_manager_update_software_table (mgr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_manager_update_software_table (mgr, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return NULL;
 	}
 
@@ -478,7 +478,7 @@ li_manager_get_software_by_pkid (LiManager *mgr, const gchar *pkid, GError **err
 static gboolean
 li_manager_find_installed_runtimes (LiManager *mgr)
 {
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	GFile *fdir;
 	GFileEnumerator *enumerator = NULL;
 	GFileInfo *file_info;
@@ -493,13 +493,13 @@ li_manager_find_installed_runtimes (LiManager *mgr)
 
 	/* get stuff in the software-runtime directory */
 	fdir =  g_file_new_for_path (runtime_root);
-	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &tmp_error);
-	if (tmp_error != NULL)
+	enumerator = g_file_enumerate_children (fdir, G_FILE_ATTRIBUTE_STANDARD_NAME, 0, NULL, &error_local);
+	if (error_local != NULL)
 		goto out;
 
-	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
+	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &error_local)) != NULL) {
 		g_autofree gchar *rt_path = NULL;
-		if (tmp_error != NULL)
+		if (error_local != NULL)
 			goto out;
 
 		if (g_file_info_get_is_hidden (file_info))
@@ -510,7 +510,7 @@ li_manager_find_installed_runtimes (LiManager *mgr)
 			LiRuntime *rt;
 
 			rt = li_runtime_new ();
-			ret = li_runtime_load_from_file (rt, rt_path, &tmp_error);
+			ret = li_runtime_load_from_file (rt, rt_path, &error_local);
 			if (ret)
 				g_ptr_array_add (priv->rts, g_object_ref (rt));
 
@@ -523,9 +523,9 @@ out:
 	g_object_unref (fdir);
 	if (enumerator != NULL)
 		g_object_unref (enumerator);
-	if (tmp_error != NULL) {
-		g_printerr ("Error while searching for installed runtimes: %s\n", tmp_error->message);
-		g_error_free (tmp_error);
+	if (error_local != NULL) {
+		g_printerr ("Error while searching for installed runtimes: %s\n", error_local->message);
+		g_error_free (error_local);
 		return FALSE;
 	}
 
@@ -684,7 +684,7 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	g_autofree gchar *swpath = NULL;
 	GFile *expfile;
 	gchar *tmp;
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	g_autoptr(GPtrArray) pkg_array = NULL;
 	GFile *ctlfile;
 	LiPkgInfo *pki;
@@ -696,18 +696,18 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 		/* we do not have root privileges - call the helper daemon to install the package */
 		g_debug ("Calling Limba DBus service.");
 
-		bus_proxy = li_manager_get_dbus_proxy (mgr, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		bus_proxy = li_manager_get_dbus_proxy (mgr, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			goto out;
 		}
 
 		li_proxy_manager_call_remove_sync (bus_proxy,
 						pkgid,
 						NULL,
-						&tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+						&error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			goto out;
 		}
 
@@ -736,10 +736,10 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 		return FALSE;
 	}
 	pki = li_pkg_info_new ();
-	li_pkg_info_load_file (pki, ctlfile, &tmp_error);
+	li_pkg_info_load_file (pki, ctlfile, &error_local);
 	g_object_unref (ctlfile);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		g_object_unref (pki);
 		return FALSE;
 	}
@@ -754,9 +754,9 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 		gboolean dependency_found = FALSE;
 
 		/* check if this software is in use somewhere */
-		sw = li_manager_get_software_list (mgr, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		sw = li_manager_get_software_list (mgr, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			return FALSE;
 		}
 
@@ -794,11 +794,11 @@ li_manager_remove_software (LiManager *mgr, const gchar *pkgid, GError **error)
 	expfile = g_file_new_for_path (tmp);
 	g_free (tmp);
 	if (g_file_query_exists (expfile, NULL)) {
-		li_manager_remove_exported_files (expfile, &tmp_error);
+		li_manager_remove_exported_files (expfile, &error_local);
 	}
 	g_object_unref (expfile);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return FALSE;
 	}
 
@@ -849,7 +849,7 @@ li_manager_package_is_installed (LiManager *mgr, LiPkgInfo *pki)
 static void
 li_manager_cleanup_broken_packages (LiManager *mgr, GError **error)
 {
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	g_autoptr(GFile) fdir = NULL;
 	g_autoptr(GFileEnumerator) enumerator = NULL;
 	GFileInfo *file_info;
@@ -865,18 +865,18 @@ li_manager_cleanup_broken_packages (LiManager *mgr, GError **error)
 						G_FILE_ATTRIBUTE_STANDARD_NAME,
 						G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
 						NULL,
-						&tmp_error);
-	if (tmp_error != NULL)
+						&error_local);
+	if (error_local != NULL)
 		goto out;
 
-	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &tmp_error)) != NULL) {
+	while ((file_info = g_file_enumerator_next_file (enumerator, NULL, &error_local)) != NULL) {
 		g_autoptr(GFile) fsdir = NULL;
 		g_autoptr(GFileEnumerator) senum = NULL;
 		g_autofree gchar *mpath = NULL;
 		gint child_count = 0;
 		GFileInfo *s_finfo;
 
-		if (tmp_error != NULL)
+		if (error_local != NULL)
 			goto out;
 		if (g_file_info_get_is_hidden (file_info))
 			continue;
@@ -891,13 +891,13 @@ li_manager_cleanup_broken_packages (LiManager *mgr, GError **error)
 						   G_FILE_ATTRIBUTE_STANDARD_NAME,
 						   G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
 						   NULL,
-						   &tmp_error);
-		if (tmp_error != NULL)
+						   &error_local);
+		if (error_local != NULL)
 			goto out;
 
-		while ((s_finfo = g_file_enumerator_next_file (senum, NULL, &tmp_error)) != NULL) {
+		while ((s_finfo = g_file_enumerator_next_file (senum, NULL, &error_local)) != NULL) {
 			g_autofree gchar *path = NULL;
-			if (tmp_error != NULL)
+			if (error_local != NULL)
 				goto out;
 			if (g_file_info_get_is_hidden (file_info))
 				continue;
@@ -925,9 +925,9 @@ li_manager_cleanup_broken_packages (LiManager *mgr, GError **error)
 	}
 
 out:
-	if (tmp_error != NULL) {
+	if (error_local != NULL) {
 		g_propagate_prefixed_error (error,
-						tmp_error,
+						error_local,
 						"Error while cleaning up software directories:");
 	}
 }
@@ -956,21 +956,21 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 	GPtrArray *all_rts_array;
 	guint i;
 	GList *l;
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	gboolean faded_sw_removed = FALSE;
 	gboolean ret = FALSE;
 
 	/* cleanup software directory */
-	li_manager_cleanup_broken_packages (mgr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_manager_cleanup_broken_packages (mgr, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		goto out;
 	}
 
 	/* load software list */
-	sws = li_manager_get_installed_software (mgr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	sws = li_manager_get_installed_software (mgr, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return FALSE;
 	}
 	sw_list = g_hash_table_get_values (sws);
@@ -981,9 +981,9 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 
 		if (li_pkg_info_has_flag (pki, LI_PACKAGE_FLAG_FADED)) {
 			g_debug ("Found faded package: %s", li_pkg_info_get_id (pki));
-			li_manager_remove_software (mgr, li_pkg_info_get_id (pki), &tmp_error);
-			if (tmp_error != NULL) {
-				g_propagate_error (error, tmp_error);
+			li_manager_remove_software (mgr, li_pkg_info_get_id (pki), &error_local);
+			if (error_local != NULL) {
+				g_propagate_error (error, error_local);
 				goto out;
 			}
 			faded_sw_removed = TRUE;
@@ -997,9 +997,9 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 		li_manager_reset_cached_data (mgr);
 
 		g_hash_table_unref (sws);
-		sws = li_manager_get_installed_software (mgr, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		sws = li_manager_get_installed_software (mgr, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			return FALSE;
 		}
 		g_list_free (sw_list);
@@ -1014,9 +1014,9 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 	}
 
 	/* create a dependency graph of the remaining packages, we will need it later */
-	pg = li_package_graph_new_from_pkiarray (removal_candidates, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	pg = li_package_graph_new_from_pkiarray (removal_candidates, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		goto out;
 	}
 
@@ -1096,9 +1096,9 @@ li_manager_cleanup (LiManager *mgr, GError **error)
 
 		li_manager_remove_software (mgr,
 					    pkid,
-					    &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+					    &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			goto out;
 		}
 	}
@@ -1130,7 +1130,7 @@ void
 li_manager_refresh_cache (LiManager *mgr, GError **error)
 {
 	g_autoptr(LiPkgCache) cache = NULL;
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	/* handle root elevation */
@@ -1139,15 +1139,15 @@ li_manager_refresh_cache (LiManager *mgr, GError **error)
 		/* we do not have root privileges - call the helper daemon to install the package */
 		g_debug ("Calling Limba DBus service for RefreshCache().");
 
-		bus_proxy = li_manager_get_dbus_proxy (mgr, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		bus_proxy = li_manager_get_dbus_proxy (mgr, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			return;
 		}
 
-		li_proxy_manager_call_refresh_cache_sync (bus_proxy, NULL, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		li_proxy_manager_call_refresh_cache_sync (bus_proxy, NULL, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			return;
 		}
 
@@ -1162,15 +1162,15 @@ li_manager_refresh_cache (LiManager *mgr, GError **error)
 	}
 
 	cache = li_pkg_cache_new ();
-	li_pkg_cache_open (cache, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_pkg_cache_open (cache, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return;
 	}
 
-	li_pkg_cache_update (cache, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_pkg_cache_update (cache, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return;
 	}
 }
@@ -1261,21 +1261,21 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 	GPtrArray *apkgs_list;
 	guint i;
 	GList *l;
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	cache = li_pkg_cache_new ();
 
 	/* get a list of all packages we have installed */
-	ipkgs = li_manager_get_installed_software (mgr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	ipkgs = li_manager_get_installed_software (mgr, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return NULL;
 	}
 
-	li_pkg_cache_open (cache, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_pkg_cache_open (cache, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return NULL;
 	}
 
@@ -1305,23 +1305,56 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 	/* match it! */
 	ipkg_list = g_hash_table_get_values (ipkgs);
 	for (l = ipkg_list; l != NULL; l = l->next) {
+		g_autoptr(GPtrArray) rts = NULL;
+		LiUpdateItem *uitem;
 		LiPkgInfo *ipki = LI_PKG_INFO (l->data);
 		LiPkgInfo *apki = NULL;
 
 		apki = g_hash_table_lookup (apkgs, li_pkg_info_get_name (ipki));
+
 		/* check if we actually have a package available */
 		if (apki == NULL)
 			continue;
 
-		if (li_compare_versions (li_pkg_info_get_version (apki), li_pkg_info_get_version (ipki)) > 0) {
-			LiUpdateItem *uitem;
+		/* check if the new version is higher than what we already have installed */
+		if (li_compare_versions (li_pkg_info_get_version (apki), li_pkg_info_get_version (ipki)) <= 0)
+			continue;
 
-			/* we have a potential update */
-			uitem = li_update_item_new_with_packages (ipki, apki);
-			g_hash_table_insert (priv->updates,
-						g_object_ref (ipki),
-						uitem);
+		/* check if a runtime uses it and if we can upgrade the package. If that isn't possible, we don't list this upgrade */
+		rts = li_manager_find_runtimes_with_member (mgr, ipki);
+		if (rts != NULL) {
+			guint rts_allowing_upgrade = 0;
+			guint j;
+
+			for (j = 0; j < rts->len; j++) {
+				gchar **reqs;
+				guint k;
+				LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (rts, j));
+
+				reqs = (gchar**) g_hash_table_get_keys_as_array (li_runtime_get_requirements (rt), NULL);
+				for (k = 0; reqs[k] != NULL; k++) {
+					LiPkgInfo *rt_req;
+					rt_req = li_parse_dependency_string (reqs[k]);
+
+					/* check if we can replace the package used by this runtime */
+					if (li_pkg_info_satisfies_requirement (apki, rt_req)) {
+						rts_allowing_upgrade++;
+						break;
+					}
+				}
+
+				g_free (reqs);
+			}
+			/* no runtime allows us to upgrad ethis package, so we don't list the upgrade */
+			if (rts_allowing_upgrade == 0)
+				continue;
 		}
+
+		/* if we got this far, we have an update candidate */
+		uitem = li_update_item_new_with_packages (ipki, apki);
+		g_hash_table_insert (priv->updates,
+					g_object_ref (ipki),
+					uitem);
 	}
 
 	return g_hash_table_get_values (priv->updates);
@@ -1335,7 +1368,7 @@ li_manager_remove_exported_files_by_pki (LiManager *mgr, LiPkgInfo *pki, GError 
 {
 	g_autofree gchar *swpath = NULL;
 	g_autoptr(GFile) expfile = NULL;
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	gchar *tmp;
 
 	swpath = g_build_filename (LI_SOFTWARE_ROOT,
@@ -1343,20 +1376,20 @@ li_manager_remove_exported_files_by_pki (LiManager *mgr, LiPkgInfo *pki, GError 
 					NULL);
 
 	/* delete exported files */
-	/* FIXME: Move them away at first, to allow a later rollback */
+	/* TODO: Move files away first, then remove them after everything else is done to allow rollbacks to work */
 	tmp = g_build_filename (swpath, "exported", NULL);
 	expfile = g_file_new_for_path (tmp);
 	g_free (tmp);
 	if (g_file_query_exists (expfile, NULL)) {
-		li_manager_remove_exported_files (expfile, &tmp_error);
+		li_manager_remove_exported_files (expfile, &error_local);
 
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			return;
 		}
-		g_file_delete (expfile, NULL, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		g_file_delete (expfile, NULL, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			return;
 		}
 	}
@@ -1371,26 +1404,26 @@ static gboolean
 li_manager_upgrade_single_package (LiManager *mgr, LiPkgInfo *ipki, LiPkgInfo *apki, GError **error)
 {
 	g_autoptr(LiInstaller) inst = NULL;
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 
 	/* prepare installation */
 	inst = li_installer_new ();
-	li_installer_open_remote (inst, li_pkg_info_get_id (apki), &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_installer_open_remote (inst, li_pkg_info_get_id (apki), &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return FALSE;
 	}
 
-	li_manager_remove_exported_files_by_pki (mgr, ipki, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_manager_remove_exported_files_by_pki (mgr, ipki, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return FALSE;
 	}
 
 	/* install new version */
-	li_installer_install (inst, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
+	li_installer_install (inst, &error_local);
+	if (error_local != NULL) {
+		g_propagate_error (error, error_local);
 		return FALSE;
 	}
 
@@ -1399,130 +1432,185 @@ li_manager_upgrade_single_package (LiManager *mgr, LiPkgInfo *ipki, LiPkgInfo *a
 
 /**
  * li_manager_apply_updates:
+ * @mgr: An instance of #LiManager
+ * @uitem: The #LiUpdateItem which should be updated.
  *
- * EXPERIMENTAL
+ * Update a single package.
+ */
+gboolean
+li_manager_apply_update (LiManager *mgr, LiUpdateItem *uitem, GError **error)
+{
+	LiPkgInfo *ipki;
+	LiPkgInfo *apki;
+	g_autoptr(GPtrArray) rts = NULL;
+	GError *error_local = NULL;
+
+	ipki = li_update_item_get_installed_pkg (uitem);
+	apki = li_update_item_get_available_pkg (uitem);
+
+	rts = li_manager_find_runtimes_with_member (mgr, ipki);
+	if (rts == NULL) {
+		/* we have no runtime, it is safe to update in any case */
+
+		g_debug ("Performing straight-forward update of '%s'", li_pkg_info_get_id (ipki));
+
+		li_manager_upgrade_single_package (mgr, ipki, apki, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
+			return FALSE;
+		}
+
+		/* mark package as faded, so it will get killed on the shutdown-cleanup run */
+		li_pkg_info_add_flag (ipki, LI_PACKAGE_FLAG_FADED);
+		li_pkg_info_save_changes (ipki);
+
+		/* tell the system to remove old packages on reboot */
+		g_file_set_contents (LI_CLEANUP_HINT_FNAME, "please clean removed packages", -1, NULL);
+
+	} else {
+		guint i;
+		g_autoptr(GPtrArray) update_rts = NULL;
+
+		g_debug ("Performing complex upgrade of '%s'", li_pkg_info_get_id (ipki));
+
+		update_rts = g_ptr_array_new_with_free_func (g_object_unref);
+		for (i = 0; i < rts->len; i++) {
+			gchar **reqs;
+			guint j;
+			LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (rts, i));
+
+			reqs = (gchar**) g_hash_table_get_keys_as_array (li_runtime_get_requirements (rt), NULL);
+			for (j = 0; reqs[j] != NULL; j++) {
+				LiPkgInfo *rt_req;
+				rt_req = li_parse_dependency_string (reqs[i]);
+
+				/* check if we can replace the package used by this runtime */
+				if (li_pkg_info_satisfies_requirement (apki, rt_req)) {
+					g_ptr_array_add (update_rts, g_object_ref (rt));
+					break;
+				}
+			}
+
+			g_free (reqs);
+		}
+
+		if (update_rts->len == 0) {
+			/* we can't upgrade, the new version would break runtimes */
+			g_debug ("Can not upgrade package '%s' as it would break all runtimes which are using it.", li_pkg_info_get_id (ipki));
+			return TRUE;
+		}
+
+		/* we can upgrade the package now! */
+		li_manager_upgrade_single_package (mgr, ipki, apki, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
+			return FALSE;
+		}
+
+		for (i = 0; i < update_rts->len; i++) {
+			LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (update_rts, i));
+
+			g_debug ("Updating runtime '%s'", li_runtime_get_uuid (rt));
+
+			li_runtime_remove_package (rt, ipki);
+			li_runtime_add_package (rt, apki);
+
+			li_runtime_save (rt, &error_local);
+			if (error_local != NULL) {
+				g_propagate_error (error, error_local);
+				return FALSE;
+			}
+		}
+
+		/* tell the system to remove old packages on reboot */
+		g_file_set_contents (LI_CLEANUP_HINT_FNAME, "please clean removed packages", -1, NULL);
+
+		/* TODO:
+		 *   - maybe explicitly flag ipki as crap if nothing uses it anymore?
+		 */
+	}
+
+	return TRUE;
+}
+
+/**
+ * li_manager_apply_updates:
+ * @mgr: An instance of #LiManager
+ *
+ * Upgrade all Limba packages.
  */
 gboolean
 li_manager_apply_updates (LiManager *mgr, GError **error)
 {
 	g_autoptr(GList) updlist = NULL;
-	g_autoptr(GHashTable) ipkgs = NULL;
 	GList *l;
-	GError *tmp_error = NULL;
+	GError *error_local = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
 
 	/* only search for new updates if we don't have some already in the queue */
 	if (g_hash_table_size (priv->updates) == 0) {
-		updlist = li_manager_get_update_list (mgr, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		updlist = li_manager_get_update_list (mgr, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
 			return FALSE;
 		}
 	} else {
 		updlist = g_hash_table_get_values (priv->updates);
 	}
 
-	/* get a list of all packages we have installed */
-	ipkgs = li_manager_get_installed_software (mgr, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return FALSE;
-	}
-
 	for (l = updlist; l != NULL; l = l->next) {
-		LiPkgInfo *ipki;
-		LiPkgInfo *apki;
-		g_autoptr(GPtrArray) rts = NULL;
-
 		LiUpdateItem *uitem = LI_UPDATE_ITEM (l->data);
 
-		ipki = li_update_item_get_installed_pkg (uitem);
-		apki = li_update_item_get_available_pkg (uitem);
-
-		rts = li_manager_find_runtimes_with_member (mgr, ipki);
-		if (rts == NULL) {
-			/* we have no runtime, it is safe to update in any case */
-
-			g_debug ("Performing straight-forward update of '%s'", li_pkg_info_get_id (ipki));
-
-			li_manager_upgrade_single_package (mgr, ipki, apki, &tmp_error);
-			if (tmp_error != NULL) {
-				g_propagate_error (error, tmp_error);
-				return FALSE;
-			}
-
-			/* mark package as faded, so it will get killed on the shutdown-cleanup run */
-			li_pkg_info_add_flag (ipki, LI_PACKAGE_FLAG_FADED);
-			li_pkg_info_save_changes (ipki);
-
-			/* tell the system to remove old packages on reboot */
-			g_file_set_contents (LI_CLEANUP_HINT_FNAME, "please clean removed packages", -1, NULL);
-
-		} else {
-			guint i;
-			g_autoptr(GPtrArray) update_rts = NULL;
-
-			g_debug ("Performing complex upgrade of '%s'", li_pkg_info_get_id (ipki));
-
-			update_rts = g_ptr_array_new_with_free_func (g_object_unref);
-			for (i = 0; i < rts->len; i++) {
-				gchar **reqs;
-				guint j;
-				LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (rts, i));
-
-				reqs = (gchar**) g_hash_table_get_keys_as_array (li_runtime_get_requirements (rt), NULL);
-				for (j = 0; reqs[j] != NULL; j++) {
-					LiPkgInfo *rt_req;
-					rt_req = li_parse_dependency_string (reqs[i]);
-
-					/* check if we can replace the package used by this runtime */
-					if (li_pkg_info_satisfies_requirement (apki, rt_req)) {
-						g_ptr_array_add (update_rts, g_object_ref (rt));
-						break;
-					}
-				}
-
-				g_free (reqs);
-			}
-
-			if (update_rts->len == 0) {
-				/* we can't upgrade, the new version would break runtimes */
-				g_debug ("Can not upgrade package '%s' as it would break all runtimes which are using it.", li_pkg_info_get_id (ipki));
-				continue;
-			}
-
-			/* we can upgrade the package now! */
-			li_manager_upgrade_single_package (mgr, ipki, apki, &tmp_error);
-			if (tmp_error != NULL) {
-				g_propagate_error (error, tmp_error);
-				return FALSE;
-			}
-
-			for (i = 0; i < update_rts->len; i++) {
-				LiRuntime *rt = LI_RUNTIME (g_ptr_array_index (update_rts, i));
-
-				g_debug ("Updating runtime '%s'", li_runtime_get_uuid (rt));
-
-				li_runtime_remove_package (rt, ipki);
-				li_runtime_add_package (rt, apki);
-
-				li_runtime_save (rt, &tmp_error);
-				if (tmp_error != NULL) {
-					g_propagate_error (error, tmp_error);
-					return FALSE;
-				}
-			}
-
-			/* tell the system to remove old packages on reboot */
-			g_file_set_contents (LI_CLEANUP_HINT_FNAME, "please clean removed packages", -1, NULL);
-
-			/* TODO:
-			 *   - maybe explicitly flag ipki as crap if nothing uses it anymore?
-			 */
+		li_manager_apply_update (mgr, uitem, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
+			return FALSE;
 		}
 	}
 
 	return TRUE;
+}
+
+/**
+ * li_manager_get_update_for_id:
+ * @mgr: An instance of #LiManager
+ * @pkid: ID of the existing package which can be upgraded.
+ *
+ * Get the #LiUpdateItem which represents an update of the package given by
+ * the pkid parameter.
+ *
+ * Returns: (transfer none): A #LiUpdateItem or %NULL if none was found.
+ */
+LiUpdateItem*
+li_manager_get_update_for_id (LiManager *mgr, const gchar *pkid, GError **error)
+{
+	g_autoptr(GList) updlist = NULL;
+	GList *l;
+	GError *error_local = NULL;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	/* only search for new updates if we don't have some already in the queue */
+	if (g_hash_table_size (priv->updates) == 0) {
+		updlist = li_manager_get_update_list (mgr, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
+			return NULL;
+		}
+	} else {
+		updlist = g_hash_table_get_values (priv->updates);
+	}
+
+	for (l = updlist; l != NULL; l = l->next) {
+		LiPkgInfo *ipki;
+		LiUpdateItem *uitem = LI_UPDATE_ITEM (l->data);
+
+		ipki = li_update_item_get_installed_pkg (uitem);
+		if (g_strcmp0 (li_pkg_info_get_id (ipki), pkid) == 0) {
+			return uitem;
+		}
+	}
+
+	return NULL;
 }
 
 /**
