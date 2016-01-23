@@ -71,6 +71,9 @@ void			li_runtime_add_package (LiRuntime *rt,
 						LiPkgInfo *pki);
 void			li_runtime_remove_package (LiRuntime *rt,
 							LiPkgInfo *pki);
+void			li_runtime_update_package (LiRuntime *rt,
+							LiPkgInfo *old_pki,
+							LiPkgInfo *new_pki);
 
 gboolean		li_runtime_remove (LiRuntime *rt);
 

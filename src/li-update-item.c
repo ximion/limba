@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014-2015 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -48,8 +48,10 @@ li_update_item_finalize (GObject *object)
 	LiUpdateItem *uitem = LI_UPDATE_ITEM (object);
 	LiUpdateItemPrivate *priv = GET_PRIVATE (uitem);
 
-	g_object_unref (priv->ipki);
-	g_object_unref (priv->apki);
+	if (priv->ipki != NULL)
+		g_object_unref (priv->ipki);
+	if (priv->apki != NULL)
+		g_object_unref (priv->apki);
 
 	G_OBJECT_CLASS (li_update_item_parent_class)->finalize (object);
 }

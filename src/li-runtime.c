@@ -278,6 +278,7 @@ li_runtime_add_package (LiRuntime *rt, LiPkgInfo *pki)
 
 /**
  * li_runtime_remove_package:
+ * @rt: An instance of #LiRuntime
  */
 void
 li_runtime_remove_package (LiRuntime *rt, LiPkgInfo *pki)
@@ -287,6 +288,20 @@ li_runtime_remove_package (LiRuntime *rt, LiPkgInfo *pki)
 				g_strdup (li_pkg_info_get_id (pki)));
 	g_hash_table_remove (priv->requirements,
 				li_pkg_info_get_name_relation_string (pki));
+}
+
+/**
+ * li_runtime_update_package:
+ * @rt: An instance of #LiRuntime
+ */
+void
+li_runtime_update_package (LiRuntime *rt, LiPkgInfo *old_pki, LiPkgInfo *new_pki)
+{
+	LiRuntimePrivate *priv = GET_PRIVATE (rt);
+	g_hash_table_remove (priv->members,
+				g_strdup (li_pkg_info_get_id (old_pki)));
+	g_hash_table_add (priv->members,
+				g_strdup (li_pkg_info_get_id (new_pki)));
 }
 
 /**

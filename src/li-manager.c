@@ -1246,8 +1246,9 @@ li_manager_clear_updates_table (LiManager *mgr)
 
 /**
  * li_manager_get_update_list:
+ * @mgr: An instance of #LiManager
  *
- * EXPERIMENTAL
+ * Get a list of available updates for the installed software.
  *
  * Returns: (transfer full) (element-type LiUpdateItem): A list of #LiUpdateItem describing the potential updates. Free with g_list_free().
  **/
@@ -1314,6 +1315,10 @@ li_manager_get_update_list (LiManager *mgr, GError **error)
 
 		/* check if we actually have a package available */
 		if (apki == NULL)
+			continue;
+
+		/* we never consider faded packages, they will be removed as soon as possible anyway. */
+		if (li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_FADED))
 			continue;
 
 		/* check if the new version is higher than what we already have installed */
@@ -1445,6 +1450,7 @@ li_manager_apply_update (LiManager *mgr, LiUpdateItem *uitem, GError **error)
 	g_autoptr(GPtrArray) rts = NULL;
 	GError *error_local = NULL;
 
+	g_assert (uitem != NULL);
 	ipki = li_update_item_get_installed_pkg (uitem);
 	apki = li_update_item_get_available_pkg (uitem);
 
@@ -1512,9 +1518,7 @@ li_manager_apply_update (LiManager *mgr, LiUpdateItem *uitem, GError **error)
 
 			g_debug ("Updating runtime '%s'", li_runtime_get_uuid (rt));
 
-			li_runtime_remove_package (rt, ipki);
-			li_runtime_add_package (rt, apki);
-
+			li_runtime_update_package (rt, ipki, apki);
 			li_runtime_save (rt, &error_local);
 			if (error_local != NULL) {
 				g_propagate_error (error, error_local);
