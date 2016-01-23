@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2014 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2014-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -134,7 +134,7 @@ bus_installer_install_local_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *
 	subject = polkit_system_bus_name_new (sender);
 	pres = polkit_authority_check_authorization_sync (helper->authority,
 								subject,
-								"org.freedesktop.limba.install-package-local",
+								"org.freedesktop.limba.install-software-local",
 								NULL,
 								POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
 								NULL,
@@ -188,7 +188,7 @@ bus_installer_install_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *contex
 	subject = polkit_system_bus_name_new (sender);
 	pres = polkit_authority_check_authorization_sync (helper->authority,
 							subject,
-							"org.freedesktop.limba.install-package",
+							"org.freedesktop.limba.install-software",
 							NULL,
 							POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
 							NULL,
@@ -240,7 +240,7 @@ bus_manager_remove_software_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *
 	subject = polkit_system_bus_name_new (sender);
 	pres = polkit_authority_check_authorization_sync (helper->authority,
 							subject,
-							"org.freedesktop.limba.remove-package",
+							"org.freedesktop.limba.remove-software",
 							NULL,
 							POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
 							NULL,
@@ -266,6 +266,110 @@ bus_manager_remove_software_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *
 	li_daemon_job_run_remove_package (helper->job, pkid);
 
 	li_proxy_manager_complete_remove (mgr_bus, context);
+
+out:
+	if (pres != NULL)
+		g_object_unref (pres);
+
+	li_daemon_reset_timer (helper);
+
+	return TRUE;
+}
+
+/**
+ * bus_manager_update_cb:
+ */
+static gboolean
+bus_manager_update_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *context, const gchar *pkid, LiHelperDaemon *helper)
+{
+	GError *error = NULL;
+	PolkitAuthorizationResult *pres = NULL;
+	PolkitSubject *subject;
+	const gchar *sender;
+
+	sender = g_dbus_method_invocation_get_sender (context);
+
+	subject = polkit_system_bus_name_new (sender);
+	pres = polkit_authority_check_authorization_sync (helper->authority,
+							subject,
+							"org.freedesktop.limba.update-software",
+							NULL,
+							POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+							NULL,
+							&error);
+	g_object_unref (subject);
+
+	if (error != NULL) {
+		g_dbus_method_invocation_take_error (context, error);
+		goto out;
+	}
+
+	if (!polkit_authorization_result_get_is_authorized (pres)) {
+		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Manager.Error.NotAuthorized",
+								"Authorization failed.");
+		goto out;
+	}
+
+	/* initialize our job, in case it is idling */
+	if (!li_daemon_init_job (helper, mgr_bus, context))
+		goto out;
+
+	/* do the thing */
+	li_daemon_job_run_update (helper->job, pkid);
+
+	li_proxy_manager_complete_update (mgr_bus, context);
+
+out:
+	if (pres != NULL)
+		g_object_unref (pres);
+
+	li_daemon_reset_timer (helper);
+
+	return TRUE;
+}
+
+/**
+ * bus_manager_update_all_cb:
+ */
+static gboolean
+bus_manager_update_all_cb (LiProxyManager *mgr_bus, GDBusMethodInvocation *context, LiHelperDaemon *helper)
+{
+	GError *error = NULL;
+	PolkitAuthorizationResult *pres = NULL;
+	PolkitSubject *subject;
+	const gchar *sender;
+
+	sender = g_dbus_method_invocation_get_sender (context);
+
+	subject = polkit_system_bus_name_new (sender);
+	pres = polkit_authority_check_authorization_sync (helper->authority,
+							subject,
+							"org.freedesktop.limba.update-software",
+							NULL,
+							POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION,
+							NULL,
+							&error);
+	g_object_unref (subject);
+
+	if (error != NULL) {
+		g_dbus_method_invocation_take_error (context, error);
+		goto out;
+	}
+
+	if (!polkit_authorization_result_get_is_authorized (pres)) {
+		g_dbus_method_invocation_return_dbus_error (context, "org.freedesktop.Limba.Manager.Error.NotAuthorized",
+								"Authorization failed.");
+		goto out;
+	}
+
+	/* initialize our job, in case it is idling */
+	if (!li_daemon_init_job (helper, mgr_bus, context))
+		goto out;
+
+	/* do the thing */
+	li_daemon_job_run_update_all (helper->job);
+
+	li_proxy_manager_complete_update_all (mgr_bus, context);
 
 out:
 	if (pres != NULL)
@@ -318,6 +422,16 @@ on_bus_acquired (GDBusConnection *connection, const gchar *name, LiHelperDaemon 
 	g_signal_connect (mgr_bus,
 			"handle-install-local",
 			G_CALLBACK (bus_installer_install_local_cb),
+			helper);
+
+	g_signal_connect (mgr_bus,
+			"handle-update",
+			G_CALLBACK (bus_manager_update_cb),
+			helper);
+
+	g_signal_connect (mgr_bus,
+			"handle-update-all",
+			G_CALLBACK (bus_manager_update_all_cb),
 			helper);
 
 	/* export the object */

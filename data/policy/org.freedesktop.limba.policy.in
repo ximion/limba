@@ -19,7 +19,7 @@
     </defaults>
   </action>
 
-  <action id="org.freedesktop.limba.install-package">
+  <action id="org.freedesktop.limba.install-software">
     <_description>Install a Limba package</_description>
     <_message>Authentication is required to install software</_message>
     <icon_name>package-x-generic</icon_name>
@@ -30,7 +30,7 @@
     </defaults>
   </action>
 
-  <action id="org.freedesktop.limba.install-package-local">
+  <action id="org.freedesktop.limba.install-software-local">
     <_description>Install a local package file</_description>
     <_message>Authentication is required to install a local package</_message>
     <icon_name>package-x-generic</icon_name>
@@ -41,9 +41,20 @@
     </defaults>
   </action>
 
-  <action id="org.freedesktop.limba.remove-package">
+  <action id="org.freedesktop.limba.remove-software">
     <_description>Remove package</_description>
     <_message>Authentication is required to remove software</_message>
+    <icon_name>package-x-generic</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
+  <action id="org.freedesktop.limba.update-software">
+    <_description>Update software</_description>
+    <_message>Authentication is required to update software</_message>
     <icon_name>package-x-generic</icon_name>
     <defaults>
       <allow_any>auth_admin</allow_any>

@@ -52,6 +52,27 @@
 		</method>
 
 		<!--
+			UpdateAll:
+			@since: 0.5.6
+
+			Update all Limba bundles on the system which have an update
+			candidate available.
+		-->
+		<method name="UpdateAll">
+		</method>
+
+		<!--
+			Update:
+			@pkid: A Limba bundle identifier
+			@since: 0.5.6
+
+			Update a single Limba bundle.
+		-->
+		<method name="Update">
+			<arg direction="in" type="s" name="pkid"/>
+		</method>
+
+		<!--
 			Progress:
 			@id: Identifier for the package this progress belongs to.
 			@percentage: Progress percentage.

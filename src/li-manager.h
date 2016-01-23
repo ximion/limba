@@ -107,11 +107,11 @@ void			li_manager_refresh_keyring (LiManager *mgr,
 GList			*li_manager_get_update_list (LiManager *mgr,
 							GError **error);
 
-gboolean		li_manager_apply_updates (LiManager *mgr,
-							GError **error);
-gboolean		li_manager_apply_update (LiManager *mgr,
-						 LiUpdateItem *uitem,
-						 GError **error);
+gboolean		li_manager_update_all (LiManager *mgr,
+						GError **error);
+gboolean		li_manager_update (LiManager *mgr,
+					   LiUpdateItem *uitem,
+					   GError **error);
 LiUpdateItem		*li_manager_get_update_for_id (LiManager *mgr,
 							const gchar *pkid,
 							GError **error);

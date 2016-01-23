@@ -426,12 +426,9 @@ lipa_update (void)
 	gint exit_code = 0;
 	GError *error = NULL;
 
-	if (!lipa_check_su ())
-		return 2;
-
 	mgr = li_manager_new ();
 
-	li_manager_apply_updates (mgr, &error);
+	li_manager_update_all (mgr, &error);
 	if (error != NULL) {
 		li_print_stderr (_("Could not apply updates: %s"), error->message);
 		exit_code = 1;

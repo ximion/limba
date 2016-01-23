@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: t; c-basic-offset: 8 -*-
  *
- * Copyright (C) 2015 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2015-2016 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 2.1
  *
@@ -30,22 +30,10 @@
 #include "li-dbus-interface.h"
 #include "limba.h"
 
-#define LI_TYPE_DAEMON_JOB		(li_daemon_job_get_type())
-#define LI_DAEMON_JOB(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_DAEMON_JOB, LiDaemonJob))
-#define LI_DAEMON_JOB_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_DAEMON_JOB, LiDaemonJobClass))
-#define LI_IS_DAEMON_JOB(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_DAEMON_JOB))
-#define LI_IS_DAEMON_JOB_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_DAEMON_JOB))
-#define LI_DAEMON_JOB_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_DAEMON_JOB, LiDaemonJobClass))
-
 G_BEGIN_DECLS
 
-typedef struct _LiDaemonJob		LiDaemonJob;
-typedef struct _LiDaemonJobClass	LiDaemonJobClass;
-
-struct _LiDaemonJob
-{
-	GObject			parent;
-};
+#define LI_TYPE_DAEMON_JOB		(li_daemon_job_get_type())
+G_DECLARE_DERIVABLE_TYPE (LiDaemonJob, li_daemon_job, LI, DAEMON_JOB, GObject)
 
 struct _LiDaemonJobClass
 {
@@ -68,12 +56,18 @@ gboolean		li_daemon_job_prepare (LiDaemonJob *job,
 						LiProxyManager *mgr_bus);
 
 void			li_daemon_job_run_refresh_cache (LiDaemonJob *job);
+
 void			li_daemon_job_run_remove_package (LiDaemonJob *job,
 						const gchar *pkid);
+
 void			li_daemon_job_run_install (LiDaemonJob *job,
 						const gchar *pkid);
 void			li_daemon_job_run_install_local (LiDaemonJob *job,
 						const gchar *fname);
+
+void			li_daemon_job_run_update_all (LiDaemonJob *job);
+void			li_daemon_job_run_update (LiDaemonJob *job,
+						  const gchar *pkid);
 
 gboolean		li_daemon_job_is_running (LiDaemonJob *job);
 

@@ -4,13 +4,19 @@ polkit.addRule(function(action, subject) {
             return polkit.Result.YES;
     }
 
-    if (action.id == "org.freedesktop.limba.install-package" &&
+    if (action.id == "org.freedesktop.limba.install-software" &&
         subject.active == true && subject.local == true &&
         subject.isInGroup("sudo")) {
             return polkit.Result.YES;
     }
 
-    if (action.id == "org.freedesktop.limba.remove-package" &&
+    if (action.id == "org.freedesktop.limba.remove-software" &&
+        subject.active == true && subject.local == true &&
+        subject.isInGroup("sudo")) {
+            return polkit.Result.YES;
+    }
+
+    if (action.id == "org.freedesktop.limba.update-software" &&
         subject.active == true && subject.local == true &&
         subject.isInGroup("sudo")) {
             return polkit.Result.YES;

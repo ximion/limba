@@ -1436,14 +1436,17 @@ li_manager_upgrade_single_package (LiManager *mgr, LiPkgInfo *ipki, LiPkgInfo *a
 }
 
 /**
- * li_manager_apply_updates:
+ * li_manager_update_internal:
  * @mgr: An instance of #LiManager
  * @uitem: The #LiUpdateItem which should be updated.
  *
- * Update a single package.
+ * Update a single package, without checking for root permissions
+ * every time.
+ *
+ * INTERNAL HELPER
  */
-gboolean
-li_manager_apply_update (LiManager *mgr, LiUpdateItem *uitem, GError **error)
+static gboolean
+li_manager_update_internal (LiManager *mgr, LiUpdateItem *uitem, GError **error)
 {
 	LiPkgInfo *ipki;
 	LiPkgInfo *apki;
@@ -1538,18 +1541,99 @@ li_manager_apply_update (LiManager *mgr, LiUpdateItem *uitem, GError **error)
 }
 
 /**
- * li_manager_apply_updates:
+ * li_manager_update:
+ * @mgr: An instance of #LiManager
+ * @uitem: The #LiUpdateItem which should be updated.
+ *
+ * Update a single package.
+ */
+gboolean
+li_manager_update (LiManager *mgr, LiUpdateItem *uitem, GError **error)
+{
+	GError *error_local = NULL;
+	LiPkgInfo *pki;
+	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	if (!li_utils_is_root ()) {
+		LiProxyManager *bus_proxy;
+
+		/* we do not have root privileges - call the helper daemon to install the package */
+		g_debug ("Calling Limba DBus service for ApplyUpdate().");
+
+		bus_proxy = li_manager_get_dbus_proxy (mgr, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
+			return FALSE;
+		}
+
+		pki = li_update_item_get_installed_pkg (uitem);
+		li_proxy_manager_call_update_sync (bus_proxy,
+							li_pkg_info_get_id (pki),
+							NULL,
+							&error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
+			return FALSE;
+		}
+
+		g_main_loop_run (priv->loop);
+
+		if (priv->proxy_error != NULL) {
+			g_propagate_error (error, priv->proxy_error);
+			priv->proxy_error = NULL;
+			return FALSE;
+		}
+
+		return TRUE;
+	}
+
+	return li_manager_update_internal (mgr, uitem, error);
+}
+
+/**
+ * li_manager_update_all:
  * @mgr: An instance of #LiManager
  *
  * Upgrade all Limba packages.
  */
 gboolean
-li_manager_apply_updates (LiManager *mgr, GError **error)
+li_manager_update_all (LiManager *mgr, GError **error)
 {
 	g_autoptr(GList) updlist = NULL;
 	GList *l;
 	GError *error_local = NULL;
 	LiManagerPrivate *priv = GET_PRIVATE (mgr);
+
+	if (!li_utils_is_root ()) {
+		LiProxyManager *bus_proxy;
+
+		/* we do not have root privileges - call the helper daemon to install the package */
+		g_debug ("Calling Limba DBus service for ApplyUpdates().");
+
+		bus_proxy = li_manager_get_dbus_proxy (mgr, &error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
+			return FALSE;
+		}
+
+		li_proxy_manager_call_update_all_sync (bus_proxy,
+							NULL,
+							&error_local);
+		if (error_local != NULL) {
+			g_propagate_error (error, error_local);
+			return FALSE;
+		}
+
+		g_main_loop_run (priv->loop);
+
+		if (priv->proxy_error != NULL) {
+			g_propagate_error (error, priv->proxy_error);
+			priv->proxy_error = NULL;
+			return FALSE;
+		}
+
+		return TRUE;
+	}
 
 	/* only search for new updates if we don't have some already in the queue */
 	if (g_hash_table_size (priv->updates) == 0) {
@@ -1565,7 +1649,7 @@ li_manager_apply_updates (LiManager *mgr, GError **error)
 	for (l = updlist; l != NULL; l = l->next) {
 		LiUpdateItem *uitem = LI_UPDATE_ITEM (l->data);
 
-		li_manager_apply_update (mgr, uitem, &error_local);
+		li_manager_update_internal (mgr, uitem, &error_local);
 		if (error_local != NULL) {
 			g_propagate_error (error, error_local);
 			return FALSE;

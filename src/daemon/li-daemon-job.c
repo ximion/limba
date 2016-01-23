@@ -32,12 +32,13 @@ typedef enum {
 	LI_JOB_KIND_INSTALL,
 	LI_JOB_KIND_INSTALL_LOCAL,
 	LI_JOB_KIND_REMOVE,
+	LI_JOB_KIND_UPDATE,
+	LI_JOB_KIND_UPDATE_ALL,
 	/*< private >*/
 	LI_JOB_KIND_LAST
 } LiJobKind;
 
-typedef struct _LiDaemonJobPrivate	LiDaemonJobPrivate;
-struct _LiDaemonJobPrivate
+typedef struct
 {
 	LiProxyManager *mgr_bus;
 	GThread *thread;
@@ -46,10 +47,9 @@ struct _LiDaemonJobPrivate
 
 	gchar *pkid;
 	gchar *local_fname;
-};
+} LiDaemonJobPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiDaemonJob, li_daemon_job, G_TYPE_OBJECT)
-
 #define GET_PRIVATE(o) (li_daemon_job_get_instance_private (o))
 
 /**
@@ -221,7 +221,7 @@ out:
 static gboolean
 li_daemon_job_execute_install_local (LiDaemonJob *job)
 {
-	LiInstaller *inst = NULL;
+	g_autoptr(LiInstaller) inst = NULL;
 	GError *error = NULL;
 	gboolean ret = FALSE;
 	LiDaemonJobPrivate *priv = GET_PRIVATE (job);
@@ -245,10 +245,83 @@ li_daemon_job_execute_install_local (LiDaemonJob *job)
 
 	ret = TRUE;
 out:
-	if (inst != NULL)
-		g_object_unref (inst);
 	li_daemon_job_emit_finished (job, ret);
+	return ret;
+}
 
+/**
+ * li_daemon_job_execute_update:
+ */
+static gboolean
+li_daemon_job_execute_update (LiDaemonJob *job)
+{
+	g_autoptr(LiManager) mgr = NULL;
+	GError *error = NULL;
+	gboolean ret = FALSE;
+	LiUpdateItem *uitem;
+	LiDaemonJobPrivate *priv = GET_PRIVATE (job);
+
+	mgr = li_manager_new ();
+	g_signal_connect (mgr, "progress",
+			G_CALLBACK (li_daemon_job_progress_proxy_cb), priv->mgr_bus);
+
+
+	uitem = li_manager_get_update_for_id (mgr,
+					      priv->pkid,
+					      &error);
+	if (error != NULL) {
+		li_daemon_job_emit_error (job, error);
+		goto out;
+	}
+
+	if (uitem == NULL) {
+		g_set_error (&error,
+				LI_MANAGER_ERROR,
+				LI_MANAGER_ERROR_NOT_FOUND,
+				"Could not find update for '%s'.",
+				priv->pkid);
+		li_daemon_job_emit_error (job, error);
+		goto out;
+	}
+
+
+	li_manager_update (mgr, uitem, &error);
+	if (error != NULL) {
+		li_daemon_job_emit_error (job, error);
+		goto out;
+	}
+
+	ret = TRUE;
+out:
+	li_daemon_job_emit_finished (job, ret);
+	return ret;
+}
+
+/**
+ * li_daemon_job_execute_update_all:
+ */
+static gboolean
+li_daemon_job_execute_update_all (LiDaemonJob *job)
+{
+	g_autoptr(LiManager) mgr = NULL;
+	GError *error = NULL;
+	gboolean ret = FALSE;
+	LiDaemonJobPrivate *priv = GET_PRIVATE (job);
+
+	mgr = li_manager_new ();
+	g_signal_connect (mgr, "progress",
+			G_CALLBACK (li_daemon_job_progress_proxy_cb), priv->mgr_bus);
+
+
+	li_manager_update_all (mgr, &error);
+	if (error != NULL) {
+		li_daemon_job_emit_error (job, error);
+		goto out;
+	}
+
+	ret = TRUE;
+out:
+	li_daemon_job_emit_finished (job, ret);
 	return ret;
 }
 
@@ -271,6 +344,10 @@ li_daemon_job_thread_func (gpointer thread_data)
 		li_daemon_job_execute_install (job);
 	} else if (priv->kind == LI_JOB_KIND_INSTALL_LOCAL) {
 		li_daemon_job_execute_install_local (job);
+	} else if (priv->kind == LI_JOB_KIND_UPDATE_ALL) {
+		li_daemon_job_execute_update_all (job);
+	} else if (priv->kind == LI_JOB_KIND_UPDATE) {
+		li_daemon_job_execute_update (job);
 	} else {
 		g_warning ("Job with unknown purpose: %i", (int) priv->kind);
 	}
@@ -353,6 +430,42 @@ li_daemon_job_run_install_local (LiDaemonJob *job, const gchar *fname)
 
 	priv->kind = LI_JOB_KIND_INSTALL_LOCAL;
 
+	priv->thread = g_thread_new ("LI-DaemonJob",
+					  li_daemon_job_thread_func,
+					  job);
+}
+
+/**
+ * li_daemon_job_run_update_all:
+ */
+void
+li_daemon_job_run_update_all (LiDaemonJob *job)
+{
+	LiDaemonJobPrivate *priv = GET_PRIVATE (job);
+
+	priv->kind = LI_JOB_KIND_UPDATE_ALL;
+
+	/* create & run thread */
+	priv->thread = g_thread_new ("LI-DaemonJob",
+					  li_daemon_job_thread_func,
+					  job);
+}
+
+/**
+ * li_daemon_job_run_update:
+ */
+void
+li_daemon_job_run_update (LiDaemonJob *job, const gchar *pkid)
+{
+	LiDaemonJobPrivate *priv = GET_PRIVATE (job);
+
+	if (priv->pkid != NULL)
+		g_free (priv->pkid);
+	priv->pkid = g_strdup (pkid);
+
+	priv->kind = LI_JOB_KIND_UPDATE;
+
+	/* create & run thread */
 	priv->thread = g_thread_new ("LI-DaemonJob",
 					  li_daemon_job_thread_func,
 					  job);
