@@ -152,6 +152,10 @@ LiPackageKind	li_pkg_info_get_kind (LiPkgInfo *pki);
 void		li_pkg_info_set_kind (LiPkgInfo *pki,
 					LiPackageKind kind);
 
+const gchar	*li_pkg_info_get_component_kind (LiPkgInfo *pki);
+void		li_pkg_info_set_component_kind (LiPkgInfo *pki,
+					const gchar *kind);
+
 void		li_pkg_info_set_flags (LiPkgInfo *pki,
 					LiPackageFlags flags);
 void		li_pkg_info_add_flag (LiPkgInfo *pki,

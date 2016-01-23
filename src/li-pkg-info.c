@@ -39,11 +39,12 @@ struct _LiPkgInfoPrivate
 	gchar *name;
 	gchar *app_name;
 	gchar *runtime_uuid;
-	gchar *dependencies;
 	gchar *hash_sha256;
 	gchar *repo_location;
+	gchar *cpt_kind;
 	gchar *abi_break_versions;
 
+	gchar *dependencies;
 	gchar *sdk_dependencies;
 	gchar *build_dependencies;
 
@@ -128,6 +129,9 @@ li_pkg_info_fetch_values_from_cdata (LiPkgInfo *pki, LiConfigData *cdata)
 	g_free (priv->runtime_uuid);
 	priv->runtime_uuid = li_config_data_get_value (cdata, "Runtime-UUID");
 
+	g_free (priv->cpt_kind);
+	priv->cpt_kind = li_config_data_get_value (cdata, "Component-Type");
+
 	str = li_config_data_get_value (cdata, "Automatic");
 	if (li_str_to_bool (str))
 		li_pkg_info_add_flag (pki, LI_PACKAGE_FLAG_AUTOMATIC);
@@ -175,6 +179,9 @@ li_pkg_info_update_cdata_values (LiPkgInfo *pki, LiConfigData *cdata)
 
 	if (priv->version != NULL)
 		li_config_data_set_value (cdata, "Version", priv->version);
+
+	if (priv->cpt_kind != NULL)
+		li_config_data_set_value (cdata, "Component-Type", priv->cpt_kind);
 
 	if (priv->abi_break_versions != NULL)
 		li_config_data_set_value (cdata, "ABI-Break-Versions", priv->abi_break_versions);
@@ -509,6 +516,7 @@ li_pkg_info_get_sdk_dependencies (LiPkgInfo *pki)
 
 /**
  * li_pkg_info_set_build_dependencies:
+ * @pki: An instance of #LiPkgInfo
  *
  * Set dependencies needed to build this package.
  */
@@ -523,6 +531,7 @@ li_pkg_info_set_build_dependencies (LiPkgInfo *pki, const gchar *deps_string)
 
 /**
  * li_pkg_info_get_build_dependencies:
+ * @pki: An instance of #LiPkgInfo
  *
  * Dependencies needed to build this package.
  */
@@ -535,6 +544,7 @@ li_pkg_info_get_build_dependencies (LiPkgInfo *pki)
 
 /**
  * li_pkg_info_get_checksum_sha256:
+ * @pki: An instance of #LiPkgInfo
  *
  * The SHA256 checksum of the package referenced by this package-info.
  * This is usually used in package-indices.
@@ -548,6 +558,7 @@ li_pkg_info_get_checksum_sha256 (LiPkgInfo *pki)
 
 /**
  * li_pkg_info_set_checksum_sha256:
+ * @pki: An instance of #LiPkgInfo
  */
 void
 li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki, const gchar *hash)
@@ -559,6 +570,7 @@ li_pkg_info_set_checksum_sha256 (LiPkgInfo *pki, const gchar *hash)
 
 /**
  * li_pkg_info_get_kind:
+ * @pki: An instance of #LiPkgInfo
  */
 LiPackageKind
 li_pkg_info_get_kind (LiPkgInfo *pki)
@@ -569,6 +581,7 @@ li_pkg_info_get_kind (LiPkgInfo *pki)
 
 /**
  * li_pkg_info_set_kind:
+ * @pki: An instance of #LiPkgInfo
  */
 void
 li_pkg_info_set_kind (LiPkgInfo *pki, LiPackageKind kind)
@@ -578,7 +591,34 @@ li_pkg_info_set_kind (LiPkgInfo *pki, LiPackageKind kind)
 }
 
 /**
+ * li_pkg_info_get_component_kind:
+ * @pki: An instance of #LiPkgInfo
+ *
+ * The AppStream component kind of the software component this package contains.
+ * You can use as_component_kind_from_string() to convert it into its enum representation.
+ */
+const gchar*
+li_pkg_info_get_component_kind (LiPkgInfo *pki)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	return priv->cpt_kind;
+}
+
+/**
+ * li_pkg_info_set_component_kind:
+ * @pki: An instance of #LiPkgInfo
+ */
+void
+li_pkg_info_set_component_kind (LiPkgInfo *pki, const gchar *kind)
+{
+	LiPkgInfoPrivate *priv = GET_PRIVATE (pki);
+	g_free (priv->cpt_kind);
+	priv->cpt_kind = g_strdup (kind);
+}
+
+/**
  * li_pkg_info_set_flags:
+ * @pki: An instance of #LiPkgInfo
  */
 void
 li_pkg_info_set_flags (LiPkgInfo *pki, LiPackageFlags flags)
@@ -589,6 +629,7 @@ li_pkg_info_set_flags (LiPkgInfo *pki, LiPackageFlags flags)
 
 /**
  * li_pkg_info_get_flags:
+ * @pki: An instance of #LiPkgInfo
  */
 LiPackageFlags
 li_pkg_info_get_flags (LiPkgInfo *pki)
@@ -599,6 +640,7 @@ li_pkg_info_get_flags (LiPkgInfo *pki)
 
 /**
  * li_pkg_info_add_flag:
+ * @pki: An instance of #LiPkgInfo
  */
 void
 li_pkg_info_add_flag (LiPkgInfo *pki, LiPackageFlags flag)
@@ -615,6 +657,7 @@ li_pkg_info_add_flag (LiPkgInfo *pki, LiPackageFlags flag)
 
 /**
  * li_pkg_info_has_flag:
+ * @pki: An instance of #LiPkgInfo
  * @flag: #LiPackageFlag to check for.
  *
  * Returns: %TRUE if the flag is assigned.
@@ -670,9 +713,9 @@ li_pkg_info_get_name_relation_string (LiPkgInfo *pki)
 		relation[1] = '=';
 
 	tmp = g_strdup_printf ("%s (%s %s)",
-						li_pkg_info_get_name (pki),
-						relation,
-						li_pkg_info_get_version (pki));
+				li_pkg_info_get_name (pki),
+				relation,
+				li_pkg_info_get_version (pki));
 	g_free (relation);
 
 	return tmp;

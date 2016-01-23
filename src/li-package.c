@@ -425,6 +425,10 @@ li_package_read_component_data (LiPackage *pkg, const gchar *data, GError **erro
 		return FALSE;
 	}
 
+	/* add information about which component kind we are dealing with to the local package metadata */
+	li_pkg_info_set_component_kind (priv->info,
+					as_component_kind_to_string (as_component_get_kind (priv->cpt)));
+
 	tmp = li_get_pkgname_from_component (priv->cpt);
 	if (tmp == NULL) {
 		g_set_error (error,
