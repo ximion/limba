@@ -47,6 +47,8 @@
 #include "li-pkg-info.h"
 #include "li-package-graph.h"
 #include "li-manager.h"
+#include "li-installer.h"
+#include "li-installer-private.h"
 #include "li-build-conf.h"
 
 typedef struct _LiBuildMasterPrivate	LiBuildMasterPrivate;
@@ -61,6 +63,7 @@ struct _LiBuildMasterPrivate
 	GPtrArray *cmds;
 	GPtrArray *cmds_post;
 	LiPkgInfo *pki;
+	gchar *extra_bundles_dir;
 	gboolean ignore_foundations;
 
 	gchar **dep_data_paths;
@@ -103,6 +106,7 @@ li_build_master_finalize (GObject *object)
 	g_free (priv->email);
 	g_free (priv->username);
 	g_free (priv->target_repo);
+	g_free (priv->extra_bundles_dir);
 
 	G_OBJECT_CLASS (li_build_master_parent_class)->finalize (object);
 }
@@ -217,68 +221,6 @@ li_build_master_check_dependencies (LiPackageGraph *pg, LiManager *mgr, LiPkgInf
 }
 
 /**
- * li_build_master_resolve_builddeps:
- */
-static void
-li_build_master_resolve_builddeps (LiBuildMaster *bmaster, GError **error)
-{
-	g_autoptr(LiPackageGraph) pg = NULL;
-	g_autoptr(GPtrArray) full_deps = NULL;
-	g_autoptr(GHashTable) depdirs = NULL;
-	g_autoptr(LiManager) mgr = NULL;
-	guint i;
-	GError *tmp_error = NULL;
-	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
-
-	pg = li_package_graph_new ();
-	li_package_graph_set_ignore_foundations (pg, priv->ignore_foundations);
-
-	/* ensure the graph is initialized and additional data (foundations list) is loaded */
-	li_package_graph_initialize (pg, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return;
-	}
-
-	mgr = li_manager_new ();
-	li_package_graph_add_package (pg, NULL, priv->pki, NULL);
-
-	li_build_master_check_dependencies (pg, mgr, priv->pki, TRUE, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return;
-	}
-
-	full_deps = li_package_graph_branch_to_array (pg, priv->pki, FALSE);
-	if (full_deps == NULL) {
-		g_warning ("Building package with no build-dependencies defined.");
-		return;
-	}
-
-	depdirs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
-	for (i = 0; i < full_deps->len; i++) {
-		const gchar *pkid;
-		g_autofree gchar *datapath = NULL;
-		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (full_deps, i));
-		pkid = li_pkg_info_get_id (pki);
-
-		/* filter system dependencies */
-		if (g_str_has_prefix (li_pkg_info_get_name (pki), "foundation:")) {
-			continue;
-		}
-
-		datapath = g_build_filename (LI_SOFTWARE_ROOT, pkid, "data", NULL);
-		g_hash_table_add (depdirs, g_strdup (datapath));
-	}
-
-	if (priv->dep_data_paths != NULL)
-		g_strfreev (priv->dep_data_paths);
-
-	priv->dep_data_paths = (gchar**) g_hash_table_get_keys_as_array (depdirs, NULL);
-	g_hash_table_steal_all (depdirs);
-}
-
-/**
  * li_build_master_init_build:
  */
 void
@@ -326,11 +268,7 @@ li_build_master_init_build (LiBuildMaster *bmaster, const gchar *dir, const gcha
 	if (priv->pki != NULL)
 		g_object_unref (priv->pki);
 	priv->pki = li_build_conf_get_pkginfo (bconf);
-	li_build_master_resolve_builddeps (bmaster, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return;
-	}
+	priv->extra_bundles_dir = li_build_conf_get_extra_bundles_dir (bconf);
 
 	priv->init_done = TRUE;
 }
@@ -467,22 +405,22 @@ li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stag
 /**
  * li_build_master_mount_deps:
  *
- * Mount the depdenencies into the environment as an overlay.
+ * Mount the depdenencies in the environment as an overlay.
+ *
+ * NOTE: We are already inside of the venv at this point.
  */
 static gint
-li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir, const gchar *env_root)
+li_build_master_mount_deps (LiBuildMaster *bmaster)
 {
 	guint i;
 	gint res;
 	g_autoptr(GString) lowerdirs = NULL;
-	g_autofree gchar *mount_target = NULL;
 	g_autofree gchar *volatile_data_dir = NULL;
 	g_autofree gchar *ofs_wdir = NULL;
-	g_autofree gchar *app_mount_target = NULL;
 	gchar *tmp;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
-	if ((priv->dep_data_paths == NULL) || (priv->dep_data_paths[0] == NULL))
+	if ((priv->dep_data_paths == NULL) || (priv->dep_data_paths[0] == '\0'))
 		return 0;
 
 	/* The payload of Limba bundles follows a strict directory layout, with directories
@@ -490,20 +428,30 @@ li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir, con
 	 * This means we can simply mount all payload over /usr here, and bindmount
 	 * /app to /usr to make things work at build-time.
 	 */
-	mount_target = g_build_filename (chroot_dir, "usr", NULL);
 
-	g_debug ("Mounting build dependencies into environment.");
+	g_debug ("Mounting build dependencies to /usr.");
 	lowerdirs = g_string_new ("");
 	for (i = 0; priv->dep_data_paths[i] != NULL; i++) {
 		const gchar *dep_data_path = priv->dep_data_paths[i];
 		g_string_append_printf (lowerdirs, "%s:", dep_data_path);
 	}
-	g_string_append (lowerdirs, mount_target);
+	g_string_append (lowerdirs, "/usr");
+
+	volatile_data_dir = g_build_filename (".host-volatile", "volatile_sdkapp", NULL);
+	g_mkdir_with_parents (volatile_data_dir, 0755);
+	ofs_wdir = g_build_filename (".host-volatile", "workdir_sdkapp", NULL);
+	g_mkdir_with_parents (ofs_wdir, 0755);
+
+	res = chown (volatile_data_dir, priv->build_uid, priv->build_gid);
+	if (res != 0) {
+		g_warning ("Could not adjust permissions on volatile data dir for SDK/Apps: %s", g_strerror (errno));
+		goto out;
+	}
 
 	/* IMPORTANT: We do *not* mount the root filesystem NOSUID, so the build process can use sudo on demand.
 	 * All other stuff and especially the environment when running the app *must not* perform mounts with SUID allowed. */
-	tmp = g_strdup_printf ("lowerdir=%s", lowerdirs->str);
-	res = mount ("overlay", mount_target,
+	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", lowerdirs->str, volatile_data_dir, ofs_wdir);
+	res = mount ("overlay", "/usr",
 				 "overlay", MS_MGC_VAL | MS_RDONLY, tmp);
 	g_free (tmp);
 	if (res != 0) {
@@ -512,54 +460,176 @@ li_build_master_mount_deps (LiBuildMaster *bmaster, const gchar *chroot_dir, con
 		goto out;
 	}
 
-	/* Now we mount /app as an overlay on /usr and make it writable using OverlayFS.
-	 * That way, binaries compiled with that prefix can find their data and we allow
+out:
+	return res;
+}
+
+/**
+ * li_build_master_resolve_builddeps:
+ */
+static void
+li_build_master_resolve_builddeps (LiBuildMaster *bmaster, GError **error)
+{
+	g_autoptr(LiPackageGraph) pg = NULL;
+	g_autoptr(GPtrArray) full_deps = NULL;
+	g_autoptr(GHashTable) depdirs = NULL;
+	g_autoptr(LiManager) mgr = NULL;
+	guint i;
+	GError *tmp_error = NULL;
+	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
+
+	pg = li_package_graph_new ();
+	li_package_graph_set_ignore_foundations (pg, priv->ignore_foundations);
+
+	/* ensure the graph is initialized and additional data (foundations list) is loaded */
+	li_package_graph_initialize (pg, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	mgr = li_manager_new ();
+	li_package_graph_add_package (pg, NULL, priv->pki, NULL);
+
+	li_build_master_check_dependencies (pg, mgr, priv->pki, TRUE, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	full_deps = li_package_graph_branch_to_array (pg, priv->pki, FALSE);
+	if (full_deps == NULL) {
+		g_warning ("Building package with no build-dependencies defined.");
+		return;
+	}
+
+	depdirs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+	for (i = 0; i < full_deps->len; i++) {
+		const gchar *pkid;
+		g_autofree gchar *datapath = NULL;
+		LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (full_deps, i));
+		pkid = li_pkg_info_get_id (pki);
+
+		/* filter system dependencies */
+		if (g_str_has_prefix (li_pkg_info_get_name (pki), "foundation:")) {
+			continue;
+		}
+
+		datapath = g_build_filename (LI_SOFTWARE_ROOT, pkid, "data", NULL);
+		g_hash_table_add (depdirs, g_strdup (datapath));
+	}
+
+	if (priv->dep_data_paths != NULL)
+		g_strfreev (priv->dep_data_paths);
+
+	priv->dep_data_paths = (gchar**) g_hash_table_get_keys_as_array (depdirs, NULL);
+	g_hash_table_steal_all (depdirs);
+}
+
+/**
+ * li_build_master_install_builddeps
+ * @bmaster: An instance of #LiBuildMaster.
+ *
+ * Install build dependencies. This is usually called within the chroot.
+ */
+void
+li_build_master_install_builddeps (LiBuildMaster *bmaster, const gchar *extra_bundles_dir, GError **error)
+{
+	g_autoptr(LiInstaller) inst = NULL;
+	g_autoptr(GPtrArray) files = NULL;
+	GError *tmp_error = NULL;
+	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
+
+	g_debug ("Installing dependencies required for the build.");
+	inst = li_installer_new ();
+	li_installer_set_allow_insecure (inst, TRUE);
+
+	li_pkg_info_set_flags (priv->pki, LI_PACKAGE_FLAG_INSTALLED);
+	li_pkg_info_set_dependencies (priv->pki,
+				      li_pkg_info_get_build_dependencies (priv->pki));
+	if (extra_bundles_dir) {
+		files = li_utils_find_files_matching (extra_bundles_dir, "*.ipk", FALSE);
+		li_installer_open_extra_packages (inst, files, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+	}
+
+	g_debug ("Needed: %s", li_pkg_info_get_dependencies (priv->pki));
+	li_installer_install_sourcepkg_deps (inst, priv->pki, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+}
+
+/**
+ * li_build_master_setup_dependencies
+ */
+void
+li_build_master_setup_dependencies (LiBuildMaster *bmaster, GError **error)
+{
+	g_autofree gchar *cmd = NULL;
+	GError *tmp_error = NULL;
+	gint res;
+	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
+
+	/* first install all the bundles which we need to build this software */
+
+	g_debug ("Calling satisfy-buildddeps");
+
+	if (priv->extra_bundles_dir != NULL)
+		cmd = g_strdup_printf ("limba-build satisfy-builddeps /build %s", priv->extra_bundles_dir);
+	else
+		cmd = g_strdup ("limba-build satisfy-builddeps /build");
+
+	g_debug ("Run: %s", cmd);
+	res = system (cmd);
+	if (res != 0) {
+		g_set_error (error,
+				LI_BUILD_MASTER_ERROR,
+				LI_BUILD_MASTER_ERROR_STEP_FAILED,
+				"Could not satisfy build dependencies.");
+		return;
+	}
+
+	g_debug ("Resolving build dependencies (again, after installation)");
+	li_build_master_resolve_builddeps (bmaster, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return;
+	}
+
+	/* Overlay /usr with the dependency data and make /app and binmount to /usr.
+	 * That way, binaries compiled with the /app prefix can find their data and we allow
 	 * the setup process to place data here which can then be found by other steps in
 	 * the same stup process. This is useful for creating one bundle out of multiple
-	 * submodules. */
-
-	/* create volatile data dir for /app */
-	volatile_data_dir = g_build_filename (env_root, "volatile_app", NULL);
-	res = g_mkdir_with_parents (volatile_data_dir, 0755);
+	 * submodules.
+	 */
+	res = li_build_master_mount_deps (bmaster);
 	if (res != 0) {
-		g_warning ("Unable to set up the environment (volatile /app): %s", g_strerror (errno));
-		goto out;
+		g_set_error (error,
+				LI_BUILD_MASTER_ERROR,
+				LI_BUILD_MASTER_ERROR_INIT,
+				"Mounting requirements failed: %s", g_strerror (errno));
+		return;
 	}
+}
 
-	/* create OverlayFS work dir */
-	ofs_wdir = g_build_filename (env_root, "ofs_work_app", NULL);
-	res = g_mkdir_with_parents (ofs_wdir, 0755);
-	if (res != 0) {
-		g_warning ("Unable to set up the environment (workdir /app): %s", g_strerror (errno));
-		goto out;
-	}
+/**
+ * private_bind_mount:
+ */
+static int
+private_bind_mount (const gchar *src, const gchar *dest, gboolean writable)
+{
+	if (mount (src, dest, NULL, MS_MGC_VAL | MS_BIND | (writable?0:MS_RDONLY), NULL) != 0)
+		return 1;
 
-	/* now mount our build-data directory via OverlayFS */
-	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", mount_target, volatile_data_dir, ofs_wdir);
-	app_mount_target = g_build_filename (chroot_dir, LI_SW_ROOT_PREFIX, NULL);
-	res = mount ("overlay", app_mount_target,
-			 "overlay", MS_MGC_VAL | MS_NOSUID, tmp);
-	g_free (tmp);
-	if (res != 0) {
-		g_warning ("Unable to set up the environment (/app mount): %s", g_strerror (errno));
-		goto out;
-	}
+	if (mount ("none", dest, NULL, MS_REC | MS_PRIVATE, NULL) != 0)
+		return 2;
 
-	res = chown (volatile_data_dir, priv->build_uid, priv->build_gid);
-	if (res != 0) {
-		g_warning ("Could not adjust permissions on volatile /app dir: %s", g_strerror (errno));
-		goto out;
-	}
-
-out:
-	if (res != 0) {
-		if (mount_target != NULL)
-			umount (mount_target);
-		if (app_mount_target != NULL)
-			umount (app_mount_target);
-	}
-
-	return res;
+	return 0;
 }
 
 /**
@@ -574,12 +644,18 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	gint res = 0;
 	gboolean ret;
 	gchar *tmp;
+	gchar *tmp2;
 	g_autofree gchar *build_data_root = NULL;
 	g_autofree gchar *newroot_dir = NULL;
+	g_autofree gchar *newroot_usr_dir = NULL;
 	g_autofree gchar *volatile_data_dir = NULL;
 	g_autofree gchar *ofs_wdir = NULL;
+	g_autofree gchar *volatile_data_dir_usr = NULL;
+	g_autofree gchar *ofs_wdir_usr = NULL;
+	g_autofree gchar *volatile_data_dir_opt = NULL;
 	g_autofree gchar *env_tmp_fname = NULL;
 	gint env_fd = 0;
+	GError *tmp_error = NULL;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
 	tmp = g_strdup_printf ("Building %s - %s",
@@ -593,6 +669,7 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		g_warning ("Unable to set up the environment.");
 		goto out;
 	}
+	g_debug ("Basic environment setup completed");
 
 	/* create our build directory */
 	build_data_root = g_build_filename (newroot_dir, "build", NULL);
@@ -618,30 +695,132 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		goto out;
 	}
 
-	/* now mount our build-data directory via OverlayFS */
+	/* mount the build directory in as an overlay */
+	g_debug ("Mounting build directory...");
 	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", priv->build_root, volatile_data_dir, ofs_wdir);
 	res = mount ("overlay", build_data_root,
 			 "overlay", MS_MGC_VAL | MS_NOSUID, tmp);
 	g_free (tmp);
 	if (res != 0) {
-		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
+		g_warning ("Unable to set up the environment, overlay on /usr failed: %s", g_strerror (errno));
 		goto out;
 	}
 
-	/* overlay the base filesystem with the build-dependency data */
-	res = li_build_master_mount_deps (bmaster, newroot_dir, env_root);
-	if (res != 0) {
-		g_warning ("Unable to set up the environment: %s", g_strerror (errno));
-		goto out;
-	}
-
-	/* ensure we can write volatile data */
+	/* ensure we can write volatile build data */
 	res = chown (volatile_data_dir, priv->build_uid, priv->build_gid);
 	if (res != 0) {
 		g_warning ("Could not adjust permissions on volatile data dir: %s", g_strerror (errno));
 		goto out;
 	}
 
+	/* Now we mount /usr using OverlayFS (making it writable by doing so).
+	 * This is required for Limba to install some apps which might want to
+	 * write into a directory in /usr/{local}
+	 */
+
+	/* create volatile data dir for /usr */
+	g_debug ("Making /usr writable...");
+	volatile_data_dir_usr = g_build_filename (env_root, "volatile_usr", NULL);
+	res = g_mkdir_with_parents (volatile_data_dir_usr, 0755);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment (volatile /usr): %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* create OverlayFS work dir */
+	ofs_wdir_usr = g_build_filename (env_root, "ofs_work_usr", NULL);
+	res = g_mkdir_with_parents (ofs_wdir_usr, 0755);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment (workdir /usr): %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* now mount /usr directory via OverlayFS */
+	newroot_usr_dir = g_build_filename (newroot_dir, "usr", NULL);
+	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", newroot_usr_dir, volatile_data_dir_usr, ofs_wdir_usr);
+	res = mount ("overlay", newroot_usr_dir,
+			 "overlay", MS_MGC_VAL, tmp);
+	g_free (tmp);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment (/app mount): %s", g_strerror (errno));
+		goto out;
+	}
+
+	res = chown (volatile_data_dir_usr, priv->build_uid, priv->build_gid);
+	if (res != 0) {
+		g_warning ("Could not adjust permissions on volatile /usr dir: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* bindmount .host-volatile to host's volatile data dir */
+	g_debug ("Creating bindmount to volatile folder of host.");
+	tmp = g_build_filename (newroot_dir, ".host-volatile", NULL);
+	g_mkdir_with_parents (tmp, 0755);
+	res = private_bind_mount (env_root, tmp, TRUE);
+	g_free (tmp);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment, bind-mount for /.host-volatile failed: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* bindmount /app to /usr */
+	tmp = g_build_filename (newroot_dir, "app", NULL);
+	tmp2 = g_build_filename (newroot_dir, "usr", NULL);
+	g_mkdir_with_parents (ofs_wdir_usr, 0755);
+	res = private_bind_mount (tmp2, tmp, TRUE);
+	g_free (tmp);
+	g_free (tmp2);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment, bind-mount for /app failed: %s", g_strerror (errno));
+		goto out;
+	}
+
+	/* bindmount /opt to temporary location */
+	volatile_data_dir_opt = g_build_filename (env_root, "volatile_opt", NULL);
+	res = g_mkdir_with_parents (volatile_data_dir_opt, 0755);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment (volatile /opt): %s", g_strerror (errno));
+		goto out;
+	}
+
+	tmp = g_build_filename (newroot_dir, "opt", NULL);
+	res = private_bind_mount (volatile_data_dir_opt, tmp, TRUE);
+	g_free (tmp);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment, bind-mount for /opt failed: %s", g_strerror (errno));
+		goto out;
+	}
+
+	if (priv->extra_bundles_dir != NULL) {
+		g_autofree gchar *tmpdir = NULL;
+		g_autofree gchar *ext_tmpdir = NULL;
+
+		g_debug ("Mounting extra bundles dir into environment tmp directory.");
+		if (!g_str_has_prefix (priv->extra_bundles_dir, "/")) {
+			tmp = g_strdup (priv->extra_bundles_dir);
+			g_free (priv->extra_bundles_dir);
+			priv->extra_bundles_dir = g_build_filename (priv->build_root, tmp, NULL);
+			g_free (tmp);
+		}
+
+		tmpdir = g_strdup ("/tmp/extra-bundles");
+		ext_tmpdir = g_build_filename (newroot_dir, tmpdir, NULL);
+		g_mkdir_with_parents (ext_tmpdir, 0755);
+
+		/* make extra bundles available in the environment */
+		res = private_bind_mount (priv->extra_bundles_dir, ext_tmpdir, TRUE);
+		if (res != 0) {
+			g_warning ("Unable to set up the environment, bind-mount for extra-bundles from '%s' failed: %s",
+					priv->extra_bundles_dir,
+					g_strerror (errno));
+			goto out;
+		}
+
+		g_free (priv->extra_bundles_dir);
+		priv->extra_bundles_dir = g_strdup (tmpdir);
+	}
+
+	g_debug ("Everything is ready, entering environment now.");
 	if (!li_run_env_enter (newroot_dir)) {
 		g_warning ("Could not enter build environment.");
 		goto out;
@@ -658,10 +837,22 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		goto out;
 	}
 
+	/* install missing bundles / mount dependencies in the venv */
+	g_debug ("Running (build)dependency setup.");
+	li_build_master_setup_dependencies (bmaster, &tmp_error);
+	if (tmp_error != NULL) {
+		g_warning ("Unable to set up the environment: %s", tmp_error->message);
+		res = 6;
+		g_error_free (tmp_error);
+		goto out;
+	}
+
 	/* set linker paths and PATH */
+	g_debug ("Setting environment variables.");
 	li_run_env_set_path_variables ();
 
 	/* try to initialize groups, failure is not fatal */
+	g_debug ("Loading build user and dropping privileges, if requested.");
 	if (priv->build_uid > 0) {
 		struct passwd *upws;
 
@@ -684,6 +875,7 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	}
 
 	/* ensure the details about the person we are building for are properly set */
+	g_debug ("Preparing build steps.");
 	li_env_set_user_details (priv->username,
 				 priv->email,
 				 priv->target_repo);
@@ -701,6 +893,7 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		g_error ("Unable to set permissions: %s", g_strerror (errno));
 		goto out;
 	}
+	g_debug ("Ready to build!");
 
 	/* now start running the actual commands */
 	li_build_master_print_section (bmaster, "Preparing Build Environment");

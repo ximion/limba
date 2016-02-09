@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "li-installer.h"
+#include "li-installer-private.h"
 
 #include <glib/gi18n-lib.h>
 
@@ -44,9 +45,11 @@ struct _LiInstallerPrivate
 	LiManager *mgr;
 	LiPackageGraph *pg;
 	LiPackage *pkg;
+	gboolean allow_insecure;
+
 	LiPkgCache *cache;
 	GPtrArray *all_pkgs;
-	gboolean allow_insecure;
+	GHashTable *extra_pkgs;
 
 	gchar *fname;
 	GMainLoop *loop;
@@ -84,6 +87,8 @@ li_installer_finalize (GObject *object)
 	g_object_unref (priv->cache);
 	if (priv->all_pkgs != NULL)
 		g_ptr_array_unref (priv->all_pkgs);
+	if (priv->extra_pkgs != NULL)
+		g_hash_table_unref (priv->extra_pkgs);
 	if (priv->pkg != NULL)
 		g_object_unref (priv->pkg);
 	g_free (priv->fname);
@@ -187,8 +192,17 @@ li_installer_find_dependency_embedded_single (LiInstaller *inst, LiPkgInfo *pki,
 
 	pkg = li_package_graph_get_install_candidate (priv->pg, pki);
 	if (pkg == NULL) {
-		g_debug ("Skipping dependency-lookup in installed package %s", li_pkg_info_get_id (pki));
-		return FALSE;
+		if (li_package_graph_node_is_origin (priv->pg, pki)) {
+			g_set_error (error,
+				LI_INSTALLER_ERROR,
+				LI_INSTALLER_ERROR_DEPENDENCY_NOT_FOUND,
+				_("Could not find dependency: %s"),
+				li_pkg_info_get_name (dep_pki));
+			return FALSE;
+		} else {
+			g_debug ("Skipping embedded dependency-lookup in installed package %s", li_pkg_info_get_id (pki));
+			return FALSE;
+		}
 	}
 
 	embedded = li_package_get_embedded_packages (pkg);
@@ -232,6 +246,55 @@ li_installer_find_dependency_embedded_single (LiInstaller *inst, LiPkgInfo *pki,
 }
 
 /**
+ * li_installer_find_dependency_in_extra_packages:
+ *
+ * Extra packages are lists of packages made available locally. At time, this is only
+ * used for building packages.
+ */
+static gboolean
+li_installer_find_dependency_in_extra_packages (LiInstaller *inst, LiPkgInfo *pki, LiPkgInfo *dep_pki, GError **error)
+{
+	LiPkgInfo **pkiv;
+	LiPkgInfo *fpki;
+	g_autoptr(GPtrArray) pkiarray = NULL;
+	guint i;
+	GError *tmp_error = NULL;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	if (priv->extra_pkgs == NULL)
+		return FALSE;
+
+	/* FIXME: This is really inefficient - the supllementary packages should only be used for very few packages,
+	 * but if it turns out that this code is too slow even for that case, we need to optimize. */
+
+	pkiarray = g_ptr_array_new ();
+	pkiv = (LiPkgInfo **) g_hash_table_get_keys_as_array (priv->extra_pkgs, NULL);
+	for (i = 0; pkiv[i] != NULL; i++)
+		g_ptr_array_add (pkiarray, pkiv[i]);
+	g_free (pkiv);
+
+	fpki = li_find_satisfying_pkg (pkiarray, dep_pki);
+	if (fpki == NULL)
+		return FALSE;
+
+	li_package_graph_add_package_install_todo (priv->pg,
+							pki,
+							g_hash_table_lookup (priv->extra_pkgs, fpki),
+							dep_pki);
+
+	/* check if we have the dependencies, or can install them */
+	li_installer_check_dependencies (inst,
+					 fpki,
+					 &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/**
  * li_installer_check_dependencies:
  */
 static void
@@ -265,7 +328,7 @@ li_installer_check_dependencies (LiInstaller *inst, LiPkgInfo *pki, GError **err
 
 	for (i = 0; i < deps->len; i++) {
 		LiPkgInfo *ipki;
-		gboolean ret;
+		gboolean ret = FALSE;
 		LiPkgInfo *dep = LI_PKG_INFO (g_ptr_array_index (deps, i));
 
 		/* test if we have a dependency on a system component */
@@ -281,11 +344,20 @@ li_installer_check_dependencies (LiInstaller *inst, LiPkgInfo *pki, GError **err
 		/* test if this package is already in the installed set */
 		ipki = li_find_satisfying_pkg (priv->all_pkgs, dep);
 		if (ipki == NULL) {
-			/* maybe we find this dependency as embedded copy? */
-			li_installer_find_dependency_embedded_single (inst, pki, dep, &tmp_error);
+			/* check if we have an extra package */
+			ret = li_installer_find_dependency_in_extra_packages (inst, pki, dep, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				return;
+			}
+
+			if (!ret) {
+				/* maybe we find this dependency as embedded copy? */
+				li_installer_find_dependency_embedded_single (inst, pki, dep, &tmp_error);
+				if (tmp_error != NULL) {
+					g_propagate_error (error, tmp_error);
+					return;
+				}
 			}
 		} else if (li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_AVAILABLE)) {
 			g_debug ("Hit remote package: %s", li_pkg_info_get_id (ipki));
@@ -325,7 +397,10 @@ li_installer_install_node (LiInstaller *inst, LiPkgInfo *node, GError **error)
 	LiInstallerPrivate *priv = GET_PRIVATE (inst);
 
 	full_deps = li_package_graph_branch_to_array (priv->pg, node, TRUE);
-	g_assert (full_deps);
+	if (full_deps == NULL) {
+		g_debug ("Branch for '%s' which should be installed was not found - maybe there is no dependency to install?", li_pkg_info_get_id (node));
+		return TRUE;
+	}
 
 	for (i = 0; i < full_deps->len; i++) {
 		LiPkgInfo *info;
@@ -340,7 +415,7 @@ li_installer_install_node (LiInstaller *inst, LiPkgInfo *node, GError **error)
 		}
 
 		/* only the initial package was set for manual installation */
-		if (info != li_package_get_info (priv->pkg))
+		if ((priv->pkg != NULL) && (info != li_package_get_info (priv->pkg)))
 			li_pkg_info_add_flag (info, LI_PACKAGE_FLAG_AUTOMATIC);
 
 		/* when in insecure mode (don't do that!) we skip verification */
@@ -631,7 +706,6 @@ li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error
 	li_package_open_file (pkg, filename, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
-		g_object_unref (pkg);
 		return FALSE;
 	}
 	li_installer_set_package (inst, pkg);
@@ -651,6 +725,7 @@ li_installer_open_file (LiInstaller *inst, const gchar *filename, GError **error
 
 /**
  * li_installer_open_remote:
+ * @inst: An instance of #LiInstaller
  * @pkgid: The package/bundle-id of the software to install.
  *
  * Install software from a repository.
@@ -690,6 +765,115 @@ li_installer_open_remote (LiInstaller *inst, const gchar *pkgid, GError **error)
 	priv->all_pkgs = NULL;
 
 	return TRUE;
+}
+
+/**
+ * li_installer_install_sourcepkg_deps:
+ * @inst: An instance of #LiInstaller
+ * @spki: #LiPkgInfo of the source package.
+ *
+ * Install dependencies of a source package.
+ */
+gboolean
+li_installer_install_sourcepkg_deps (LiInstaller *inst, LiPkgInfo *spki, GError **error)
+{
+	gboolean ret = FALSE;
+	GError *tmp_error = NULL;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	/* ensure the graph is initialized and additional data (foundations list) is loaded */
+	li_package_graph_initialize (priv->pg, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	if (!li_pkg_info_has_flag (spki, LI_PACKAGE_FLAG_INSTALLED)) {
+		g_set_error (error,
+			LI_INSTALLER_ERROR,
+			LI_INSTALLER_ERROR_FAILED,
+			"Source-package must be in \"installed\" state to get its dependencies resolved.");
+		goto out;
+	}
+
+	/* open the package cache */
+	li_pkg_cache_open (priv->cache, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	/* create a dependency tree for this package installation */
+	li_package_graph_add_package (priv->pg, NULL, spki, NULL);
+	li_installer_check_dependencies (inst,
+					 spki,
+					 &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+	/* install the package tree */
+	ret = li_installer_install_node (inst,
+					 spki,
+					 &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		goto out;
+	}
+
+out:
+	/* teardown current dependency graph */
+	li_package_graph_reset (priv->pg);
+
+	return ret;
+}
+
+/**
+ * li_installer_open_extra_packages:
+ * @inst: An instance of #LiInstaller
+ * @files: A #GPtrArray of files to add.
+ *
+ * Load supllementary local packages which might be used for resolving
+ * missing dependencies of the main package.
+ */
+void
+li_installer_open_extra_packages (LiInstaller *inst, GPtrArray *files, GError **error)
+{
+	guint i;
+	GError *tmp_error = NULL;
+	LiInstallerPrivate *priv = GET_PRIVATE (inst);
+
+	/* handle the case when we have no files at all */
+	if (files == NULL) {
+		if (priv->extra_pkgs != NULL)
+			g_hash_table_unref (priv->extra_pkgs);
+		priv->extra_pkgs = NULL;
+	}
+
+	if (priv->extra_pkgs != NULL)
+			g_hash_table_unref (priv->extra_pkgs);
+	priv->extra_pkgs = g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL, g_object_unref);
+
+	for (i = 0; i < files->len; i++) {
+		LiPackage *pkg;
+		const gchar *fname = (const gchar*) g_ptr_array_index (files, i);
+
+		pkg = li_package_new ();
+		li_package_open_file (pkg, fname, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			g_object_unref (pkg);
+			return;
+		}
+
+		li_package_set_auto_verify (pkg, !priv->allow_insecure);
+		g_hash_table_insert (priv->extra_pkgs,
+				     li_package_get_info (pkg),
+				     pkg);
+	}
+
+	return;
 }
 
 /**

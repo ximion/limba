@@ -33,6 +33,7 @@
 #include <appstream.h>
 
 #include "limba.h"
+#include "li-config-data.h"
 #include "li-utils-private.h"
 
 typedef struct _LiBuildConfPrivate	LiBuildConfPrivate;
@@ -40,6 +41,7 @@ struct _LiBuildConfPrivate
 {
 	GNode *yroot;
 	LiPkgInfo *pki;
+	gchar *extra_bundles_dir;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (LiBuildConf, li_build_conf, G_TYPE_OBJECT)
@@ -66,6 +68,7 @@ li_build_conf_finalize (GObject *object)
 	li_build_conf_free_doctree (priv->yroot);
 	if (priv->pki != NULL)
 		g_object_unref (priv->pki);
+	g_free (priv->extra_bundles_dir);
 
 	G_OBJECT_CLASS (li_build_conf_parent_class)->finalize (object);
 }
@@ -185,6 +188,18 @@ li_build_conf_get_pkginfo (LiBuildConf *bconf)
 {
 	LiBuildConfPrivate *priv = GET_PRIVATE (bconf);
 	return g_object_ref (priv->pki);
+}
+
+/**
+ * li_build_conf_get_extra_bundles_dir:
+ *
+ * Returns: (transfer full): Path to extra bundles.
+ */
+gchar*
+li_build_conf_get_extra_bundles_dir (LiBuildConf *bconf)
+{
+	LiBuildConfPrivate *priv = GET_PRIVATE (bconf);
+	return g_strdup (priv->extra_bundles_dir);
 }
 
 /**
@@ -362,6 +377,7 @@ li_build_conf_open_from_dir (LiBuildConf *bconf, const gchar *dir, GError **erro
 	gchar *tmp;
 	const gchar *version;
 	g_autoptr(LiPkgInfo) pki = NULL;
+	g_autoptr(LiConfigData) cdata = NULL;
 	g_autoptr(AsMetadata) mdata = NULL;
 	LiBuildConfPrivate *priv = GET_PRIVATE (bconf);
 
@@ -416,13 +432,25 @@ li_build_conf_open_from_dir (LiBuildConf *bconf, const gchar *dir, GError **erro
 		return;
 	}
 
+	/* get basic package info */
 	pki = li_pkg_info_new ();
 	li_pkg_info_load_file (pki, file, &tmp_error);
+	if (tmp_error != NULL) {
+		g_propagate_error (error, tmp_error);
+		g_object_unref (file);
+		return;
+	}
+
+	/* read some extra fields relevant for building only */
+	cdata = li_config_data_new ();
+	li_config_data_load_file (cdata, file, &tmp_error);
 	g_object_unref (file);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
+		g_object_unref (file);
 		return;
 	}
+	priv->extra_bundles_dir = li_config_data_get_value (cdata, "ExtraBundlesDir");
 
 	/* load elementary information from AppStream metainfo */
 	fname = g_build_filename (dir, "lipkg", "metainfo.xml", NULL);

@@ -444,6 +444,35 @@ li_package_graph_node_get_any_parent_manual (LiPackageGraph *pg, LiPkgInfo *root
 }
 
 /**
+ * li_package_graph_node_is_origin:
+ * @pg: An instance of #LiPackageGraph.
+ *
+ * Check if this node is an origin (it is no child of any other node).
+ */
+gboolean
+li_package_graph_node_is_origin (LiPackageGraph *pg, LiPkgInfo *root)
+{
+	guint i;
+	LiPackageGraphPrivate *priv = GET_PRIVATE (pg);
+
+	for (i = 0; i < priv->alist->len; i++) {
+		guint j;
+		GPtrArray *row = (GPtrArray*) g_ptr_array_index (priv->alist, i);
+
+		if (LI_PKG_INFO (g_ptr_array_index (row, 0)) == root)
+			continue;
+
+		for (j = 0; j < row->len; j++) {
+			LiPkgInfo *pki = LI_PKG_INFO (g_ptr_array_index (row, j));
+			if (pki == root)
+				return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+/**
  * li_package_graph_reset:
  *
  * Remove all nodes from the graph, except for the root node.

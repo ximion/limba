@@ -70,7 +70,9 @@ void			li_build_conf_open_from_dir (LiBuildConf *bconf,
 GPtrArray		*li_build_conf_get_before_script (LiBuildConf *bconf);
 GPtrArray		*li_build_conf_get_script (LiBuildConf *bconf);
 GPtrArray		*li_build_conf_get_after_script (LiBuildConf *bconf);
+
 LiPkgInfo		*li_build_conf_get_pkginfo (LiBuildConf *bconf);
+gchar			*li_build_conf_get_extra_bundles_dir (LiBuildConf *bconf);
 
 G_END_DECLS
 

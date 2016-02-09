@@ -203,6 +203,43 @@ out:
 }
 
 /**
+ * bcli_satisfy_builddeps:
+ *
+ * Internal helper function called from within the chroot.
+ */
+static gint
+bcli_satisfy_builddeps (const gchar *srcdir, const gchar *extradeps_dir)
+{
+	g_autoptr(LiBuildMaster) bmaster = NULL;
+	GError *error = NULL;
+
+	if (srcdir == NULL) {
+		g_error ("No build directory defined!");
+		return 1;
+	}
+
+	bmaster = li_build_master_new ();
+	li_build_master_init_build (bmaster,
+				srcdir,
+				NULL,
+				&error);
+	if (error != NULL) {
+		printf ("\n/!\\ Error:\n");
+		li_print_stderr ("%s", error->message);
+		return 1;
+	}
+
+	li_build_master_install_builddeps (bmaster, extradeps_dir, &error);
+	if (error != NULL) {
+		printf ("\n/!\\ Error:\n");
+		li_print_stderr ("%s", error->message);
+		return 1;
+	}
+
+	return 0;
+}
+
+/**
  * libuild_get_summary:
  **/
 static gchar *
@@ -310,6 +347,8 @@ main (int argc, char *argv[])
 		exit_code = bcli_execute_build (value1, TRUE);
 	} else if (g_strcmp0 (command, "make-template") == 0) {
 		exit_code = libuild_make_template (value1);
+	} else if (g_strcmp0 (command, "satisfy-builddeps") == 0) {
+		exit_code = bcli_satisfy_builddeps (value1, value2);
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;

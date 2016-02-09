@@ -24,22 +24,10 @@
 #include <glib-object.h>
 #include <sys/types.h>
 
-#define LI_TYPE_BUILD_MASTER			(li_build_master_get_type())
-#define LI_BUILD_MASTER(obj)			(G_TYPE_CHECK_INSTANCE_CAST((obj), LI_TYPE_BUILD_MASTER, LiBuildMaster))
-#define LI_BUILD_MASTER_CLASS(cls)	(G_TYPE_CHECK_CLASS_CAST((cls), LI_TYPE_BUILD_MASTER, LiBuildMasterClass))
-#define LI_IS_BUILD_MASTER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), LI_TYPE_BUILD_MASTER))
-#define LI_IS_BUILD_MASTER_CLASS(cls)	(G_TYPE_CHECK_CLASS_TYPE((cls), LI_TYPE_BUILD_MASTER))
-#define LI_BUILD_MASTER_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS((obj), LI_TYPE_BUILD_MASTER, LiBuildMasterClass))
-
 G_BEGIN_DECLS
 
-typedef struct _LiBuildMaster		LiBuildMaster;
-typedef struct _LiBuildMasterClass	LiBuildMasterClass;
-
-struct _LiBuildMaster
-{
-	GObject			parent;
-};
+#define LI_TYPE_BUILD_MASTER (li_build_master_get_type ())
+G_DECLARE_DERIVABLE_TYPE (LiBuildMaster, li_build_master, LI, BUILD_MASTER, GObject)
 
 struct _LiBuildMasterClass
 {
@@ -94,6 +82,10 @@ void			li_build_master_set_build_group (LiBuildMaster *bmaster,
 
 void			li_build_master_set_ignore_foundations (LiBuildMaster *bmaster,
 							       gboolean ignore);
+
+void			li_build_master_install_builddeps (LiBuildMaster *bmaster,
+								const gchar *extra_bundles_dir,
+								GError **error);
 
 G_END_DECLS
 

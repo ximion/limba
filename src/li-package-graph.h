@@ -86,6 +86,9 @@ gboolean		li_package_graph_test_foundation_dependency (LiPackageGraph *pg,
 void			li_package_graph_set_ignore_foundations (LiPackageGraph *pg,
 								 gboolean ignore);
 
+gboolean		li_package_graph_node_is_origin (LiPackageGraph *pg,
+								LiPkgInfo *root);
+
 LiPkgInfo		*li_find_satisfying_pkg (GPtrArray *pkglist,
 						 LiPkgInfo *dep);
 
