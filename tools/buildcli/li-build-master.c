@@ -664,7 +664,13 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	li_build_master_print_section (bmaster, tmp);
 	g_free (tmp);
 
+	g_debug ("AA");
+	fflush (stdout);
+
 	newroot_dir = li_run_env_setup_with_root (priv->chroot_orig_dir);
+	g_debug ("BB");
+	fflush (stdout);
+
 	if (!newroot_dir) {
 		g_warning ("Unable to set up the environment.");
 		goto out;
@@ -861,7 +867,7 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 			if (initgroups (upws->pw_name, priv->build_gid) < 0)
 				g_warning ("Unable to initialize user groups: %s", g_strerror (errno));
 		} else {
-			g_warning ("Unable to initialize user groups: Could not determine user name: %s", g_strerror (errno));
+			g_warning ("Unable to initialize user groups: Could not determine user name.");
 		}
 	}
 	/* we now finished everything we needed root for, so drop root in case we build as user */
