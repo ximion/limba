@@ -219,6 +219,7 @@ bcli_satisfy_builddeps (const gchar *srcdir, const gchar *extradeps_dir)
 	}
 
 	bmaster = li_build_master_new ();
+	li_build_master_set_ignore_foundations (bmaster, optn_ignore_foundations);
 	li_build_master_init_build (bmaster,
 				srcdir,
 				NULL,

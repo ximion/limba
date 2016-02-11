@@ -403,6 +403,21 @@ li_build_master_exec_command_sequence (LiBuildMaster *bmaster, const gchar *stag
 }
 
 /**
+ * private_bind_mount:
+ */
+static int
+private_bind_mount (const gchar *src, const gchar *dest, gboolean writable)
+{
+	if (mount (src, dest, NULL, MS_MGC_VAL | MS_BIND | (writable?0:MS_RDONLY), NULL) != 0)
+		return 1;
+
+	if (mount ("none", dest, NULL, MS_REC | MS_PRIVATE, NULL) != 0)
+		return 2;
+
+	return 0;
+}
+
+/**
  * li_build_master_mount_deps:
  *
  * Mount the depdenencies in the environment as an overlay.
@@ -413,7 +428,7 @@ static gint
 li_build_master_mount_deps (LiBuildMaster *bmaster)
 {
 	guint i;
-	gint res;
+	gint res = 0;
 	g_autoptr(GString) lowerdirs = NULL;
 	g_autofree gchar *volatile_data_dir = NULL;
 	g_autofree gchar *ofs_wdir = NULL;
@@ -421,7 +436,7 @@ li_build_master_mount_deps (LiBuildMaster *bmaster)
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
 	if ((priv->dep_data_paths == NULL) || (priv->dep_data_paths[0] == '\0'))
-		return 0;
+		g_debug ("No build dependencies, will just make /usr writable.");
 
 	/* The payload of Limba bundles follows a strict directory layout, with directories
 	 * like bin/, share/, include/, lib/, etc. being at the toplevel.
@@ -452,12 +467,19 @@ li_build_master_mount_deps (LiBuildMaster *bmaster)
 	 * All other stuff and especially the environment when running the app *must not* perform mounts with SUID allowed. */
 	tmp = g_strdup_printf ("lowerdir=%s,upperdir=%s,workdir=%s", lowerdirs->str, volatile_data_dir, ofs_wdir);
 	res = mount ("overlay", "/usr",
-				 "overlay", MS_MGC_VAL | MS_RDONLY, tmp);
+				 "overlay", MS_MGC_VAL, tmp);
 	g_free (tmp);
 	if (res != 0) {
 		fprintf (stderr, "Unable to mount directory. %s\n", strerror (errno));
 		res = 1;
 		goto out;
+	}
+
+	/* finally bindmount /app to /usr */
+	res = private_bind_mount ("/usr", "/app", TRUE);
+	if (res != 0) {
+		g_warning ("Unable to set up the environment, bind-mount for /app failed: %s", g_strerror (errno));
+		return 1;
 	}
 
 out:
@@ -543,6 +565,7 @@ li_build_master_install_builddeps (LiBuildMaster *bmaster, const gchar *extra_bu
 	g_debug ("Installing dependencies required for the build.");
 	inst = li_installer_new ();
 	li_installer_set_allow_insecure (inst, TRUE);
+	li_installer_set_ignore_foundations  (inst, priv->ignore_foundations);
 
 	li_pkg_info_set_flags (priv->pki, LI_PACKAGE_FLAG_INSTALLED);
 	li_pkg_info_set_dependencies (priv->pki,
@@ -580,9 +603,12 @@ li_build_master_setup_dependencies (LiBuildMaster *bmaster, GError **error)
 	g_debug ("Calling satisfy-buildddeps");
 
 	if (priv->extra_bundles_dir != NULL)
-		cmd = g_strdup_printf ("limba-build satisfy-builddeps /build %s", priv->extra_bundles_dir);
+		cmd = g_strdup_printf ("limba-build satisfy-builddeps %s /build %s",
+					priv->ignore_foundations? "--ignore-foundations": "",
+					priv->extra_bundles_dir);
 	else
-		cmd = g_strdup ("limba-build satisfy-builddeps /build");
+		cmd = g_strdup_printf ("limba-build satisfy-builddeps %s /build",
+					priv->ignore_foundations? "--ignore-foundations": "");
 
 	g_debug ("Run: %s", cmd);
 	res = system (cmd);
@@ -618,21 +644,6 @@ li_build_master_setup_dependencies (LiBuildMaster *bmaster, GError **error)
 }
 
 /**
- * private_bind_mount:
- */
-static int
-private_bind_mount (const gchar *src, const gchar *dest, gboolean writable)
-{
-	if (mount (src, dest, NULL, MS_MGC_VAL | MS_BIND | (writable?0:MS_RDONLY), NULL) != 0)
-		return 1;
-
-	if (mount ("none", dest, NULL, MS_REC | MS_PRIVATE, NULL) != 0)
-		return 2;
-
-	return 0;
-}
-
-/**
  * li_build_master_run_executor:
  *
  * Run the actual build setup and build steps as parent
@@ -644,7 +655,6 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	gint res = 0;
 	gboolean ret;
 	gchar *tmp;
-	gchar *tmp2;
 	g_autofree gchar *build_data_root = NULL;
 	g_autofree gchar *newroot_dir = NULL;
 	g_autofree gchar *newroot_usr_dir = NULL;
@@ -664,13 +674,7 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	li_build_master_print_section (bmaster, tmp);
 	g_free (tmp);
 
-	g_debug ("AA");
-	fflush (stdout);
-
 	newroot_dir = li_run_env_setup_with_root (priv->chroot_orig_dir);
-	g_debug ("BB");
-	fflush (stdout);
-
 	if (!newroot_dir) {
 		g_warning ("Unable to set up the environment.");
 		goto out;
@@ -748,7 +752,7 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 			 "overlay", MS_MGC_VAL, tmp);
 	g_free (tmp);
 	if (res != 0) {
-		g_warning ("Unable to set up the environment (/app mount): %s", g_strerror (errno));
+		g_warning ("Unable to set up the environment (/usr mount): %s", g_strerror (errno));
 		goto out;
 	}
 
@@ -766,18 +770,6 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 	g_free (tmp);
 	if (res != 0) {
 		g_warning ("Unable to set up the environment, bind-mount for /.host-volatile failed: %s", g_strerror (errno));
-		goto out;
-	}
-
-	/* bindmount /app to /usr */
-	tmp = g_build_filename (newroot_dir, "app", NULL);
-	tmp2 = g_build_filename (newroot_dir, "usr", NULL);
-	g_mkdir_with_parents (ofs_wdir_usr, 0755);
-	res = private_bind_mount (tmp2, tmp, TRUE);
-	g_free (tmp);
-	g_free (tmp2);
-	if (res != 0) {
-		g_warning ("Unable to set up the environment, bind-mount for /app failed: %s", g_strerror (errno));
 		goto out;
 	}
 
