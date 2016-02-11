@@ -452,9 +452,9 @@ li_build_master_mount_deps (LiBuildMaster *bmaster)
 	}
 	g_string_append (lowerdirs, "/usr");
 
-	volatile_data_dir = g_build_filename (".host-volatile", "volatile_sdkapp", NULL);
+	volatile_data_dir = g_build_filename ("/host", "volatile", "volatile_sdkapp", NULL);
 	g_mkdir_with_parents (volatile_data_dir, 0755);
-	ofs_wdir = g_build_filename (".host-volatile", "workdir_sdkapp", NULL);
+	ofs_wdir = g_build_filename ("/host", "volatile", "workdir_sdkapp", NULL);
 	g_mkdir_with_parents (ofs_wdir, 0755);
 
 	res = chown (volatile_data_dir, priv->build_uid, priv->build_gid);
@@ -762,14 +762,14 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 		goto out;
 	}
 
-	/* bindmount .host-volatile to host's volatile data dir */
+	/* bindmount /host/volatile to host's volatile data dir */
 	g_debug ("Creating bindmount to volatile folder of host.");
-	tmp = g_build_filename (newroot_dir, ".host-volatile", NULL);
+	tmp = g_build_filename (newroot_dir, "host", "volatile", NULL);
 	g_mkdir_with_parents (tmp, 0755);
 	res = private_bind_mount (env_root, tmp, TRUE);
 	g_free (tmp);
 	if (res != 0) {
-		g_warning ("Unable to set up the environment, bind-mount for /.host-volatile failed: %s", g_strerror (errno));
+		g_warning ("Unable to set up the environment, bind-mount for /host/volatile failed: %s", g_strerror (errno));
 		goto out;
 	}
 
