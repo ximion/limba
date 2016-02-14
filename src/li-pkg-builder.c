@@ -821,15 +821,7 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 	/* set the package type we're building here */
 	li_pkg_info_set_kind (ctl, kind);
 
-	/* handle arch:any notation (resolve to current arch) */
-	if (g_strcmp0 (li_pkg_info_get_architecture (ctl), "any") == 0) {
-		gchar *arch;
-		arch = li_get_current_arch_h ();
-		li_pkg_info_set_architecture (ctl, arch);
-		g_free (arch);
-	}
-
-	/* Ensure SDK packages always depend on their runtime package */
+	/* ensure SDK packages always depend on their runtime package */
 	orig_deps = g_strdup (li_pkg_info_get_dependencies (ctl));
 	orig_sdk_deps = g_strdup (li_pkg_info_get_sdk_dependencies (ctl));
 	if (kind == LI_PACKAGE_KIND_DEVEL) {
@@ -952,19 +944,30 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 	cpt = as_metadata_get_component (mdata);
 	g_object_ref (cpt);
 
+	/* handle arch:any notation (resolve to current arch) */
+	if (g_strcmp0 (li_pkg_info_get_architecture (ctl), "any") == 0) {
+		gchar *arch;
+		arch = li_get_current_arch_h ();
+		li_pkg_info_set_architecture (ctl, arch);
+		g_free (arch);
+	}
+
 	if (out_fname == NULL) {
 		g_autofree gchar *pkgname = NULL;
 		const gchar *version;
+		const gchar *architecture;
 
 		/* we need to auto-generate a package filename */
 		pkgname = li_get_pkgname_from_component (cpt);
 		version = li_get_last_version_from_component (cpt);
+		architecture = li_pkg_info_get_architecture (ctl);
+
 		if (version != NULL) {
-			pkg_fname_rt  = g_strdup_printf ("%s/%s-%s.ipk", dir, pkgname, version);
-			pkg_fname_sdk = g_strdup_printf ("%s/%s-%s.devel.ipk", dir, pkgname, version);
+			pkg_fname_rt  = g_strdup_printf ("%s/%s-%s_%s.ipk", dir, pkgname, version, architecture);
+			pkg_fname_sdk = g_strdup_printf ("%s/%s-%s_%s.devel.ipk", dir, pkgname, version, architecture);
 		} else {
-			pkg_fname_rt  = g_strdup_printf ("%s/%s.ipk", dir, pkgname);
-			pkg_fname_sdk = g_strdup_printf ("%s/%s.devel.ipk", dir, pkgname);
+			pkg_fname_rt  = g_strdup_printf ("%s/%s_%s.ipk", dir, pkgname, architecture);
+			pkg_fname_sdk = g_strdup_printf ("%s/%s_%s.devel.ipk", dir, pkgname, architecture);
 		}
 	} else {
 		g_autofree gchar *base_fname;
