@@ -341,23 +341,23 @@ li_installer_check_dependencies (LiInstaller *inst, LiPkgInfo *pki, GError **err
 		if (ret)
 			continue;
 
-		/* test if this package is already in the installed set */
+		/* check if we have a locally supplied package (extra pkg) satisfying the requirements */
+		ret = li_installer_find_dependency_in_extra_packages (inst, pki, dep, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+		if (ret)
+			continue;
+
+		/* check if we have an installed or available package satisfying the dependency */
 		ipki = li_find_satisfying_pkg (priv->all_pkgs, dep);
 		if (ipki == NULL) {
-			/* check if we have an extra package */
-			ret = li_installer_find_dependency_in_extra_packages (inst, pki, dep, &tmp_error);
+			/* maybe we find this dependency as embedded copy? */
+			li_installer_find_dependency_embedded_single (inst, pki, dep, &tmp_error);
 			if (tmp_error != NULL) {
 				g_propagate_error (error, tmp_error);
 				return;
-			}
-
-			if (!ret) {
-				/* maybe we find this dependency as embedded copy? */
-				li_installer_find_dependency_embedded_single (inst, pki, dep, &tmp_error);
-				if (tmp_error != NULL) {
-					g_propagate_error (error, tmp_error);
-					return;
-				}
 			}
 		} else if (li_pkg_info_has_flag (ipki, LI_PACKAGE_FLAG_AVAILABLE)) {
 			g_debug ("Hit remote package: %s", li_pkg_info_get_id (ipki));
