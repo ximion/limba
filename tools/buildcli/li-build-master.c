@@ -43,6 +43,7 @@
 
 #include "li-utils.h"
 #include "li-utils-private.h"
+#include "li-console-utils.h"
 #include "li-run.h"
 #include "li-pkg-info.h"
 #include "li-package-graph.h"
@@ -549,6 +550,34 @@ li_build_master_resolve_builddeps (LiBuildMaster *bmaster, GError **error)
 }
 
 /**
+ * li_installer_stage_changed_cb:
+ */
+static void
+li_installer_stage_changed_cb (LiInstaller *inst, LiPackageStage stage, const gchar *id, gpointer user_data)
+{
+	/* we ignore global notifications */
+	if (id == NULL)
+		return;
+
+	switch (stage) {
+		case LI_PACKAGE_STAGE_DOWNLOADING:
+			li_print_stdout (_("Downloading %s"), id);
+			break;
+		case LI_PACKAGE_STAGE_VERIFYING:
+			li_print_stdout (_("Verifying %s"), id);
+			break;
+		case LI_PACKAGE_STAGE_INSTALLING:
+			li_print_stdout (_("Installing %s"), id);
+			break;
+		case LI_PACKAGE_STAGE_FINISHED:
+			li_print_stdout (_("Completed %s"), id);
+			return;
+		default:
+			return;
+	}
+}
+
+/**
  * li_build_master_install_builddeps
  * @bmaster: An instance of #LiBuildMaster.
  *
@@ -562,10 +591,12 @@ li_build_master_install_builddeps (LiBuildMaster *bmaster, const gchar *extra_bu
 	GError *tmp_error = NULL;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
-	g_debug ("Installing dependencies required for the build.");
+	li_print_stdout ("Installing bundles required for the build.");
 	inst = li_installer_new ();
 	li_installer_set_allow_insecure (inst, TRUE);
 	li_installer_set_ignore_foundations  (inst, priv->ignore_foundations);
+	g_signal_connect (inst, "stage-changed",
+				G_CALLBACK (li_installer_stage_changed_cb), NULL);
 
 	li_pkg_info_set_flags (priv->pki, LI_PACKAGE_FLAG_INSTALLED);
 	li_pkg_info_set_dependencies (priv->pki,
