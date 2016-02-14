@@ -144,8 +144,8 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 		g_object_unref (fistream);
 	} else {
 		gchar *line = NULL;
-		GFileInputStream* ir;
-		GDataInputStream* dis;
+		g_autoptr(GFileInputStream) ir = NULL;
+		g_autoptr(GDataInputStream) dis = NULL;
 
 		ir = g_file_read (file, NULL, &tmp_error);
 		if (tmp_error != NULL) {
@@ -153,8 +153,7 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 			return;
 		}
 
-		dis = g_data_input_stream_new ((GInputStream*) ir);
-		g_object_unref (ir);
+		dis = g_data_input_stream_new (G_INPUT_STREAM (ir));
 
 		/* clear the array */
 		if (priv->content != NULL) {
@@ -170,8 +169,6 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 
 			priv->content = g_list_append (priv->content, line);
 		}
-
-		g_object_unref (dis);
 	}
 }
 
