@@ -25,6 +25,8 @@
 
 #include "li-config-data.h"
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "li-utils.h"
@@ -107,6 +109,12 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 	if (info != NULL)
 		content_type = g_file_info_get_attribute_string (info, G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE);
 
+	/* clear the list */
+	if (priv->content != NULL) {
+		g_list_free_full (priv->content, g_free);
+		priv->content = NULL;
+	}
+
 	if ((g_strcmp0 (content_type, "application/gzip") == 0) || (g_strcmp0 (content_type, "application/x-gzip") == 0)) {
 		GFileInputStream *fistream;
 		GMemoryOutputStream *mem_os;
@@ -119,8 +127,13 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 
 		/* load a GZip compressed file */
 
-		fistream = g_file_read (file, NULL, NULL);
-		mem_os = (GMemoryOutputStream*) g_memory_output_stream_new (NULL, 0, g_realloc, g_free);
+		fistream = g_file_read (file, NULL, &tmp_error);
+		if (tmp_error != NULL) {
+			g_propagate_error (error, tmp_error);
+			return;
+		}
+
+		mem_os = G_MEMORY_OUTPUT_STREAM (g_memory_output_stream_new (NULL, 0, g_realloc, g_free));
 		zdecomp = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_GZIP);
 		conv_stream = g_converter_input_stream_new (G_INPUT_STREAM (fistream), G_CONVERTER (zdecomp));
 		g_object_unref (zdecomp);
@@ -143,32 +156,38 @@ li_config_data_load_file (LiConfigData *cdata, GFile *file, GError **error)
 		g_object_unref (mem_os);
 		g_object_unref (fistream);
 	} else {
-		gchar *line = NULL;
-		g_autoptr(GFileInputStream) ir = NULL;
-		g_autoptr(GDataInputStream) dis = NULL;
+		g_autofree gchar *line = NULL;
+		g_autofree gchar *fname = NULL;
+		FILE *fstream;
+		size_t len = 0;
+		ssize_t read;
 
-		ir = g_file_read (file, NULL, &tmp_error);
-		if (tmp_error != NULL) {
-			g_propagate_error (error, tmp_error);
+		/* We don't use GLib/GIO here sice this particular function is used after
+		 * pivoting into the build virtual env, where the code hangs at g_data_input_stream_new ()
+		 * for unknown reasons (it's probably trying to access some GIO stuff inside the constructor,
+		 * which is loaded from the venv and mismatches with the stuff we have in memory from the host.
+		 * FIXME: This is an ugly workaround, a proper solution needs to be found to make this beautiful
+		 * again.
+		 */
+
+		fname = g_file_get_path (file);
+		g_assert (fname != NULL);
+
+		fstream = fopen (fname, "r");
+		if (fstream == NULL) {
+			g_set_error (error,
+					G_IO_ERROR,
+					G_IO_ERROR_FAILED,
+					"Unable to open file '%s' for reading", fname);
 			return;
 		}
 
-		dis = g_data_input_stream_new (G_INPUT_STREAM (ir));
-
-		/* clear the array */
-		if (priv->content != NULL) {
-			g_list_free_full (priv->content, g_free);
-			priv->content = NULL;
+		while ((read = getline (&line, &len, fstream)) != -1) {
+			g_strchomp (line);
+			priv->content = g_list_append (priv->content, g_strdup (line));
 		}
 
-		while (TRUE) {
-			line = g_data_input_stream_read_line (dis, NULL, NULL, NULL);
-			if (line == NULL) {
-				break;
-			}
-
-			priv->content = g_list_append (priv->content, line);
-		}
+		fclose (fstream);
 	}
 }
 
