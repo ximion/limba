@@ -424,6 +424,9 @@ private_bind_mount (const gchar *src, const gchar *dest, gboolean writable)
  * Mount the depdenencies in the environment as an overlay.
  *
  * NOTE: We are already inside of the venv at this point.
+ *       Also, this method is called by re-execing limba-build, so
+ *       in order for the mounts to be visible for our parent process,
+ *       we shouldn't make them private.
  */
 static gint
 li_build_master_mount_deps (LiBuildMaster *bmaster)
@@ -477,7 +480,7 @@ li_build_master_mount_deps (LiBuildMaster *bmaster)
 	}
 
 	/* finally bindmount /app to /usr */
-	res = private_bind_mount ("/usr", "/app", TRUE);
+	res = mount ("/usr", "/app", NULL, MS_MGC_VAL | MS_BIND, NULL);
 	if (res != 0) {
 		g_warning ("Unable to set up the environment, bind-mount for /app failed: %s", g_strerror (errno));
 		return 1;
@@ -489,6 +492,8 @@ out:
 
 /**
  * li_build_master_resolve_builddeps:
+ *
+ * NOTE: Called from limba-build setup-builddeps
  */
 static void
 li_build_master_resolve_builddeps (LiBuildMaster *bmaster, GError **error)
@@ -578,80 +583,62 @@ li_installer_stage_changed_cb (LiInstaller *inst, LiPackageStage stage, const gc
 }
 
 /**
- * li_build_master_install_builddeps
+ * li_build_master_setup_builddeps
  * @bmaster: An instance of #LiBuildMaster.
  *
- * Install build dependencies. This is usually called within the chroot.
+ * Install build dependencies. This is usually called within the chroot,
+ * via execing "limba-build setup-builddeps".
  */
 void
-li_build_master_install_builddeps (LiBuildMaster *bmaster, const gchar *extra_bundles_dir, GError **error)
+li_build_master_setup_builddeps (LiBuildMaster *bmaster, const gchar *extra_bundles_dir, GError **error)
 {
 	g_autoptr(LiInstaller) inst = NULL;
 	g_autoptr(GPtrArray) files = NULL;
+	gint res;
 	GError *tmp_error = NULL;
 	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
 
-	li_print_stdout ("Installing bundles required for the build.");
-	inst = li_installer_new ();
-	li_installer_set_allow_insecure (inst, TRUE);
-	li_installer_set_ignore_foundations  (inst, priv->ignore_foundations);
-	g_signal_connect (inst, "stage-changed",
-				G_CALLBACK (li_installer_stage_changed_cb), NULL);
+	if ((!g_file_test ("/host", G_FILE_TEST_IS_DIR)) || (g_file_test ("/boot", G_FILE_TEST_IS_DIR))) {
+		/* if /host is not present or /boot is present we're not running in a Limba build venv,
+		 * and really shouldn't do anything here to prevent unexpected or damaging sideeffects */
+		g_set_error (error,
+				LI_BUILD_MASTER_ERROR,
+				LI_BUILD_MASTER_ERROR_INIT,
+				"Can not set up build-dependencies: Looks like we were not executed in a Limba build venv.");
+		return;
+	}
 
-	li_pkg_info_set_flags (priv->pki, LI_PACKAGE_FLAG_INSTALLED);
-	li_pkg_info_set_dependencies (priv->pki,
-				      li_pkg_info_get_build_dependencies (priv->pki));
-	if (extra_bundles_dir) {
-		files = li_utils_find_files_matching (extra_bundles_dir, "*.ipk", FALSE);
-		li_installer_open_extra_packages (inst, files, &tmp_error);
+	if (li_pkg_info_get_dependencies (priv->pki) != NULL) {
+		li_print_stdout ("Installing bundles required for the build.");
+		inst = li_installer_new ();
+		li_installer_set_allow_insecure (inst, TRUE);
+		li_installer_set_ignore_foundations  (inst, priv->ignore_foundations);
+		g_signal_connect (inst, "stage-changed",
+					G_CALLBACK (li_installer_stage_changed_cb), NULL);
+
+		li_pkg_info_set_flags (priv->pki, LI_PACKAGE_FLAG_INSTALLED);
+		li_pkg_info_set_dependencies (priv->pki,
+					li_pkg_info_get_build_dependencies (priv->pki));
+		if (extra_bundles_dir) {
+			files = li_utils_find_files_matching (extra_bundles_dir, "*.ipk", FALSE);
+			li_installer_open_extra_packages (inst, files, &tmp_error);
+			if (tmp_error != NULL) {
+				g_propagate_error (error, tmp_error);
+				return;
+			}
+		}
+
+		g_debug ("Needed: %s", li_pkg_info_get_dependencies (priv->pki));
+		li_installer_install_sourcepkg_deps (inst, priv->pki, &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_error (error, tmp_error);
 			return;
 		}
+	} else {
+		li_print_stdout ("No additional bundles need to be installed.");
 	}
 
-	g_debug ("Needed: %s", li_pkg_info_get_dependencies (priv->pki));
-	li_installer_install_sourcepkg_deps (inst, priv->pki, &tmp_error);
-	if (tmp_error != NULL) {
-		g_propagate_error (error, tmp_error);
-		return;
-	}
-}
-
-/**
- * li_build_master_setup_dependencies
- */
-void
-li_build_master_setup_dependencies (LiBuildMaster *bmaster, GError **error)
-{
-	g_autofree gchar *cmd = NULL;
-	GError *tmp_error = NULL;
-	gint res;
-	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
-
-	/* first install all the bundles which we need to build this software */
-
-	g_debug ("Calling satisfy-buildddeps");
-
-	if (priv->extra_bundles_dir != NULL)
-		cmd = g_strdup_printf ("limba-build satisfy-builddeps %s /build %s",
-					priv->ignore_foundations? "--ignore-foundations": "",
-					priv->extra_bundles_dir);
-	else
-		cmd = g_strdup_printf ("limba-build satisfy-builddeps %s /build",
-					priv->ignore_foundations? "--ignore-foundations": "");
-
-	g_debug ("Run: %s", cmd);
-	res = system (cmd);
-	if (res != 0) {
-		g_set_error (error,
-				LI_BUILD_MASTER_ERROR,
-				LI_BUILD_MASTER_ERROR_STEP_FAILED,
-				"Could not satisfy build dependencies.");
-		return;
-	}
-
-	g_debug ("Resolving build dependencies (again, after installation)");
+	g_debug ("Resolving build dependencies (again, after initial setup)");
 	li_build_master_resolve_builddeps (bmaster, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
@@ -670,6 +657,39 @@ li_build_master_setup_dependencies (LiBuildMaster *bmaster, GError **error)
 				LI_BUILD_MASTER_ERROR,
 				LI_BUILD_MASTER_ERROR_INIT,
 				"Mounting requirements failed: %s", g_strerror (errno));
+		return;
+	}
+}
+
+/**
+ * li_build_master_run_setup_dependencies
+ */
+static void
+li_build_master_run_setup_dependencies (LiBuildMaster *bmaster, GError **error)
+{
+	g_autofree gchar *cmd = NULL;
+	gint res;
+	LiBuildMasterPrivate *priv = GET_PRIVATE (bmaster);
+
+	/* first install all the bundles which we need to build this software */
+
+	g_debug ("Calling setup-buildddeps");
+
+	if (priv->extra_bundles_dir != NULL)
+		cmd = g_strdup_printf ("limba-build setup-builddeps %s /build %s",
+					priv->ignore_foundations? "--ignore-foundations": "",
+					priv->extra_bundles_dir);
+	else
+		cmd = g_strdup_printf ("limba-build setup-builddeps %s /build",
+					priv->ignore_foundations? "--ignore-foundations": "");
+
+	g_debug ("Run: %s", cmd);
+	res = system (cmd);
+	if (res != 0) {
+		g_set_error (error,
+				LI_BUILD_MASTER_ERROR,
+				LI_BUILD_MASTER_ERROR_STEP_FAILED,
+				"Could not satisfy build dependencies.");
 		return;
 	}
 }
@@ -868,7 +888,7 @@ li_build_master_run_executor (LiBuildMaster *bmaster, const gchar *env_root)
 
 	/* install missing bundles / mount dependencies in the venv */
 	g_debug ("Running (build)dependency setup.");
-	li_build_master_setup_dependencies (bmaster, &tmp_error);
+	li_build_master_run_setup_dependencies (bmaster, &tmp_error);
 	if (tmp_error != NULL) {
 		g_warning ("Unable to set up the environment: %s", tmp_error->message);
 		res = 6;

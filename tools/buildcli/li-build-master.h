@@ -83,7 +83,7 @@ void			li_build_master_set_build_group (LiBuildMaster *bmaster,
 void			li_build_master_set_ignore_foundations (LiBuildMaster *bmaster,
 							       gboolean ignore);
 
-void			li_build_master_install_builddeps (LiBuildMaster *bmaster,
+void			li_build_master_setup_builddeps (LiBuildMaster *bmaster,
 								const gchar *extra_bundles_dir,
 								GError **error);
 

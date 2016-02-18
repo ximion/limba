@@ -203,12 +203,13 @@ out:
 }
 
 /**
- * bcli_satisfy_builddeps:
+ * bcli_setup_builddeps:
  *
- * Internal helper function called from within the chroot.
+ * Internal helper function called from within the chroot to
+ * install and mount all build dependencies.
  */
 static gint
-bcli_satisfy_builddeps (const gchar *srcdir, const gchar *extradeps_dir)
+bcli_setup_builddeps (const gchar *srcdir, const gchar *extradeps_dir)
 {
 	g_autoptr(LiBuildMaster) bmaster = NULL;
 	GError *error = NULL;
@@ -230,7 +231,7 @@ bcli_satisfy_builddeps (const gchar *srcdir, const gchar *extradeps_dir)
 		return 1;
 	}
 
-	li_build_master_install_builddeps (bmaster, extradeps_dir, &error);
+	li_build_master_setup_builddeps (bmaster, extradeps_dir, &error);
 	if (error != NULL) {
 		printf ("\n/!\\ Error:\n");
 		li_print_stderr ("%s", error->message);
@@ -348,8 +349,8 @@ main (int argc, char *argv[])
 		exit_code = bcli_execute_build (value1, TRUE);
 	} else if (g_strcmp0 (command, "make-template") == 0) {
 		exit_code = libuild_make_template (value1);
-	} else if (g_strcmp0 (command, "satisfy-builddeps") == 0) {
-		exit_code = bcli_satisfy_builddeps (value1, value2);
+	} else if (g_strcmp0 (command, "setup-builddeps") == 0) {
+		exit_code = bcli_setup_builddeps (value1, value2);
 	} else {
 		li_print_stderr (_("Command '%s' is unknown."), command);
 		exit_code = 1;
