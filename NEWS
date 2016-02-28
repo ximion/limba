@@ -1,3 +1,34 @@
+Version 0.5.6
+~~~~~~~~~~~~~~
+Released: 2016-02-28
+
+Features:
+ * Set path variables in the build venv as well
+ * cli: Allow ignoreing foundations when installing
+ * bcli: Print bundle name we are building before starting the build
+ * bcli: Allow ignoring foundations as well
+ * Store the component-type in local package metadata
+ * Add privilege helper for cache refreshes
+ * Split the update function into smaller parts
+ * Add privilege helper for update actions
+ * Add experimental code to allow in-chroot Limba bundle installations
+ * builder: Place internal host link in /host
+ * bcli: Be more verbose when installing build-deps
+ * Look for locally supplied dependencies first when installing
+ * Always add architecture to auto-generated bundle filename
+ * bcli: Execute helper for installations in the build venv
+ * policy: Allow any active user to refresh the Limba cache
+
+Bugfixes:
+ * Fix PolKit rules file
+ * bcli: Ensure using external chroot envs works
+ * bcli: Work in usrmerged systems
+ * bcli: Flush stdout after printing a section header
+ * Fix crash when someone passes NULL as package ID to LiManager
+ * Fix various update-related bugs
+ * builder: Fix some more quirks in the build environment
+ * Use libc functions instead of GIO for loading plaintext config
+
 Version 0.5.5
 ~~~~~~~~~~~~~~
 Released: 2016-01-20
