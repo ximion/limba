@@ -417,7 +417,7 @@ li_package_read_component_data (LiPackage *pkg, const gchar *data, GError **erro
 	/* do not filter languages */
 	as_metadata_set_locale (mdata, "ALL");
 
-	as_metadata_parse_data (mdata, data, &tmp_error);
+	as_metadata_parse_xml (mdata, data, &tmp_error);
 	priv->cpt = g_object_ref (as_metadata_get_component (mdata));
 	g_object_unref (mdata);
 	if (tmp_error != NULL) {
