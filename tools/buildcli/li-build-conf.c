@@ -467,7 +467,10 @@ li_build_conf_open_from_dir (LiBuildConf *bconf, const gchar *dir, GError **erro
 
 	mdata = as_metadata_new ();
 	as_metadata_set_locale (mdata, "C");
-	as_metadata_parse_file (mdata, file, &tmp_error);
+	as_metadata_parse_file (mdata,
+				file,
+				AS_FORMAT_KIND_XML,
+				&tmp_error);
 	g_object_unref (file);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);

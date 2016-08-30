@@ -787,7 +787,10 @@ li_pkg_builder_build_package_with_details (LiPkgBuilder *builder, LiPkgInfo *ctl
 	}
 
 	as_metadata_add_component (metad, cpt);
-	as_metadata_save_upstream_xml (metad, asdata_fname, &tmp_error);
+	as_metadata_save_metainfo (metad,
+				   asdata_fname,
+				   AS_FORMAT_KIND_XML,
+				   &tmp_error);
 	as_component_set_id (cpt, cpt_orig_id);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
@@ -936,7 +939,7 @@ li_pkg_builder_create_package_from_dir (LiPkgBuilder *builder, const gchar *dir,
 	mdata = as_metadata_new ();
 	as_metadata_set_locale (mdata, "ALL");
 
-	as_metadata_parse_file (mdata, asfile, &tmp_error);
+	as_metadata_parse_file (mdata, asfile, AS_FORMAT_KIND_XML, &tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_error (error, tmp_error);
 		return FALSE;

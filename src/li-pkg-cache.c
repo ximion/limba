@@ -560,7 +560,10 @@ li_pkg_cache_download_repodata (LiPkgCache *cache, LiRepoEntry *re, const gchar 
 
 	/* add AppStream metadata to the pool */
 	asfile = g_file_new_for_path (dest_asfname);
-	as_metadata_parse_file (metad, asfile, &tmp_error);
+	as_metadata_parse_file (metad,
+				asfile,
+				AS_FORMAT_KIND_XML,
+				&tmp_error);
 	if (tmp_error != NULL) {
 		g_propagate_prefixed_error (error, tmp_error, "Unable to load AppStream data for: %s", li_repo_entry_get_url (re));
 		return;
@@ -712,9 +715,10 @@ li_pkg_cache_update (LiPkgCache *cache, GError **error)
 		}
 
 		/* save AppStream XML data */
-		as_metadata_save_distro_xml (metad,
-						li_repo_entry_get_appstream_fname (re),
-						&tmp_error);
+		as_metadata_save_collection (metad,
+					     li_repo_entry_get_appstream_fname (re),
+					     AS_FORMAT_KIND_XML,
+					     &tmp_error);
 		if (tmp_error != NULL) {
 			g_propagate_prefixed_error (error, tmp_error, "Unable to save metadata.");
 			return;

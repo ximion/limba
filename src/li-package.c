@@ -417,7 +417,10 @@ li_package_read_component_data (LiPackage *pkg, const gchar *data, GError **erro
 	/* do not filter languages */
 	as_metadata_set_locale (mdata, "ALL");
 
-	as_metadata_parse_xml (mdata, data, &tmp_error);
+	as_metadata_parse (mdata,
+			   data,
+			   AS_FORMAT_KIND_XML,
+			   &tmp_error);
 	priv->cpt = g_object_ref (as_metadata_get_component (mdata));
 	g_object_unref (mdata);
 	if (tmp_error != NULL) {
@@ -1416,7 +1419,7 @@ li_package_has_embedded_packages (LiPackage *pkg)
 gchar*
 li_package_get_appstream_data (LiPackage *pkg)
 {
-	AsMetadata *metad;
+	g_autoptr(AsMetadata) metad = NULL;
 	gchar *xml;
 	LiPackagePrivate *priv = GET_PRIVATE (pkg);
 	if (priv->cpt == NULL)
@@ -1424,8 +1427,7 @@ li_package_get_appstream_data (LiPackage *pkg)
 
 	metad = as_metadata_new ();
 	as_metadata_add_component (metad, priv->cpt);
-	xml = as_metadata_component_to_upstream_xml (metad);
-	g_object_unref (metad);
+	xml = as_metadata_component_to_metainfo (metad, AS_FORMAT_KIND_XML, NULL);
 
 	return xml;
 }

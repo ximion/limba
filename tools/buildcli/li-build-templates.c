@@ -153,7 +153,9 @@ libuild_make_template (const gchar *dir)
 		asfile = g_build_filename (res_dir, "metainfo.xml", NULL);
 		metad = as_metadata_new ();
 		as_metadata_add_component (metad, cpt);
-		tmp = as_metadata_component_to_upstream_xml (metad);
+		tmp = as_metadata_component_to_metainfo (metad,
+							 AS_FORMAT_KIND_XML,
+							 NULL);
 		g_object_unref (metad);
 		g_file_set_contents (asfile, tmp, -1, &error);
 		g_free (tmp);

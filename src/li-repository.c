@@ -238,7 +238,10 @@ li_repository_load_indices (LiRepository *repo, const gchar* dir, GError **error
 				/* we do not want to filter languages */
 				as_metadata_set_locale (metad, "ALL");
 
-				as_metadata_parse_file (metad, file, &tmp_error);
+				as_metadata_parse_file (metad,
+							file,
+							AS_FORMAT_KIND_XML,
+							&tmp_error);
 				if (tmp_error == NULL)
 					g_hash_table_insert (priv->asmeta, g_strdup (arch), metad);
 			}
@@ -543,7 +546,10 @@ li_repository_save_asmeta (gchar *arch, AsMetadata *metad, LiIndexSaveHelper *he
 	g_mkdir_with_parents (dir, 0755);
 
 	fname = g_build_filename (dir, "Metadata.xml.gz", NULL);
-	as_metadata_save_distro_xml (metad, fname, &helper->error);
+	as_metadata_save_collection (metad,
+				     fname,
+				     AS_FORMAT_KIND_XML,
+				     &helper->error);
 	if (helper->error != NULL)
 		return;
 
@@ -755,6 +761,7 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 
 	/* don't add to AppStream index, development packages don't belong there */
 	if (kind != LI_PACKAGE_KIND_DEVEL) {
+		g_autoptr(AsBundle) bundle = NULL;
 		AsComponent *cpt;
 
 		cpt = li_package_get_appstream_cpt (pkg);
@@ -773,8 +780,10 @@ li_repository_add_package (LiRepository *repo, const gchar *pkg_fname, GError **
 		}
 
 		/* set a unique AppStream bundle name */
-		as_component_add_bundle_id (cpt, AS_BUNDLE_KIND_LIMBA,
-						li_pkg_info_get_id (pki));
+		bundle = as_bundle_new ();
+		as_bundle_set_kind (bundle, AS_BUNDLE_KIND_LIMBA);
+		as_bundle_set_id (bundle, li_pkg_info_get_id (pki));
+		as_component_add_bundle (cpt, bundle);
 		/* remove all package names - just in case */
 		as_component_set_pkgnames (cpt, NULL);
 
